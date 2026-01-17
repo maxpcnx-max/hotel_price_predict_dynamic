@@ -17,7 +17,7 @@ from xgboost import XGBRegressor
 from sklearn.metrics import mean_absolute_error, r2_score
 
 # ==========================================================
-# 1. SETUP & CONSTANTS
+# 1. SETUP & CONSTANTS (ตั้งค่าระบบ)
 # ==========================================================
 st.set_page_config(
     page_title="Hotel Price Forecasting System",
@@ -28,6 +28,7 @@ st.set_page_config(
 
 DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
+ROOM_FILE = "room_type.csv" # <--- [ปรับ] ไฟล์สำหรับแปลงเลขห้องเป็นชื่อห้อง
 METRICS_FILE = "model_metrics.json"
 
 MODEL_FILES = {
@@ -37,10 +38,10 @@ MODEL_FILES = {
     'le_res': 'le_res.joblib'
 }
 
-# [NEW] ราคา Base Price สำหรับเปรียบเทียบ
+# [ปรับ] ราคา Base Price ตามที่คุณระบุ
 BASE_PRICES = {
     'Grand Suite Room': 2700,
-    'Villa Suite (Garden)': 2700, # Villa private garden
+    'Villa Suite (Garden)': 2700,
     'Executive Room': 2500,
     'Executive Room with Balcony': 2400,
     'Villa Suite (Bathtub)': 2000,
@@ -48,11 +49,10 @@ BASE_PRICES = {
     'Standard Room': 1000
 }
 
-# ค่า Default (Thesis Baseline) - ใช้เมื่อยังไม่เคย Retrain
+# ค่า Default (Thesis Baseline) ใช้กรณีเริ่มระบบครั้งแรกหรือหาไฟล์ไม่เจอ
 DEFAULT_METRICS = {
     'xgb': {'mae': 1112.79, 'r2': 0.7256},
     'lr':  {'mae': 1162.27, 'r2': 0.7608},
-    # [NEW] เพิ่ม Default Feature Importance (Thesis)
     'importance': {
         'Night': 0.4364, 'Reservation': 0.1742, 'Month': 0.1315, 
         'Is Weekend': 0.0643, 'Room Type': 0.0640, 'Weekday': 0.0512, 
@@ -64,7 +64,7 @@ if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'username' not in st.session_state: st.session_state['username'] = ""
 
 # ==========================================================
-# 2. DATABASE
+# 2. DATABASE (ระบบจัดการ User)
 # ==========================================================
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -97,14 +97,14 @@ def register_user(username, password):
 init_db()
 
 # ==========================================================
-# 3. BACKEND SYSTEM
+# 3. BACKEND SYSTEM (ระบบหลังบ้าน)
 # ==========================================================
 
 @st.cache_data
 def load_data():
+    # 1. โหลดข้อมูล Booking
     if not os.path.exists(DATA_FILE):
-        url_main = "https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri"
-        try: gdown.download(url_main, DATA_FILE, quiet=True)
+        try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
 
     try:
@@ -112,18 +112,31 @@ def load_data():
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
         
-        # Merge Room Type: พยายาม Map ชื่อห้องให้ได้
-        if os.path.exists("room_type.csv"):
-            room_type = pd.read_csv("room_type.csv")
-            if 'Room_Type' in room_type.columns:
-                 room_type = room_type.rename(columns={'Room_Type': 'Target_Room_Type'})
-            df = df.merge(room_type, on='Room', how='left')
-            # ถ้า Map ไม่เจอ ให้ใส่ Standard ไว้ก่อน ดีกว่าโชว์เลขห้อง
-            df['Target_Room_Type'] = df['Target_Room_Type'].fillna('Standard Room')
-        else:
-            # ถ้าไม่มีไฟล์ Map ให้พยายามเดาหรือใช้ Unknown
-            df['Target_Room_Type'] = df.get('Room', 'Unknown')
+        # 2. [ปรับ] โหลดข้อมูล Room Type Mapping และ Merge ทันที
+        # เพื่อให้ทุกหน้าเห็นเป็น "ชื่อห้อง" ไม่ใช่ "เลขห้อง"
+        if os.path.exists(ROOM_FILE):
+            try:
+                room_type = pd.read_csv(ROOM_FILE)
+                if 'Room_Type' in room_type.columns:
+                    # Merge โดยใช้คอลัมน์ Room เป็นตัวเชื่อม
+                    df = df.merge(room_type, on='Room', how='left')
+                    
+                    # จัดการชื่อคอลัมน์หลัง Merge
+                    if 'Room_Type_y' in df.columns: 
+                        df = df.rename(columns={'Room_Type_y': 'Target_Room_Type'})
+                    elif 'Room_Type' in df.columns:
+                        df = df.rename(columns={'Room_Type': 'Target_Room_Type'})
+            except:
+                pass
 
+        # 3. [ปรับ] Fallback: ถ้ายังไม่มีชื่อห้อง ให้พยายามใช้คอลัมน์เดิม
+        if 'Target_Room_Type' not in df.columns:
+            if 'Room_Type' in df.columns:
+                df['Target_Room_Type'] = df['Room_Type']
+            else:
+                df['Target_Room_Type'] = df['Room'].astype(str) # ถ้าไม่มีจริงๆ ให้ใช้เลขห้องไปก่อน
+
+        df['Target_Room_Type'] = df['Target_Room_Type'].fillna('Unknown')
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         df['month'] = df['Date'].dt.month
         return df
@@ -139,34 +152,37 @@ def load_system_models():
     le_room = joblib.load(MODEL_FILES['le_room'])
     le_res = joblib.load(MODEL_FILES['le_res'])
     
-    # Load Dynamic Metrics
+    # [ปรับ] โหลดค่า Metrics ล่าสุดจากไฟล์ JSON
     if os.path.exists(METRICS_FILE):
-        with open(METRICS_FILE, 'r') as f:
-            metrics = json.load(f)
-    else:
-        metrics = DEFAULT_METRICS
+        with open(METRICS_FILE, 'r') as f: metrics = json.load(f)
+    else: metrics = DEFAULT_METRICS
         
     return xgb, lr, le_room, le_res, metrics
 
-def save_uploaded_data(uploaded_file):
+def save_uploaded_data(uploaded_file, is_room_file=False):
     try:
         uploaded_file.seek(0)
         new_data = pd.read_csv(uploaded_file)
         
-        if os.path.exists(DATA_FILE):
-            current_df = pd.read_csv(DATA_FILE)
-            updated_df = pd.concat([current_df, new_data], ignore_index=True)
+        if is_room_file:
+            # กรณีอัปโหลดไฟล์ชื่อห้อง ให้เซฟทับไฟล์ room_type.csv เลย
+            new_data.to_csv(ROOM_FILE, index=False)
         else:
-            updated_df = new_data
+            # กรณีอัปโหลด Booking ให้ต่อท้ายไฟล์เดิม
+            if os.path.exists(DATA_FILE):
+                current_df = pd.read_csv(DATA_FILE)
+                updated_df = pd.concat([current_df, new_data], ignore_index=True)
+            else:
+                updated_df = new_data
+            updated_df.to_csv(DATA_FILE, index=False)
             
-        updated_df.to_csv(DATA_FILE, index=False)
         st.cache_data.clear()
         return True
     except Exception as e:
         st.error(f"Save failed: {e}")
         return False
 
-# --- RETRAIN FUNCTION (Updated Logic) ---
+# --- RETRAIN FUNCTION (ระบบเทรนโมเดลใหม่) ---
 def retrain_system():
     status_text = st.empty()
     progress_bar = st.progress(0)
@@ -175,24 +191,29 @@ def retrain_system():
         status_text.text("⏳ Reading all data...")
         df = pd.read_csv(DATA_FILE)
         
-        # ... (Preprocessing เหมือนเดิม) ...
-        if 'Date' in df.columns:
-            df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
-        if os.path.exists("room_type.csv"):
-            room_type = pd.read_csv("room_type.csv")
-            if 'Room_Type' in room_type.columns:
-                 room_type = room_type.rename(columns={'Room_Type': 'Target_Room_Type'})
-            df = df.merge(room_type, on='Room', how='left')
-            df['Target_Room_Type'] = df['Target_Room_Type'].fillna('Standard Room')
-        else:
-            df['Target_Room_Type'] = df['Room']
+        # --- Preprocessing Pipeline ---
+        if 'Date' in df.columns: df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
         
+        # Merge Room Type (ทำเหมือน load_data เพื่อให้ข้อมูลตรงกัน)
+        if os.path.exists(ROOM_FILE):
+            room_type = pd.read_csv(ROOM_FILE)
+            if 'Room_Type' in room_type.columns:
+                 df = df.merge(room_type, on='Room', how='left')
+                 if 'Room_Type_y' in df.columns: df = df.rename(columns={'Room_Type_y': 'Target_Room_Type'})
+                 elif 'Room_Type' in df.columns: df = df.rename(columns={'Room_Type': 'Target_Room_Type'})
+        
+        if 'Target_Room_Type' not in df.columns:
+             df['Target_Room_Type'] = df['Room'].astype(str)
+
         df = df.dropna(subset=['Date'])
+        df['Target_Room_Type'] = df['Target_Room_Type'].fillna('Standard Room')
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         
+        # Holiday Handling
         if not os.path.exists("thai_holidays.csv"):
              try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
              except: pass
+        
         if os.path.exists("thai_holidays.csv"):
             holidays_csv = pd.read_csv("thai_holidays.csv")
             holidays_csv['Holiday_Date'] = pd.to_datetime(holidays_csv['Holiday_Date'], dayfirst=True, errors='coerce')
@@ -204,6 +225,7 @@ def retrain_system():
         df['month'] = df['Date'].dt.month
         df['weekday'] = df['Date'].dt.weekday
         
+        # Encoders
         le_room_new = LabelEncoder()
         df['RoomType_encoded'] = le_room_new.fit_transform(df['Target_Room_Type'].astype(str))
         le_res_new = LabelEncoder()
@@ -218,24 +240,19 @@ def retrain_system():
         
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        # XGBoost
+        # 1. XGBoost
         xgb_new = XGBRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
         xgb_new.fit(X_train, y_train)
         pred_xgb = xgb_new.predict(X_test)
         new_xgb_mae = mean_absolute_error(y_test, pred_xgb)
         new_xgb_r2 = r2_score(y_test, pred_xgb)
         
-        # [NEW] Calculate Feature Importance Dynamically
+        # [ปรับ] คำนวณ Feature Importance จริงๆ จากข้อมูลใหม่
         fi_raw = xgb_new.feature_importances_
-        # Map raw column names to Readable names
-        col_mapping = {
-            'Night': 'Night', 'total_guests': 'Guests', 'is_holiday': 'Is Holiday', 
-            'is_weekend': 'Is Weekend', 'month': 'Month', 'weekday': 'Weekday', 
-            'RoomType_encoded': 'Room Type', 'Reservation_encoded': 'Reservation'
-        }
-        new_importance = {col_mapping[col]: float(val) for col, val in zip(feature_cols, fi_raw)}
+        col_mapping = {'Night': 'Night', 'total_guests': 'Guests', 'is_holiday': 'Is Holiday', 'is_weekend': 'Is Weekend', 'month': 'Month', 'weekday': 'Weekday', 'RoomType_encoded': 'Room Type', 'Reservation_encoded': 'Reservation'}
+        new_importance = {col_mapping.get(col, col): float(val) for col, val in zip(feature_cols, fi_raw)}
 
-        # Linear Regression
+        # 2. Linear Regression
         lr_new = LinearRegression()
         lr_new.fit(X_train, y_train)
         pred_lr = lr_new.predict(X_test)
@@ -250,17 +267,15 @@ def retrain_system():
         joblib.dump(le_room_new, MODEL_FILES['le_room'])
         joblib.dump(le_res_new, MODEL_FILES['le_res'])
         
-        # [NEW] Save Metrics INCLUDING Importance
+        # [ปรับ] บันทึกทั้ง Scores และ Importance ลง JSON
         new_metrics = {
             'xgb': {'mae': new_xgb_mae, 'r2': new_xgb_r2},
             'lr':  {'mae': new_lr_mae, 'r2': new_lr_r2},
-            'importance': new_importance # <--- Save Feature Importance here
+            'importance': new_importance
         }
-        with open(METRICS_FILE, 'w') as f:
-            json.dump(new_metrics, f)
+        with open(METRICS_FILE, 'w') as f: json.dump(new_metrics, f)
             
         st.cache_resource.clear()
-        
         progress_bar.progress(100)
         status_text.success(f"✅ Retraining Complete! New R²: {new_xgb_r2:.4f}")
         return True, len(df)
@@ -270,7 +285,7 @@ def retrain_system():
         return False, 0
 
 # ==========================================================
-# 4. MAIN UI PAGES
+# 4. MAIN UI PAGES (ส่วนแสดงผล)
 # ==========================================================
 
 def login_page():
@@ -326,16 +341,22 @@ else:
         c1, c2 = st.columns([3, 2])
         with c1:
             st.markdown("**🏆 ยอดจองตามประเภทห้อง (Room Type)**")
-            # [FIX] บังคับใช้ชื่อห้อง (Target_Room_Type) ไม่เอาเลขห้อง
+            # [ปรับ] ใช้ Target_Room_Type (ชื่อห้อง) แทนเลขห้อง
             if 'Target_Room_Type' in df.columns:
                 rc = df['Target_Room_Type'].value_counts().reset_index()
                 rc.columns = ['Room', 'Count']
                 st.plotly_chart(px.bar(rc, x='Count', y='Room', orientation='h', text='Count', color='Count', color_continuous_scale='Viridis'), use_container_width=True)
+            else:
+                st.warning("⚠️ แสดงเป็นเลขห้องเนื่องจากไม่พบไฟล์ Room Mapping")
+                rc = df['Room'].value_counts().head(20).reset_index() 
+                rc.columns = ['Room', 'Count']
+                st.plotly_chart(px.bar(rc, x='Count', y='Room', orientation='h', text='Count'), use_container_width=True)
+                
         with c2:
             st.markdown("**💸 สัดส่วนรายได้**")
-            if 'Target_Room_Type' in df.columns:
-                rev = df.groupby('Target_Room_Type')['Price'].sum().reset_index()
-                st.plotly_chart(px.pie(rev, values='Price', names='Target_Room_Type', hole=0.4), use_container_width=True)
+            group_col = 'Target_Room_Type' if 'Target_Room_Type' in df.columns else 'Room'
+            rev = df.groupby(group_col)['Price'].sum().reset_index()
+            st.plotly_chart(px.pie(rev, values='Price', names=group_col, hole=0.4), use_container_width=True)
         
         st.divider()
         c3, c4 = st.columns([2, 3])
@@ -353,23 +374,35 @@ else:
 
     def show_manage_data_page():
         st.title("📥 จัดการข้อมูล & อัปเดตโมเดล")
-        tab1, tab2 = st.tabs(["1. นำเข้าข้อมูล", "2. อัปเดตโมเดล (Retrain)"])
+        # [ปรับ] เพิ่ม Tab สำหรับอัปโหลดชื่อห้อง
+        tab1, tab2, tab3 = st.tabs(["1. นำเข้า Booking", "2. อัปเดตชื่อห้อง (Room Type)", "3. อัปเดตโมเดล (Retrain)"])
         
         with tab1:
-            st.markdown("### Import New Bookings")
-            up_file = st.file_uploader("เลือกไฟล์ CSV", type=['csv'])
+            st.markdown("### Import New Bookings (CSV)")
+            st.info("อัปโหลดไฟล์จองห้องพัก (ต้องมีคอลัมน์ Room, Price, Date, ...)")
+            up_file = st.file_uploader("เลือกไฟล์ Booking CSV", type=['csv'], key="booking_up")
             if up_file is not None:
-                if st.button("บันทึกข้อมูลเข้าระบบ", type="primary"):
-                    if save_uploaded_data(up_file):
-                        # [FIX] แจ้งเตือนเมื่อนำเข้าสำเร็จ
-                        st.success("✅ นำไฟล์เข้าเรียบร้อยแล้ว! ข้อมูลถูกบันทึกแล้ว")
+                if st.button("บันทึกข้อมูล Booking", type="primary"):
+                    if save_uploaded_data(up_file, is_room_file=False):
+                        # [ปรับ] แจ้งเตือนเมื่อนำเข้าสำเร็จ
+                        st.success("✅ นำเข้าข้อมูล Booking เรียบร้อยแล้ว!")
                         st.balloons()
-                        
+                        st.rerun()
+
         with tab2:
+            st.markdown("### Update Room Mapping (CSV)")
+            st.info("อัปโหลดไฟล์จับคู่เลขห้องกับชื่อห้อง (Columns: Room, Room_Type)")
+            room_file = st.file_uploader("เลือกไฟล์ Room Type CSV", type=['csv'], key="room_up")
+            if room_file is not None:
+                if st.button("บันทึกข้อมูลชื่อห้อง", type="secondary"):
+                    if save_uploaded_data(room_file, is_room_file=True):
+                        st.success("✅ อัปเดตชื่อห้องเรียบร้อย! Dashboard จะแสดงชื่อห้องแทนเลขห้องแล้ว")
+                        st.rerun()
+                        
+        with tab3:
             st.markdown("### 🔄 On-Demand Model Retraining")
-            st.warning("⚠️ การนำเข้าข้อมูลอย่างเดียว *จะไม่เปลี่ยน* ค่าความแม่นยำ (MAE/R2) \n\nคุณต้องกดปุ่มด้านล่างเพื่อให้โมเดลเรียนรู้ใหม่เท่านั้น")
-            
-            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="secondary"):
+            st.warning("⚠️ การกดปุ่มนี้จะทำให้โมเดลเรียนรู้ข้อมูลใหม่ และค่าความแม่นยำจะเปลี่ยนไป")
+            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)"):
                 success, count = retrain_system()
                 if success:
                     st.success(f"🎉 โมเดลเรียนรู้ครบ {count:,} รายการ! ค่า MAE/R2 และ Feature Importance ถูกอัปเดตแล้ว")
@@ -406,81 +439,64 @@ else:
                 p_xgb = xgb_model.predict(inp)[0]
                 p_lr = lr_model.predict(inp)[0]
                 
-                # [NEW] ดึง Base Price มาเทียบ
-                # พยายาม Map ชื่อห้องให้ตรง Key ใน BASE_PRICES
-                # ถ้าไม่ตรงเป๊ะ ให้ default 0
+                # [ปรับ] เทียบ Base Price
                 base_price = 0
                 for key in BASE_PRICES:
-                    if key in room: # Matching แบบบ้านๆ เช่น "Deluxe" in "Deluxe Room"
-                        base_price = BASE_PRICES[key]
-                        break
+                    if key in room: base_price = BASE_PRICES[key]; break
                 
                 st.divider()
-                # แสดงผลเปรียบเทียบ
                 c_base, c_xgb, c_lr = st.columns(3)
-                
                 with c_base:
                     st.info("### 🏷️ Base Price")
                     st.metric("ราคาตั้งต้น", f"{base_price:,.0f} THB")
-                    st.caption(f"ราคามาตรฐานของห้อง {room}")
-
+                    st.caption("ราคามาตรฐานโรงแรม")
                 with c_xgb:
                     st.success("### ⚡ XGBoost (AI)")
-                    # คำนวณส่วนต่าง
-                    diff = p_xgb - base_price
-                    st.metric("ราคาแนะนำ", f"{p_xgb:,.0f} THB", delta=f"{diff:,.0f} THB")
+                    st.metric("ราคาแนะนำ", f"{p_xgb:,.0f} THB", delta=f"{p_xgb - base_price:,.0f} THB")
                     st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']:.4f}")
-                
                 with c_lr:
                     st.warning("### 📉 Linear Reg")
-                    diff_lr = p_lr - base_price
-                    st.metric("ราคาประเมิน", f"{p_lr:,.0f} THB", delta=f"{diff_lr:,.0f} THB")
+                    st.metric("ราคาประเมิน", f"{p_lr:,.0f} THB", delta=f"{p_lr - base_price:,.0f} THB")
                     st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']:.4f}")
 
     def show_model_insight_page():
         st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Dynamic Insight)")
-        st.markdown("แสดงค่าความสำคัญของตัวแปร (Feature Importance Scores) ที่อัปเดตตามโมเดลล่าสุด")
-        
-        # [NEW] ดึงค่า Importance จาก metrics (ซึ่งเปลี่ยนค่าได้ตอน Retrain)
+        # [ปรับ] ดึง Feature Importance จากไฟล์ Metrics (ไม่ใช่ Hardcode)
         imp_data = metrics.get('importance', DEFAULT_METRICS['importance'])
-        
-        # แปลง Dict เป็น DataFrame
-        fi_df = pd.DataFrame(list(imp_data.items()), columns=['Feature', 'Importance'])
-        fi_df = fi_df.sort_values('Importance', ascending=True)
+        fi_df = pd.DataFrame(list(imp_data.items()), columns=['Feature', 'Importance']).sort_values('Importance', ascending=True)
         
         st.divider()
         c1, c2 = st.columns([2, 1])
-        
         with c1:
             st.subheader("📊 กราฟความสำคัญ")
-            fig = px.bar(fi_df, x='Importance', y='Feature', orientation='h', text_auto='.4f', color='Importance', color_continuous_scale='Blues')
-            st.plotly_chart(fig, use_container_width=True)
-            
+            st.plotly_chart(px.bar(fi_df, x='Importance', y='Feature', orientation='h', text_auto='.4f', color='Importance', color_continuous_scale='Blues'), use_container_width=True)
         with c2:
             st.subheader("📋 ตารางข้อมูล")
-            # [FIX] โชว์ตารางชัดๆ ไม่ซ่อนแล้ว
-            display_df = fi_df.sort_values('Importance', ascending=False)
-            display_df['Importance'] = display_df['Importance'].apply(lambda x: f"{x:.4f}")
-            st.dataframe(display_df, use_container_width=True, height=400)
+            # [ปรับ] โชว์ตารางให้เห็นชัดๆ
+            st.dataframe(fi_df.sort_values('Importance', ascending=False), use_container_width=True, height=400)
 
-    # --- Sidebar ---
+    def show_about_page():
+        st.title("ℹ️ เกี่ยวกับระบบ / ผู้จัดทำ")
+        st.divider()
+        c1, c2 = st.columns([1, 2])
+        with c1: st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=200)
+        with c2:
+            st.header("ผู้จัดทำ")
+            st.markdown("**ว่าที่ร้อยตรีพรพินิต วิรัตน์สกุลชัย** สาขาวิทยาการข้อมูล และ นวัตกรรมดิจิทัล\n\nคณะ นวัตกรรม เทคโนโลยีและการสร้างสรรค์ **มหาวิทยาลัยฟาร์อีสเทอร์น**")
+            st.divider()
+            st.info("วิทยานิพนธ์: การพัฒนาระบบสนับสนุนการตัดสินใจเพื่อการพยากรณ์ราคาแบบพลวัต")
+
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
         st.markdown(f"### User: {st.session_state['username']}")
-        
         page = st.radio("เมนูใช้งาน:", ["🏠 หน้าหลัก", "📊 แดชบอร์ด", "📥 จัดการข้อมูล", "🔮 พยากรณ์ราคา", "🧠 วิเคราะห์โมเดล", "ℹ️ เกี่ยวกับระบบ"])
-        
         st.divider()
         st.markdown("#### ⚙️ Real-time Performance")
         st.progress(metrics['xgb']['r2'], text=f"XGBoost: {metrics['xgb']['r2']*100:.1f}%")
         st.progress(metrics['lr']['r2'], text=f"Linear Reg: {metrics['lr']['r2']*100:.1f}%")
-        
         st.divider()
-        if st.button("Logout"):
-            st.session_state['logged_in'] = False
-            st.rerun()
+        if st.button("Logout"): st.session_state['logged_in'] = False; st.rerun()
 
-    # --- Routing ---
     if "หน้าหลัก" in page: show_home_page()
     elif "แดชบอร์ด" in page: show_dashboard_page()
     elif "จัดการข้อมูล" in page: show_manage_data_page()
