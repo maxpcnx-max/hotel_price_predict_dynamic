@@ -10,6 +10,7 @@ import gdown
 import time
 from datetime import datetime
 
+# Import Library สำหรับการ Retrain
 from sklearn.model_selection import train_test_split
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LinearRegression
@@ -28,7 +29,7 @@ st.set_page_config(
 
 DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
-ROOM_FILE = "room_type.csv" # ไฟล์กฎหมาย (Master Data)
+ROOM_FILE = "room_type.csv" # ไฟล์ Master Data (ใส่ไว้ใน GitHub)
 METRICS_FILE = "model_metrics.json"
 
 MODEL_FILES = {
@@ -110,9 +111,9 @@ def load_data():
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
         if 'Room' in df.columns:
-            df['Room'] = df['Room'].astype(str)
+            df['Room'] = df['Room'].astype(str) # บังคับเป็น String
 
-        # 2. โหลดไฟล์ Master (room_type.csv)
+        # 2. โหลดไฟล์ Master (room_type.csv) จากหลังบ้าน
         if os.path.exists(ROOM_FILE):
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
@@ -127,10 +128,6 @@ def load_data():
         # ถ้า Target_Room_Type เป็น NaN แสดงว่าเลขห้องนั้นไม่อยู่ในสารบบ -> Drop ทิ้ง
         df = df.dropna(subset=['Target_Room_Type'])
         
-        # Optional: กรอง Reservation ที่แปลกๆ (ถ้าต้องการ)
-        # valid_channels = ['Booking.com', 'Agoda', 'Direct', ...]
-        # df = df[df['Reservation'].isin(valid_channels)]
-
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         df['month'] = df['Date'].dt.month
         return df
@@ -170,7 +167,6 @@ def save_uploaded_data_with_cleaning(uploaded_file):
         
         # 2. ตรวจสอบ Outlier (ห้องที่ไม่รู้จัก)
         if len(valid_rooms) > 0:
-            # แยกแถวดี (Good) กับ แถวเสีย (Bad)
             good_rows = new_data[new_data['Room'].isin(valid_rooms)]
             bad_rows = new_data[~new_data['Room'].isin(valid_rooms)]
             
@@ -208,7 +204,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
         st.error(f"Save failed: {e}")
         return False
 
-# --- RETRAIN FUNCTION ---
+# --- RETRAIN FUNCTION (CLEANING INCLUDED) ---
 def retrain_system():
     status_text = st.empty()
     progress_bar = st.progress(0)
@@ -222,6 +218,17 @@ def retrain_system():
             st.error("ไม่พบข้อมูลสำหรับเทรนโมเดล")
             return False, 0
             
+        # --- CLEANING FOR LINEAR REGRESSION ---
+        # 1. ตัดแถวที่ข้อมูลสำคัญหาย
+        df = df.dropna(subset=['Price', 'Night'])
+        
+        # 2. อุดรูรั่วข้อมูลตัวเลข (ป้องกัน Linear Regression Error)
+        df['Night'] = df['Night'].fillna(1)
+        df['Adults'] = df['Adults'].fillna(2)
+        df['Children'] = df['Children'].fillna(0)
+        df['Infants'] = df['Infants'].fillna(0)
+        df['Extra Person'] = df['Extra Person'].fillna(0)
+        
         if not os.path.exists("thai_holidays.csv"):
              try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
              except: pass
@@ -232,7 +239,7 @@ def retrain_system():
         else: df['is_holiday'] = 0
 
         df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
-        df['total_guests'] = df[['Adults', 'Children', 'Infants', 'Extra Person']].fillna(0).sum(axis=1)
+        df['total_guests'] = df[['Adults', 'Children', 'Infants', 'Extra Person']].sum(axis=1)
         df['month'] = df['Date'].dt.month
         df['weekday'] = df['Date'].dt.weekday
         
@@ -245,6 +252,9 @@ def retrain_system():
         feature_cols = ['Night', 'total_guests', 'is_holiday', 'is_weekend', 'month', 'weekday', 'RoomType_encoded', 'Reservation_encoded']
         X = df[feature_cols]
         y = df['Price']
+        
+        # 3. Final Check: เติม 0 ใน X ถ้ายังมีอะไรว่าง
+        X = X.fillna(0)
         
         progress_bar.progress(40)
         status_text.text("🏋️‍♂️ Training new models...")
@@ -262,7 +272,7 @@ def retrain_system():
         col_mapping = {'Night': 'Night', 'total_guests': 'Guests', 'is_holiday': 'Is Holiday', 'is_weekend': 'Is Weekend', 'month': 'Month', 'weekday': 'Weekday', 'RoomType_encoded': 'Room Type', 'Reservation_encoded': 'Reservation'}
         new_importance = {col_mapping.get(col, col): float(val) for col, val in zip(feature_cols, fi_raw)}
 
-        # Linear Regression
+        # Linear Regression (จะไม่ Error แล้ว)
         lr_new = LinearRegression()
         lr_new.fit(X_train, y_train)
         pred_lr = lr_new.predict(X_test)
@@ -319,7 +329,7 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    df = load_data() # <--- ข้อมูลที่โหลดตรงนี้จะถูกกรอง Outlier ออกแล้ว
+    df = load_data() # <--- Load + Clean Outlier
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     if not os.path.exists("thai_holidays.csv"):
         try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
@@ -350,7 +360,6 @@ else:
         c1, c2 = st.columns([3, 2])
         with c1:
             st.markdown("**🏆 ยอดจองตามประเภทห้อง (Room Type)**")
-            # ไม่ต้อง check Target_Room_Type เพราะ load_data กรองมาให้แล้ว
             rc = df['Target_Room_Type'].value_counts().reset_index()
             rc.columns = ['Room', 'Count']
             st.plotly_chart(px.bar(rc, x='Count', y='Room', orientation='h', text='Count', color='Count', color_continuous_scale='Viridis'), use_container_width=True)
@@ -377,14 +386,15 @@ else:
     def show_manage_data_page():
         st.title("📥 จัดการข้อมูล & อัปเดตโมเดล")
         st.markdown("### 1. นำเข้าข้อมูล & ตรวจสอบความถูกต้อง")
-        st.info("ระบบจะตรวจสอบเลขห้องกับไฟล์ room_type.csv หากพบข้อมูลที่ไม่รู้จัก (Outlier) จะทำการแจ้งเตือนและลบทิ้งอัตโนมัติ")
+        st.info("ระบบจะตรวจสอบเลขห้องกับไฟล์ Master Data หากพบข้อมูล Outlier จะทำการลบทิ้งอัตโนมัติ")
         
         up_file = st.file_uploader("เลือกไฟล์ Booking CSV (เพื่อเพิ่มข้อมูล)", type=['csv'])
         if up_file is not None:
             if st.button("💾 บันทึกข้อมูลเข้าระบบ", type="primary"):
-                # ฟังก์ชันนี้จะแจ้งเตือน Outlier และ Save เฉพาะ Good Rows
                 if save_uploaded_data_with_cleaning(up_file):
-                    time.sleep(3) # ให้เวลาอ่านแจ้งเตือนนานหน่อย
+                    st.success("✅ บันทึกข้อมูลเรียบร้อย! ข้อมูลถูกบันทึกลงระบบแล้ว")
+                    st.balloons()
+                    time.sleep(5) # แจ้งเตือน 5 วินาที
                     st.rerun()
         
         st.divider()
@@ -398,8 +408,8 @@ else:
         if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="secondary"):
             success, count = retrain_system()
             if success:
-                st.success(f"🎉 โมเดลเรียนรู้ครบ {count:,} รายการ! (เฉพาะข้อมูลที่ถูกต้อง)")
-                time.sleep(2)
+                st.success(f"🎉 โมเดลเรียนรู้ครบ {count:,} รายการ! ระบบพร้อมใช้งานข้อมูลใหม่แล้ว")
+                time.sleep(5) # แจ้งเตือน 5 วินาที
                 st.rerun()
 
     def show_pricing_page():
@@ -443,11 +453,11 @@ else:
                     st.info("### 🏷️ Base Price")
                     st.metric("ราคาตั้งต้น", f"{base_price:,.0f} THB")
                 with c_xgb:
-                    st.success("### ⚡ XGBoost ")
+                    st.success("### ⚡ XGBoost") # ลบ (AI) ออก
                     st.metric("ราคาแนะนำ", f"{p_xgb:,.0f} THB", delta=f"{p_xgb - base_price:,.0f} THB")
                     st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']:.4f}")
                 with c_lr:
-                    st.warning("### 📉 Linear Regression")
+                    st.warning("### 📉 Linear Regression") # เปลี่ยนชื่อเต็ม
                     st.metric("ราคาประเมิน", f"{p_lr:,.0f} THB", delta=f"{p_lr - base_price:,.0f} THB")
                     st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']:.4f}")
 
