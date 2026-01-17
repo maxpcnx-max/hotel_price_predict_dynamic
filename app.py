@@ -170,14 +170,20 @@ def load_system_models():
 # C. Save Data Function
 def save_uploaded_data(uploaded_file):
     try:
+        # 👇 [สำคัญ] เพิ่มบรรทัดนี้ เพื่อสั่งรีเซ็ตหัวอ่านกลับไปจุดเริ่มต้น
+        uploaded_file.seek(0) 
+        
         new_data = pd.read_csv(uploaded_file)
+        
         if os.path.exists(DATA_FILE):
             current_df = pd.read_csv(DATA_FILE)
+            # ใช้ concat เพื่อต่อท้าย (ignore_index สำคัญมาก)
             updated_df = pd.concat([current_df, new_data], ignore_index=True)
         else:
             updated_df = new_data
+            
         updated_df.to_csv(DATA_FILE, index=False)
-        st.cache_data.clear()
+        st.cache_data.clear() # เคลียร์ Cache เพื่อให้ Dashboard อัปเดต
         return True
     except Exception as e:
         st.error(f"Save failed: {e}")
