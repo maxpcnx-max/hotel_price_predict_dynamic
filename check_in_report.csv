@@ -1,0 +1,1481 @@
+Reservation,Name,Date,Night,Room,Adults,Children,Infants,Extra Person,Price
+Direct Booking,"voron, Laure",1/7/2024,2,1,3,0,0,0,2584
+Direct Booking,"voron, Laure",1/7/2024,2,2,3,0,0,0,2584
+Direct Booking,"Nuha, Nuha",1/7/2024,3,4.2,1,0,0,0,4500
+Trip.com,"XIE, WENYAN",2/7/2024,2,5,5,0,0,2,2560
+Trip.com,"XIE, WENYAN",2/7/2024,2,6,5,0,0,2,2560
+Trip.com,"PAN, HAN",3/7/2024,3,1,2,0,0,0,4920
+Trip.com,"SHAN, YIFEI",3/7/2024,1,3,2,0,0,0,1389.6
+Direct Booking,"xu, yingqing",3/7/2024,3,7,1,0,0,0,3600
+Direct Booking,"Li, Yuan",3/7/2024,2,2,1,0,0,0,1813.33
+Trip.com,"XIONG, MENG",5/7/2024,1,3,2,0,0,0,1460.8
+Trip.com,"XU, DELONG",5/7/2024,1,5,2,0,0,0,1845.35
+Trip.com,"WANG, XIA",6/7/2024,1,3,2,0,0,0,1155
+Trip.com,"XU, DELONG",6/7/2024,1,5,2,0,0,0,1845.35
+Direct Booking,"huang, lixue",7/7/2024,4,3,2,1,2,1,7610
+Trip.com,"ZHANG, MIYU",7/7/2024,1,2,2,0,0,0,2040.85
+Expedia,"Golan, Uriel",7/7/2024,2,6,2,0,0,0,4632.02
+Booking.com,"phasourath, justine",8/7/2024,4,4.1,4,1,2,0,7877.57
+Booking.com,"phasourath, justine",8/7/2024,4,4.2,4,1,2,0,7877.57
+Booking.com,"phasourath, justine",8/7/2024,4,2,4,1,2,0,7877.57
+Direct Booking,"Nuha, Nuha",8/7/2024,2,1,1,0,0,0,3600
+Trip.com,"YIN, GUOSHENG",8/7/2024,1,5,2,0,0,0,759.85
+Booking.com,"Morozova, Ekaterina",9/7/2024,2,5,1,0,0,0,4481.98
+Direct Booking,"LEE, CHAELIN",10/7/2024,1,1,2,0,0,0,4000
+Booking.com,"TANINAI, TOMOKO",10/7/2024,3,6,2,0,0,0,4576.99
+Booking.com,"LEE, HEEJIK",11/7/2024,2,1,2,0,0,0,4315.86
+Booking.com,"Petecchi, Alessandra",12/7/2024,4,3,2,1,2,1,8461.56
+Booking.com,"liang, ling yun",12/7/2024,7,2,2,1,2,1,18993.8
+Booking.com,"Puangthong, Janchisa",13/7/2024,2,4.1,4,0,0,0,3904.56
+Booking.com,"Puangthong, Janchisa",13/7/2024,2,4.2,4,0,0,0,3904.56
+Expedia,"HAN, FEI",13/7/2024,1,1,2,0,0,0,1694.66
+Expedia,"Raskin, Derek",13/7/2024,1,5,2,0,0,0,19338
+Expedia,"CHENG, LUE",14/7/2024,1,6,2,0,0,0,2895
+Direct Booking,"Alcus, Mattew",14/7/2024,1,8,1,0,0,0,1067.48
+Direct Booking,"Raskin, Derk",14/7/2024,2,1,2,0,0,0,0
+Direct Booking,"Robert, Mullers",15/7/2024,2,6,2,0,0,0,6600
+Trip.com,"THAN, MAY SU",15/7/2024,1,7,2,0,0,1,902.11
+Booking.com,"Abbeloos, Daphnis",15/7/2024,3,4.1,1,0,0,0,7012.37
+Booking.com,"McGarty, Sarah",16/7/2024,4,5,1,1,2,0,6178.52
+Trip.com,"HE, ZHONGMIN",16/7/2024,4,1,2,0,0,0,6970
+Trip.com,"HUANG, HUI",17/7/2024,3,3,2,0,0,0,3465
+Trip.com,"Zeng, HaiXia",17/7/2024,2,4.1,5,0,0,0,3018.35
+Trip.com,"Zeng, HaiXia",17/7/2024,2,4.2,5,0,0,0,3018.35
+Direct Booking,"Dop, Dop",18/7/2024,2,8,1,0,0,0,3000
+Expedia,"Tobler, Gabriel",19/7/2024,1,4.1,1,0,0,0,2828.01
+Trip.com,"TANAKA, ASAHI",19/7/2024,2,7,2,0,0,1,2368
+Trip.com,"TANG, XINGBO",20/7/2024,4,4.1,5,0,0,0,5681.6
+Trip.com,"TANG, XINGBO",20/7/2024,4,4.2,5,0,0,0,5681.6
+Trip.com,"LIANG, DANLI",20/7/2024,3,8,2,0,0,1,3189.6
+Booking.com,"Plunkett, Anna",21/7/2024,6,2,2,0,0,0,10769.4
+Expedia,"Pan, Chiayun",21/7/2024,2,3,2,0,0,0,4634.22
+Expedia,"Tseng, Li hsueh",21/7/2024,2,5,2,0,0,0,4286.2
+Booking.com,"Scott, Alistair",21/7/2024,2,1,2,1,2,1,7144.48
+Direct Booking,Suphanida,21/7/2024,1,6,4,0,0,1,2000
+Direct Booking,Suphanida,21/7/2024,1,7,4,0,0,1,2000
+Trip.com,"Yip, Tsz Ching",22/7/2024,2,7,2,0,0,1,3104.2
+Direct Booking,"Lee, Khun",23/7/2024,4,1,2,0,0,0,10000
+Trip.com,"ZHOU, PEI",23/7/2024,3,3,2,0,0,0,5363.6
+Trip.com,"LIU, YANGLI",23/7/2024,3,5,2,0,0,0,5363.6
+Trip.com,"CAI, XIUFENG",24/7/2024,2,7,2,0,0,1,2123.3
+Booking.com,"Nair, Vinay",26/7/2024,3,5,4,0,0,0,4645.8
+Booking.com,"Nair, Vinay",26/7/2024,3,6,4,0,0,0,4645.8
+Trip.com,"ZHANG, JING",26/7/2024,2,4.1,4,0,0,0,2526
+Trip.com,"ZHANG, JING",26/7/2024,2,4.2,4,0,0,0,2526
+Trip.com,"Shuangqi, Bai",26/7/2024,2,3,2,0,0,0,3690.7
+Trip.com,"CAI, XIUFENG",26/7/2024,1,7,2,0,0,1,1384.65
+Trip.com,"ANANTASOMBOON, KORAKOD",27/7/2024,1,1,2,0,0,0,2040.85
+Trip.com,"ANANTASOMBOON, KORAKOD",27/7/2024,1,2,2,0,0,0,1552.1
+Trip.com,"ANNA, SOLOVYEVA",27/7/2024,2,7,2,0,0,1,2764.2
+Trip.com,"CHAM, KWONG FOR",28/7/2024,2,2,2,0,0,0,3115.2
+Booking.com,"Rzymski, Pawel",28/7/2024,3,1,2,1,2,1,8620.95
+Booking.com,"via vidal, Marta",28/7/2024,2,3,2,1,2,1,5510.84
+Trip.com,"Zhao, Mimi",28/7/2024,1,8,2,0,0,1,1303.2
+Booking.com,"Cantoni, Paola",29/7/2024,3,4.1,2,0,0,0,8249.97
+Trip.com,"ANNA, SOLOVYEVA",29/7/2024,1,7,2,0,0,1,1231.65
+Trip.com,"Zhao, Mimi",29/7/2024,2,4.2,2,0,0,0,3303.2
+Expedia,"LI, CHUNLING",30/7/2024,2,3,2,0,0,0,4286.2
+Expedia,"LI, CHUNLING",30/7/2024,2,5,2,0,0,0,4286.2
+Trip.com,"Zhou, ziyang",31/7/2024,1,1,4,0,0,0,2178.2
+Trip.com,"Zhou, ziyang",31/7/2024,1,2,4,0,0,0,2178.2
+Expedia,"FU, JIAYI",2/8/2024,4,1,2,0,0,0,10573.41
+Direct Booking,"SHI, HONG",2/8/2024,4,6,2,0,0,0,10036.61
+Trip.com,"XU, SHAOHONG",2/8/2024,1,4.1,2,0,0,0,2886.5
+Trip.com,"HUANG, TING",2/8/2024,4,5,2,0,0,0,6947.2
+Booking.com,"Stewart, Kathryn",2/8/2024,4,2,2,0,0,0,12249.64
+Trip.com,"YI, SHOUQIN",3/8/2024,1,7,4,0,0,2,1460.8
+Trip.com,"YI, SHOUQIN",3/8/2024,1,8,4,0,0,2,1460.8
+Trip.com,"YANG, YAN",4/8/2024,7,7,4,0,0,2,6994.4
+Trip.com,"YANG, YAN",4/8/2024,7,8,4,0,0,2,6994.4
+Trip.com,"YI, TINGTING",4/8/2024,4,3,2,0,0,0,6947.2
+Direct Booking,"Zhou, Zhou",5/8/2024,1,4.1,1,0,0,0,21000
+Booking.com,"jiang, wei",5/8/2024,6,4.2,1,0,0,0,27930.96
+Trip.com,"DORDEVIC, MARKO",6/8/2024,1,5,2,0,0,0,1280.89
+Trip.com,"ZHAO, HAOWEN",7/8/2024,3,6,2,0,0,0,6024
+Trip.com,"XU, YANGYANG",7/8/2024,2,1,2,0,0,0,3554.7
+Trip.com,"LEUNG, LAWRENCE YIUHON",7/8/2024,2,2,2,0,0,0,4144
+Booking.com,"Tang, Hongmei",8/8/2024,3,3,2,1,2,1,7098.27
+Trip.com,"ZHANG, LANDAN",9/8/2024,2,2,2,0,0,0,4267
+Trip.com,"YU, LINNA",9/8/2024,2,1,2,0,0,0,5142
+Trip.com,"LI, JIANGUO",9/8/2024,1,5,2,0,0,0,1085.5
+Expedia,"HONG, HYUN JUNG",10/8/2024,2,6,2,0,0,0,5098.22
+Trip.com,"HONG, HYUNJUNG",10/8/2024,2,5,2,0,0,0,3690.7
+Direct Booking,"Khun,Chuan",10/8/2024,2,4.1,2,0,0,0,1500
+Expedia,"ZHAO, NA",11/8/2024,4,1,2,0,0,0,9268.44
+Direct Booking,"Khun,Chuan",11/8/2024,2,2,2,0,0,0,1500
+Trip.com,"he, xin",11/8/2024,3,3,2,0,0,0,5210.4
+Trip.com,"CHEN, TZUYU",11/8/2024,2,7,2,0,0,1,2633.3
+Booking.com,"Ruangrit, Piyanute",11/8/2024,2,8,1,0,0,0,3586.12
+Trip.com,"ZHOU, RAN",12/8/2024,5,4.1,5,0,0,0,7102
+Trip.com,"ZHOU, RAN",12/8/2024,5,4.2,5,0,0,0,7102
+Trip.com,"ZHENG, XIAOZHEN",13/8/2024,1,6,2,0,0,0,2072
+Trip.com,"HARADA, MIDORI",13/8/2024,6,7,2,0,0,1,7899.9
+Trip.com,"YANG, XINXING",13/8/2024,2,8,2,0,0,1,2633.3
+Trip.com,"SUZUKI, FUMIO",14/8/2024,1,2,2,0,0,0,1480
+Trip.com,"ZHENG, XIAOZHEN",14/8/2024,1,6,2,0,0,0,2072
+Trip.com,"SUN, XIAOFENG",14/8/2024,3,5,2,0,0,0,5210.4
+B2B,"SUZUKI, TOMOKO",15/8/2024,1,2,2,0,0,0,2290
+Trip.com,"YANG, JIE",15/8/2024,1,8,2,0,0,1,1303.2
+Trip.com,"MIKHAYLENKO, DIANA",16/8/2024,1,2,2,0,0,0,2072
+Trip.com,"GONG, WENJING",17/8/2024,1,4.1,5,0,0,0,1509.18
+Trip.com,"GONG, WENJING",17/8/2024,1,4.2,5,0,0,0,1509.18
+Trip.com,"YANG, YUE",17/8/2024,4,8,2,0,0,1,4956.8
+Trip.com,"WU, MINTING",17/8/2024,2,3,2,0,0,0,3554.7
+Trip.com,"MIKHAYLENKO, DIANA",17/8/2024,1,2,2,0,0,0,2072
+B2B,"Chuepakdee, Mas",17/8/2024,1,1,4,0,0,0,2390
+B2B,"Chuepakdee, Mas",17/8/2024,1,6,4,0,0,0,2390
+Trip.com,"FONG, YUIHUNG",18/8/2024,4,4.1,4,0,0,0,9146
+Trip.com,"FONG, YUIHUNG",18/8/2024,4,4.2,4,0,0,0,9146
+Trip.com,"AN, AIHUI",18/8/2024,3,6,2,0,0,0,6216
+Trip.com,"MIKHAYLENKO, DIANA",18/8/2024,1,2,2,0,0,0,2072
+Trip.com,"ZHUANG, YING",19/8/2024,3,1,2,0,0,0,8160
+Trip.com,"WU, LISHA",19/8/2024,3,5,2,0,0,0,7336.05
+Trip.com,"LIU, LU",19/8/2024,3,3,2,0,0,0,5210.4
+Trip.com,"LIU, RUOCHEN",19/8/2024,1,2,2,0,0,0,2201.5
+Trip.com,"LU, JIANPING",20/8/2024,4,2,2,0,0,0,5212.8
+Trip.com,"YANG, CHAOJIE",20/8/2024,1,7,2,0,0,1,1303.2
+Trip.com,"LEE, SUMIN",21/8/2024,1,7,2,0,0,1,1303.2
+Booking.com,"CHEN, LAN-MEI (Gyata)",21/8/2024,3,6,1,0,0,0,8073.57
+Trip.com,"FAN, ZHIRONH",22/8/2024,2,4.1,5,0,0,0,2560
+Trip.com,"FAN, ZHIRONH",22/8/2024,2,4.2,5,0,0,0,2560
+Trip.com,"ZHANG, YU",22/8/2024,2,3,2,0,0,0,2640
+Trip.com,"ZHANG, YUNPENG",22/8/2024,2,7,2,0,0,0,2633.3
+Trip.com,"LIU, YING",22/8/2024,1,1,2,0,0,0,2560
+Trip.com,"LIU, YAXIA",22/8/2024,1,8,2,0,0,1,1303.2
+Trip.com,"CHU, SUZHEN",22/8/2024,1,5,2,0,0,0,1736.8
+Trip.com,"YEN, FEI CHUNG",23/8/2024,3,5,2,0,0,0,5536.05
+Trip.com,"TSANG, PUI KA",23/8/2024,3,8,2,0,0,1,3949.95
+Trip.com,"YIN, ZHEN",23/8/2024,3,1,2,0,0,0,9480
+Trip.com,"YE, YONGSHENG",24/8/2024,2,3,2,0,0,0,3554.7
+Trip.com,"GAO, YITING",24/8/2024,2,2,2,0,0,0,4516
+Trip.com,"CHU, SUZHEN",24/8/2024,1,7,2,0,0,0,1303.2
+Trip.com,"WU, DI",24/8/2024,1,6,2,0,0,0,2672
+Trip.com,"ZHANG, JUELIN",25/8/2024,5,7,2,0,0,0,6516
+Trip.com,"XU, FEIFEI",25/8/2024,4,6,2,0,0,0,8534
+Direct Booking,"Maki, Maki",25/8/2024,7,4.2,1,0,0,0,0
+Trip.com,"LEE, Seul",26/8/2024,4,5,2,0,0,0,6947.2
+Trip.com,"SHI, RUXIN",26/8/2024,5,1,2,0,0,0,12800
+Direct Booking,"don, don",26/8/2024,1,4.1,2,0,0,0,2262
+Trip.com,"liu, pumin",26/8/2024,1,2,2,0,0,0,2072
+Trip.com,"WANG, BAITONG",27/8/2024,2,4.1,2,0,0,0,4268
+Trip.com,"YANG, SHUCHUN",28/8/2024,2,3,2,0,0,0,3345.6
+Trip.com,"WANG, XU",28/8/2024,2,2,2,0,0,0,4016
+Trip.com,"ZHANG, RUI",28/8/2024,1,8,2,0,0,1,1303.2
+Trip.com,"GUHA, SANJAY",29/8/2024,3,4.1,2,0,0,0,6859.5
+Direct Booking,"Haru, Haru",29/8/2024,4,6,2,0,0,0,9300
+Trip.com,"LU, PENG",29/8/2024,1,8,2,0,0,1,1303.2
+Trip.com,"Lee, Jaewook",30/8/2024,6,2,2,0,0,0,12432
+Direct Booking,"Rui, Rui",30/8/2024,1,7,1,0,0,0,1200
+Trip.com,"WANG, DAN",30/8/2024,1,3,2,0,0,0,1736.8
+Trip.com,"LIN, CHIAHUI",31/8/2024,4,3,2,0,0,0,7381.4
+Expedia,"Dowling, Bryce",31/8/2024,4,5,2,0,0,0,15094.76
+Trip.com,"YANG, ZIYI",31/8/2024,3,7,2,0,0,1,3909.6
+Trip.com,"MATTANTIPON, THONGCHAI",31/8/2024,1,8,2,0,0,1,1303.2
+Direct Booking,"Wang, Wang",31/8/2024,1,1,2,0,0,0,2490
+Trip.com,"ZHU, QIUYU",2/9/2024,2,4.1,2,0,0,0,4573
+Trip.com,"RONG, CHUNQIN",3/9/2024,1,7,4,0,0,2,1303.2
+Trip.com,"RONG, CHUNQIN",3/9/2024,1,8,4,0,0,2,1303.2
+Trip.com,"HOU, TAK KEUNG",4/9/2024,5,7,2,0,0,1,6196
+Trip.com,"ZHANG, YIFAN",6/9/2024,3,3,2,0,0,0,5210.4
+Trip.com,"ZHANG, YUXIN",6/9/2024,3,4.1,2,0,0,0,5210.4
+Trip.com,"ZHANG, YUEYANG",8/9/2024,5,8,2,0,0,1,6516
+Trip.com,"LIU, YUE",9/9/2024,2,7,2,0,0,1,2769.3
+Trip.com,"ZHANG, XIADONG",9/9/2024,1,3,2,0,0,0,1125
+Trip.com,"YIN, DAWEI",9/9/2024,1,2,2,0,0,0,1650
+Trip.com,"YIN, DAWEI",9/9/2024,1,5,2,0,0,0,1425
+Booking.com,"Han, Xu",11/9/2024,4,3,2,0,0,0,16303.68
+Trip.com,"WANG, YUZHEN",11/9/2024,3,2,8,0,0,0,6216
+Trip.com,"WANG, YUZHEN",11/9/2024,3,6,8,0,0,0,6216
+Trip.com,"WANG, YUZHEN",11/9/2024,3,4.1,8,0,0,0,6216
+Trip.com,"WANG, YUZHEN",11/9/2024,3,4.2,8,0,0,0,6216
+Trip.com,"ARUNDALE, KATIE",12/9/2024,2,7,2,0,0,1,2478.4
+Trip.com,"ORTIZ, ANGELA TONETTE",12/9/2024,1,5,2,0,0,0,1736.8
+Expedia,"Dominici, Derek M.",12/9/2024,1,1,2,0,0,0,4394.5
+Trip.com,"XU, SHENGNAN",13/9/2024,4,1,2,0,0,0,12800
+Trip.com,"SHI, MENGRAN",14/9/2024,3,5,2,0,0,0,5210.4
+Trip.com,"LIAO, JIAZHOU",14/9/2024,1,7,2,0,0,1,1384.65
+Trip.com,"WANG, YI",14/9/2024,1,8,2,0,0,1,1384.65
+Trip.com,"WANG, CHENYANG",15/9/2024,2,7,2,0,0,1,2606.4
+Trip.com,"LI, XIAN",15/9/2024,1,4.1,2,0,0,0,2152
+Trip.com,"MUNGKERD, NISACHON",15/9/2024,2,2,2,0,0,0,3520
+Trip.com,"FU, Ying wa Cara Florence",15/9/2024,1,6,2,0,0,0,1592
+Trip.com,"KHERA, RIMA",15/9/2024,5,3,2,0,0,0,6760
+Trip.com,"KWOK, POYEE",16/9/2024,2,4.1,2,0,0,0,4573
+Trip.com,"ZHANG, YAFEN",17/9/2024,1,7,2,0,0,1,975
+Trip.com,"OU, SHAOYANG",17/9/2024,2,5,2,0,0,0,2704
+Trip.com,"CHEN, KAIJIE",17/9/2024,2,1,2,0,0,0,3184
+Trip.com,"SUN, YANSHAN",18/9/2024,4,7,4,0,0,2,5212.8
+Trip.com,"SUN, YANSHAN",18/9/2024,4,8,4,0,0,2,5212.8
+Trip.com,"WU, HUI LAN",19/9/2024,2,1,2,0,0,0,3504
+Trip.com,"LIM, XIU YUE STELLA",19/9/2024,1,5,2,0,0,0,1352
+Trip.com,"Walsh, Jonathan",20/9/2024,2,5,2,0,0,0,2704
+Trip.com,"WEI, JINGTIAN",20/9/2024,3,6,2,0,0,0,5074.5
+Trip.com,"CHEN, MEIXIAN",20/9/2024,1,4.1,2,0,0,0,1592
+Trip.com,"GUO, WEI",20/9/2024,4,2,2,0,0,0,6368
+Trip.com,"NOINUAL, PHORNCHANIT",21/9/2024,1,3,2,0,0,0,1352
+Trip.com,"SHEN, ZUOMEI",21/9/2024,1,4.1,2,0,0,0,1691.5
+Trip.com,"HU, JIANHONG",21/9/2024,1,1,2,0,0,0,1752
+Trip.com,"OYAMA, TOMOMI",22/9/2024,2,7,2,0,0,1,2606.4
+Trip.com,"OTOOLE, SHARON",22/9/2024,2,3,2,0,0,0,3345.6
+Direct Booking,"HU, JIANHONG",22/9/2024,1,1,2,0,0,0,2000
+Trip.com,"ZHOU, YUEYING",22/9/2024,1,5,2,0,0,0,1352
+Trip.com,"ZHANG, KAI",23/9/2024,3,1,2,0,0,0,5256
+Direct Booking,"HU, JIANHONG",23/9/2024,1,5,2,0,0,0,1350
+Trip.com,"PUAKDONKENG, SASIPON",23/9/2024,2,4.1,2,0,0,0,3184
+Trip.com,"ZHOU, YUEYING",23/9/2024,1,4.2,2,0,0,0,1592
+Direct Booking,"WEI, JINGTIAN",23/9/2024,1,6,2,0,0,0,1800
+Direct Booking,"Sifan, Fu",24/9/2024,1,7,2,0,0,0,1200
+Trip.com,"YUAN, ZHENNAN",25/9/2024,1,2,2,0,0,0,1192
+Trip.com,"YING, HUALING",26/9/2024,4,7,4,0,0,2,5212.8
+Trip.com,"YING, HUALING",26/9/2024,4,8,4,0,0,2,5212.8
+Trip.com,"TAN, WU PIN",26/9/2024,1,3,2,0,0,0,1425
+Trip.com,"LIU, SHANSHAN",26/9/2024,2,5,2,0,0,0,2704
+Trip.com,"ZHANG, XIAOTING",26/9/2024,2,1,2,0,0,0,3504
+Trip.com,"ZHANG, KAI",26/9/2024,2,2,2,0,0,0,3184
+Trip.com,"TAN, WU PIN",27/9/2024,1,3,2,0,0,0,1425
+Trip.com,"Mai, Qianyi",28/9/2024,5,2,8,0,0,0,10668
+Trip.com,"Mai, Qianyi",28/9/2024,5,6,8,0,0,0,10668
+Trip.com,"Mai, Qianyi",28/9/2024,5,3,8,0,0,0,10668
+Trip.com,"Mai, Qianyi",28/9/2024,5,4.1,8,0,0,0,10668
+Trip.com,"BAI, XUE",28/9/2024,4,1,2,0,0,0,9640
+Trip.com,"ZHANG, KAI",28/9/2024,1,4.2,2,0,0,0,1736.8
+Trip.com,"WANG, YINGYING",29/9/2024,3,5,2,0,0,0,5210.4
+Trip.com,"LI, SHUYING",30/9/2024,2,7,2,0,0,1,2606.4
+Trip.com,"GUO, JINXIN",30/9/2024 ,2,8,2,0,0,1,2606.4
+Trip.com,"CHEN, YUXIN",1/10/2024,5,4.2,2,0,0,0,10760
+Trip.com,"SHI, XIAN",2/10/2024,1,5,2,0,0,0,1736.8
+Trip.com,"SHI, XIAN",2/10/2024,1,1,2,0,0,0,2560
+Trip.com,"HUANG, SIYI",2/10/2024,1,7,2,0,0,1,1303.2
+Trip.com,"DENG, LIXIA",3/10/2024,2,3,2,0,0,0,3473.6
+Trip.com,"NI, WEIWEI",3/10/2024,2,7,2,0,0,1,2769.3
+Trip.com,"WAN, JINSHAN",3/10/2024,2,8,2,0,0,1,2769.3
+Trip.com,"GUO, HAOHAO",3/10/2024,2,5,2,0,0,0,3690.7
+Trip.com,"BAI, ZHIGUO",3/10/2024,5,1,2,0,0,0,12800
+Trip.com,"XU, WEIHONG",3/10/2024,1,4.1,2,0,0,0,2072
+Trip.com,"WANG, SIYUAN",3/10/2024,2,2,2,0,0,0,4403
+Trip.com,"YUAN, SISI",4/10/2024,3,6,2,0,0,0,6216
+Trip.com,"SHAO, FEI",5/10/2024,1,7,2,0,0,1,1303.2
+Trip.com,"WANG, XIAOHAN",5/10/2024,3,3,2,0,0,0,5210.4
+Trip.com,"ZHENG, SISI",5/10/2024,2,8,2,0,0,1,2769.3
+Trip.com,"SUB, SAIYU",5/10/2024,3,2,2,0,0,0,6604.5
+Direct Booking,"RAYMOND, ANTHONY",5/10/2024,1,4.1,1,0,0,0,2800
+Trip.com,"SHAO, FEI",6/10/2024,1,7,2,0,0,1,1303.2
+Direct Booking,"Danai, Danai",6/10/2024,1,4.1,1,0,0,0,2200
+Direct Booking,"Raymon, Anthony",6/10/2024,1,4.2,1,1,2,0,2200
+Trip.com,"XU, HAIYING",7/10/2024,2,4.1,2,0,0,0,4304
+Trip.com,"Xu, Ke",7/10/2024,1,5,2,0,0,0,1736.8
+Trip.com,"WU, SHUFANG",7/10/2024,3,8,2,0,0,1,4153.95
+Trip.com,"ZHAO, JING",7/10/2024,2,7,2,0,0,1,2769.3
+Direct Booking,"Raymond, Antony",7/10/2024,1,6,4,0,0,0,2200
+Direct Booking,"Raymond, Antony",7/10/2024,1,4.2,4,0,0,0,2200
+Trip.com,"XU, JINQUAN",8/10/2024,2,3,2,0,0,0,3690.7
+Trip.com,"Wang, Lihua",8/10/2024,5,1,2,0,0,0,12800
+Direct Booking,"Baumer, Roman",8/10/2024,2,,0,0,0,0,5000
+Direct Booking,"Baumer, Roman",8/10/2024,2,,2,0,0,0,4000
+Trip.com,"KUO, CHINGHUI",9/10/2024,3,2,2,0,0,0,6216
+Trip.com,"LI, XINGZHEN",9/10/2024,2,7,2,0,0,1,2769.3
+Trip.com,"HAO, KAINING",9/10/2024,1,5,2,0,0,0,1736.8
+Trip.com,"LEE, BYOUNG NIM",10/10/2024,1,3,2,0,0,0,1736.8
+Trip.com,"TYMOSHENKO, OLGA",10/10/2024,1,8,2,0,0,1,1303.2
+Trip.com,"HILLEARY, MARK WILLIAM",10/10/2024,2,5,2,0,0,0,3473.6
+Direct Booking,"Baumer, Baumer",10/10/2024,1,,2,0,0,0,4000
+Trip.com,"TYMOSHENKO, OLGA",11/10/2024,5,6,2,0,0,0,9712.5
+Trip.com,"LEE, BYOUNG NIM",11/10/2024,4,3,2,0,0,0,6947.2
+Trip.com,"Cheng, Liang",12/10/2024,3,4.1,2,0,0,0,6859.5
+Trip.com,"SUN, WEI",12/10/2024,3,4.2,2,0,0,0,6859.5
+Trip.com,"TOOKAMMEE, JURAWAN",12/10/2024,1,7,2,0,0,1,1303.2
+Trip.com,"KIM, JAEBONG",12/10/2024,2,2,2,0,0,0,4144
+Trip.com,"GAO, NENG",12/10/2024,1,5,2,0,0,0,1352
+Trip.com,"GONG, LAN",13/10/2024,2,1,2,0,0,0,5120
+Trip.com,"LIU, XUE",15/10/2024,4,7,2,0,0,1,5212.8
+Trip.com,"JANG, HANSEUL",15/10/2024,1,8,2,0,0,1,1303.2
+Trip.com,"SAUGRIN, SYLVIANE BERNADETTE",16/10/2024,1,4.1,2,0,0,0,2286.5
+Trip.com,"Mo, Yan",16/10/2024,1,4.2,2,0,0,0,1352
+Trip.com,"ZHANG, HONGZHENG",16/10/2024,1,1,2,0,0,0,2000
+Direct Booking,"Luk, Siu Shan",17/10/2024,4,5,2,0,0,0,5680
+Trip.com,"YU, HAOJIE",17/10/2024,2,4.2,2,0,0,0,3024
+Trip.com,"ZHANG, HONGZHENG",17/10/2024,1,1,2,0,0,0,2000
+Direct Booking,"SAUGRIN, SYLVIANE BERNADETTE",17/10/2024,3,2,2,0,0,0,4953
+Trip.com,"ZHANG, HONGZHENG",18/10/2024,1,1,2,0,0,0,2000
+Trip.com,"YANG, JAEHO",19/10/2024,1,7,2,0,0,1,1303.2
+Trip.com,"ZHANG, HONGZHENG",19/10/2024,1,4.2,2,0,0,0,1512
+Trip.com,"CHEN, WEI",20/10/2024,2,1,2,0,0,0,5120
+Direct Booking,"Maki, Maki",21/10/2024,31,9,1,0,0,0,31500
+Trip.com,"YANG, JIE",21/10/2024,2,3,2,0,0,0,2704
+Direct Booking,"Ratanakamnerd, Chakkrit",22/10/2024,1,1,2,0,0,0,3600
+Trip.com,"cha, suyeon",22/10/2024,3,5,2,0,0,0,5210.4
+Direct Booking,"wei, Chen",22/10/2024,3,2,1,0,0,0,5400
+Trip.com,"CHU, TINGHSUAN",23/10/2024,1,7,2,0,0,0,6583.25
+Trip.com,"LING, LE",23/10/2024,1,3,2,0,0,0,1436.5
+Trip.com,"YANG, JIE",23/10/2024,2,6,2,0,0,0,3024
+Direct Booking,"HUAN, YANG",23/10/2024,1,4.1,1,0,0,0,2000
+Trip.com,"LI, JIN",24/10/2024,1,4.1,2,0,0,0,1606.5
+Direct Booking,"CHU, TINGHSUAN",24/10/2024,3,10,2,0,0,0,2700
+Trip.com,"PAN, LIPING",25/10/2024,1,7,2,0,0,1,1303.2
+Trip.com,"LIU, QIQIAO",25/10/2024,1,3,4,0,0,0,1437
+Trip.com,"LIU, QIQIAO",25/10/2024,1,5,4,0,0,0,1437
+Direct Booking,"wei, Chen",25/10/2024,1,2,2,0,0,0,1200
+Direct Booking,"Borgford-parnell, Donna",25/10/2024,2,11,2,0,0,0,6600
+Direct Booking,"Thewan,Weerakul",25/10/2024,2,6,1,0,0,0,3500
+Trip.com,"FAKKOH, JEERAPA",25/10/2024,1,8,2,0,0,1,1112
+Direct Booking,"Al Garzae, Mohamed",25/10/2024,1,1,2,0,0,0,3099.83
+Trip.com,"PAN, LIPING",26/10/2024,2,5,2,0,0,0,3473.6
+Booking.com,"Chen, Chang cyuan",26/10/2024,4,3,2,0,0,0,10755.92
+Trip.com,"WONG, CHI MING KARY",27/10/2024,3,8,2,0,0,1,3717.6
+Trip.com,"HUANG, WEI",27/10/2024,1,2,2,0,0,0,2072
+Trip.com,"Xu, Shanshan",27/10/2024,3,6,2,0,0,0,6336
+Trip.com,"LIU, YING",27/10/2024,1,10,2,0,0,0,2201.5
+Trip.com,"LIU, YING",27/10/2024,1,11,2,0,0,0,2286.5
+Direct Booking,"Thewan,Weerakul",27/10/2024,2,7,1,0,0,0,2700
+Trip.com,"LIU, ZHI",28/10/2024,1,2,2,0,0,0,1606.5
+Trip.com,"LIU, LI",28/10/2024,1,1,2,0,0,0,2125
+Trip.com,"PAN, LIPING",28/10/2024,1,5,2,0,0,0,1352
+Booking.com,"HriberÂÂ­ek, Ingrid",28/10/2024,2,10,2,1,2,1,5740.42
+Trip.com,"Kim, Donghyun",29/10/2024,2,7,2,0,0,1,2606.4
+Trip.com,"WYMER, TOBIAS ALAN",29/10/2024,5,4.2,2,0,0,0,11256
+Trip.com,"HU, JIACHENG",29/10/2024,2,5,2,0,0,0,2873
+Direct Booking,"Thewan,Weerakul",29/10/2024,2,2,1,0,0,0,3500
+Trip.com,"MEI, WANG",30/10/2024,3,3,2,0,0,0,4376
+Trip.com,"WU, YUN",30/10/2024,4,8,2,0,0,1,5744
+Trip.com,"LIANG, Zhichao",30/10/2024,1,6,2,0,0,0,1408.05
+Trip.com,Prawat,31/10/2024,2,6,2,0,0,0,3712
+Trip.com,"JIANG, YEQING",31/10/2024,1,7,2,0,0,1,1275
+Trip.com,"YANG, JIE",31/10/2024,1,5,2,0,0,0,1259.05
+Trip.com,"LU, XIAOJUN",1/11/2024,4,4.1,2,0,0,0,9600
+Trip.com,"XU, XIAOYI",1/11/2024,4,2,2,0,0,0,10200
+Trip.com,"CHEN, HUITZE",1/11/2024,2,1,2,0,0,0,4864
+Booking.com,"Sistek, Michael",1/11/2024,2,5,1,0,0,0,5123.62
+Trip.com,"WANG, YI JU",2/11/2024,2,6,2,0,0,0,4800
+Trip.com,"YUAN, SIYAN",2/11/2024,1,7,2,0,0,1,1520
+Booking.com,"Arous, Charif",2/11/2024,1,3,2,0,0,0,1832.51
+Trip.com,"WU, TIANSHU",3/11/2024,1,8,2,0,0,1,1784.15
+Trip.com,"WANG, LEI",3/11/2024,6,3,2,0,0,0,13420.8
+Trip.com,"CHIEN, CHUNHO",3/11/2024,6,5,2,0,0,0,10659
+Trip.com,"JIANG, LILY",3/11/2024,10,4.2,2,0,0,0,21120
+Trip.com,"GUO, QIANG",3/11/2024,2,11,2,0,0,0,5200
+Booking.com,"Sistek, Michael",3/11/2024,1,7,1,0,0,0,1578.24
+Direct Booking,"Cherif, Arous",3/11/2024,1,1,1,0,0,0,3000
+Expedia,"Keagan, Donald",4/11/2024,2,1,2,0,0,0,8690
+Trip.com,"AI, XIN",4/11/2024,1,6,2,0,0,0,4290
+Booking.com,"Oneill, Louise",4/11/2024,1,7,2,0,0,0,2400
+Trip.com,"JIANG, LONGMEI",5/11/2024,1,4.1,2,0,0,0,2458.5
+Trip.com,"WU, KUN",5/11/2024,3,6,2,0,0,0,6258
+Trip.com,"ZHU, RUZHUO",6/11/2024,1,4.1,2,0,0,0,2400
+Booking.com,"Poe, Kerri",6/11/2024,3,2,2,0,0,0,10096.2
+Trip.com,"WANG, SHUHAN",6/11/2024,1,7,2,0,0,1,925
+Booking.com,"Smolorz, Sabine",7/11/2024,4,1,2,0,0,0,11343.04
+Trip.com,"TIAN, RUIFEI",7/11/2024,1,4.1,2,0,0,0,2260
+Trip.com,"SPERBER, HERBERT MATTHEW",7/11/2024,1,7,2,0,0,1,1430.4
+Trip.com,"DUAN, JINGDE",8/11/2024,2,7,4,0,0,2,3568.3
+Trip.com,"DUAN, JINGDE",8/11/2024,2,8,4,0,0,2,3568.3
+Trip.com,"KWOK, SIN TING",8/11/2024,3,6,2,0,0,0,5976
+Expedia,"Sugrue, Denis",8/11/2024,4,11,2,0,0,0,16758.72
+Trip.com,"BEIBEI, ZHANG",8/11/2024,2,4.1,2,0,0,0,4335
+Trip.com,"CHANG, ZHENG",8/11/2024,4,10,2,0,0,0,8344
+Expedia,"Miller, Timothy",9/11/2024,3,2,2,0,0,0,22011.6
+Direct Booking,"girard, girard",9/11/2024,2,5,2,0,0,0,3400
+Trip.com,"LI, ZHUO LING",9/11/2024,1,3,2,0,0,0,1665
+Trip.com,"Bunter, Paul Andre",10/11/2024,2,3,2,0,0,0,4000
+Expedia,"chan gweon, Ji",10/11/2024,4,4.1,2,0,0,0,15390
+Trip.com,"LEE, CHAN YOUNG",10/11/2024,1,7,2,0,0,1,1440
+Trip.com,"SHI, LIPING",10/11/2024,2,8,2,0,0,1,3052.8
+Trip.com,"HE, SHAN",11/11/2024,1,7,2,0,0,1,1378.25
+Trip.com,"WANG, ZONGPING",11/11/2024,2,5,2,0,0,0,3529.8
+Direct Booking,"Girad, Girad",11/11/2024,2,1,2,0,0,0,5000
+Booking.com,"Jones, Rada",12/11/2024,14,3,2,0,0,0,46471.83
+Trip.com,"CHEN, LIANG",12/11/2024,2,7,2,0,0,1,3040
+Trip.com,"WU, DI",12/11/2024,2,2,4,0,0,0,3816
+Trip.com,"WU, DI",12/11/2024,2,6,4,0,0,0,3816
+Trip.com,"TEO, CHUN SIONG",12/11/2024,2,11,2,0,0,0,5119.8
+Trip.com,"ZHOU, JIEWEN",12/11/2024,1,8,2,0,0,1,1440
+Direct Booking,"Hacker, Marcelo",13/11/2024,4,1,2,0,0,0,28476
+Trip.com,"Gadelha, Valeska",13/11/2024,4,8,2,0,0,1,8879.2
+Booking.com,"Quelle, Natasha",13/11/2024,3,5,1,0,0,0,18907.74
+Trip.com,"CAI, DONGYUAN",13/11/2024,2,4.2,2,0,0,0,4880
+Trip.com,"FUJIMOTO, TETSUYA",14/11/2024,2,2,2,0,0,0,4420
+Trip.com,"LI, NA",14/11/2024,1,7,2,0,0,1,2400
+Trip.com,"AYTAC TOPATAN, EKIN",14/11/2024,1,11,2,0,0,0,3000
+Trip.com,"WU, DI",14/11/2024,1,10,2,0,0,0,2226
+Expedia,"TANG, XIAOLAN",14/11/2024,1,4.1,2,0,0,0,2700
+Direct Booking,"Gall, Brett",14/11/2024,2,6,2,0,0,0,14238
+Trip.com,"DENG, HUIRU",15/11/2024,2,4.1,5,0,0,0,3400
+Trip.com,"DENG, HUIRU",15/11/2024,2,4.2,5,0,0,0,3400
+Trip.com,"LI, NA",15/11/2024,1,7,2,0,0,1,2400
+Booking.com,"Aguiar, Isabella",15/11/2024,4,11,2,0,0,0,34788.1
+Booking.com,"Bulut, Samet Sevket",15/11/2024,6,10,2,0,0,0,42412.5
+Trip.com,"CHEN, YU",16/11/2024,2,7,2,0,0,1,3230.4
+Trip.com,"CHEN, YU",16/11/2024,2,5,2,0,0,0,4345.6
+Trip.com,"XIE, XUE FEI",16/11/2024,2,2,4,0,0,0,4672
+Trip.com,"XIE, XUE FEI",16/11/2024,2,6,4,0,0,0,4672
+Trip.com,"GUO, JIAXINWANG",17/11/2024,3,8,2,0,0,1,5037.6
+Trip.com,"Song, Wenwen",17/11/2024,2,1,2,0,0,0,4499.8
+Booking.com,"Filkorn, Thomas",17/11/2024,4,4.2,2,0,0,0,11101.72
+Trip.com,"TOYOSATO, MAMIKO",17/11/2024,1,4.1,2,0,0,0,1996.6
+Trip.com,"JIN, BIYAO",18/11/2024,2,2,2,0,0,0,4800
+Trip.com,"LIAO, WANMING",18/11/2024,2,7,2,0,0,1,3816
+Booking.com,"Soria, Natalia",19/11/2024,2,5,2,0,0,0,6347.76
+Trip.com,"CHENG, FENGLAN",19/11/2024,4,1,2,0,0,0,11590.4
+Expedia,"fang, yiqi",19/11/2024,2,6,2,0,0,0,16200
+Trip.com,"LOFTUS, JOHN HOWARD",19/11/2024,1,4.1,2,0,0,0,2458.5
+Trip.com,"QIN, YUGE",20/11/2024,1,7,2,0,0,1,1784.15
+Booking.com,"Loftus, John",20/11/2024,4,4.1,1,0,0,0,11059.2
+Expedia,"jing, wen",20/11/2024,4,8,1,0,0,0,10800
+Trip.com,"HUANG, JINGJING",20/11/2024,1,11,2,0,0,0,9595.6
+Booking.com,"NABETH, herve",20/11/2024,2,2,2,0,0,0,6773.12
+Expedia,"Chaisri, Renu",21/11/2024,1,6,2,0,0,0,3240
+Direct Booking,"Miller, Alex",21/11/2024,4,10,2,0,0,0,8124.28
+Booking.com,"Dijkman, Yu Lian",21/11/2024,1,9,2,0,0,0,4896
+Trip.com,"HU, XIAOCHUN",21/11/2024,1,5,2,0,0,0,2235
+Direct Booking,"HUANG, JINGJING",21/11/2024,3,11,2,0,0,0,0
+Direct Booking,"HU, XIAOCHUN",21/11/2024,1,4.2,1,0,0,0,2500
+Trip.com,"ZOU, JUN",22/11/2024,2,9,2,0,0,0,4230
+Trip.com,"CHEN, JINGWEN",22/11/2024,2,2,2,0,0,0,5247
+Trip.com,"XU, JIANLI",22/11/2024,3,5,2,0,0,0,5783.61
+Trip.com,"CHEN, XIAODAN",22/11/2024,2,4.2,2,0,0,0,4491.74
+Trip.com,"li, yunping",22/11/2024,1,7,2,0,0,1,1430.4
+Trip.com,"Pang, Chaoming",22/11/2024,1,6,2,0,0,0,2458.5
+Trip.com,"ZHOU, HAO",23/11/2024,5,1,2,0,0,0,15393.5
+Trip.com,"JIN, CHAOWEI",23/11/2024,1,,2,0,0,0,2458.5
+Trip.com,"SAKNURAK, PONGPAN",23/11/2024,1,7,2,0,0,1,1430.4
+Direct Booking,"Ruetsche, Valerie",23/11/2024,1,6,2,0,0,0,0
+Trip.com,"SONG, MINGXUAN",24/11/2024,2,8,2,0,0,1,3358.4
+Trip.com,"ZHOU, HAO",24/11/2024,4,2,2,0,0,0,10200
+Expedia,"Liu, Mei-Chun",24/11/2024,3,4.2,2,0,0,0,10395
+Trip.com,"HUANG, JINGJING",24/11/2024,1,6,2,0,0,0,1996.6
+Trip.com,"JIN, CHAOWEI",24/11/2024,1,4.1,2,0,0,0,2458.5
+Trip.com,"CHEN, YAN",24/11/2024,2,7,2,0,0,1,2860.8
+Direct Booking,"Ruetsche, Valerie",24/11/2024,3,,2,0,0,0,28476
+Trip.com,"CHEN, ZHI KUN",24/11/2024,1,9,2,0,0,0,1806.62
+Trip.com,"FREY, ARIEL",25/11/2024,3,6,2,0,0,0,7200
+Trip.com,"FREY, ARIEL",25/11/2024,3,4.1,2,0,0,0,7200
+Trip.com,"Dong, Xingwang",25/11/2024,2,5,2,0,0,0,3529.8
+Trip.com,"CAI, YUN",25/11/2024,2,9,2,0,0,0,4770
+Direct Booking,"chun, mei chun",25/11/2024,2,10,0,0,0,0,6000
+Booking.com,"Daubenfeld, Fabienne",26/11/2024,5,3,2,0,0,0,12954.9
+Trip.com,"FU, YUEHUA",26/11/2024,1,8,2,0,0,1,1430.4
+Trip.com,"LIU, WEI",26/11/2024,3,7,2,0,0,1,4320
+Trip.com,"OMA, DARIN",27/11/2024,2,8,2,0,0,1,2864
+Trip.com,"HE, ZHUOQIAN",27/11/2024,3,9,2,0,0,0,5604.75
+Trip.com,"FENG, HAIYING",27/11/2024,3,10,2,0,0,0,6258
+Booking.com,"Bidiuk, Maksym",27/11/2024,1,4.2,2,0,0,0,3898.8
+Trip.com,"YANG, SUYEON",27/11/2024,2,5,2,0,0,0,4500
+Trip.com,"LIM, MISOOK",28/11/2024,4,4.1,4,0,0,0,9600
+Trip.com,"LIM, MISOOK",28/11/2024,4,4.2,4,0,0,0,9600
+Booking.com,"Guzowski, Kayne",28/11/2024,3,1,2,0,0,0,11082.63
+Trip.com,"GONG, YIQIN",28/11/2024,3,11,2,0,0,0,7679.7
+Trip.com,"YE, XUJIAN",28/11/2024,1,2,2,0,0,0,2458.5
+Trip.com,"ROBSON, STEPHEN JAMES",29/11/2024,3,5,2,0,0,0,5640
+Trip.com,"LI, YING",29/11/2024,1,2,2,0,0,0,2130.6
+Trip.com,"CHEN, MINET",29/11/2024,3,6,2,0,0,0,6391.8
+Trip.com,"ZENG, GUIRONG",29/11/2024,1,7,2,0,0,1,1430.4
+Trip.com,"YE, XUJIAN",29/11/2024,1,8,2,0,0,1,1430.4
+Trip.com,"SUN, MIAO",30/11/2024,3,7,2,0,0,1,5457
+Trip.com,"ZHOU, TING",30/11/2024,2,9,2,0,0,0,3736.5
+Trip.com,"LIN, YITING",30/11/2024,2,8,2,0,0,1,3211.8
+Trip.com,"WU, HONG",30/11/2024,2,2,2,0,0,0,4485
+Trip.com,"Seaman, Tracey",30/11/2024,3,10,2,0,0,0,6795
+Trip.com,"HOU, FENG",1/12/2024,1,3,2,0,0,0,1764.9
+Booking.com,"Patel, Aishwarya",1/12/2024,4,1,2,0,0,0,14423.04
+Booking.com,"Atkin, John",2/12/2024,1,11,2,0,0,0,3694.21
+Trip.com,"LIU, SILING",2/12/2024,2,6,2,0,0,0,4261.2
+Trip.com,"WU, HONG",2/12/2024,1,2,2,0,0,0,2010
+Trip.com,"LOFTUS, JOHN HOWARD",2/12/2024,1,8,2,0,0,1,1430.4
+Trip.com,"TANG, TZUYA",2/12/2024,2,9,2,0,0,0,3552
+Trip.com,"WANG, XIAOYU",2/12/2024,2,3,2,0,0,0,3307.8
+Trip.com,"HUANG, SITING",2/12/2024,2,4,2,0,0,0,3993.2
+Booking.com,"Rghioui, Hanyfa",2/12/2024,1,4,1,0,0,0,2570.4
+Trip.com,"PAN, JIAXIN",2/12/2024,1,5,2,0,0,0,1653.9
+Trip.com,"Keith, Kristin",3/12/2024,3,11,2,0,0,0,7931.25
+Trip.com,"FENG, JINGXIN",3/12/2024,2,5,2,0,0,0,3529.8
+Trip.com,"YAO, JING",3/12/2024,2,4,2,0,0,0,3993.2
+Trip.com,"CHENG, SHENZHU",3/12/2024,2,7,4,0,0,2,3052.8
+Trip.com,"CHENG, SHENZHU",3/12/2024,2,8,4,0,0,2,3052.8
+Trip.com,"CHANG, WEI",3/12/2024,2,2,2,0,0,0,4897.2
+Trip.com,"PAN, JIAXIN",3/12/2024,1,10,2,0,0,0,2249.9
+Booking.com,"Atkin, John",4/12/2024,1,10,2,0,0,0,3694.21
+Trip.com,"fang, xinyuan",4/12/2024,3,4,2,0,0,0,6720
+Trip.com,"wei, xiaoyan",4/12/2024,3,6,2,0,0,0,6720
+Trip.com,"song, changjing",4/12/2024,3,3,2,0,0,0,5760
+Trip.com,"HUANG, SITING",4/12/2024,1,9,2,0,0,0,1653.9
+Trip.com,"Cai, Jiazhen",5/12/2024,2,4,2,0,0,0,5100
+Booking.com,"van lint, charlotte",5/12/2024,5,2,2,1,2,1,13554.6
+Trip.com,"TAVI, KATYA",5/12/2024,2,5,2,0,0,0,4499.8
+Trip.com,"XING, YUE",5/12/2024,2,8,2,0,0,1,2880
+Trip.com,"XU, NANYONG",5/12/2024,1,7,2,0,0,1,1526.4
+Direct Booking,"Cai, Yu",5/12/2024,4,9,2,0,0,0,6647.12
+Trip.com,"SHAO, YE",6/12/2024,2,7,2,0,0,1,3568.3
+Booking.com,"Truong, Van Thuy",6/12/2024,4,11,2,0,0,0,10880
+Expedia,"WANG, WENLI",6/12/2024,2,1,2,0,0,0,5065.22
+Trip.com,"ZHANG, JUANLIN",6/12/2024,1,10,2,0,0,0,2249.9
+Trip.com,"XING, YUE",7/12/2024,2,8,2,0,0,1,2880
+Booking.com,"Bhardwaj, Kunal",7/12/2024,1,4,1,0,0,0,3379.97
+Trip.com,"FAN, YUQI",7/12/2024,2,3,2,0,0,0,3529.8
+Trip.com,"HE, DAN",7/12/2024,2,5,2,0,0,0,3529.8
+Expedia,"LAN, XIAOLING",7/12/2024,2,10,2,0,0,0,6480
+Booking.com,"Kotvis, Paul",7/12/2024,1,4,2,0,0,0,2430
+Trip.com,"ZHANG, JUANLIN",7/12/2024,1,6,2,0,0,0,2294.6
+Trip.com,"Ott, Paul",8/12/2024,4,4.1,5,0,0,0,6941.1
+Trip.com,"Ott, Paul",8/12/2024,4,4.2,5,0,0,0,6941.1
+Trip.com,"WANG, WENLI",8/12/2024,1,1,2,0,0,0,7941.5
+Trip.com,"XU, NANYONG",8/12/2024,1,7,2,0,0,1,1526.4
+Trip.com,"LI, XUAN",8/12/2024,1,6,2,0,0,0,1996.6
+Trip.com,"SHEN, YUANSHU",9/12/2024,4,3,2,0,0,0,6660
+Trip.com,"Li, Xuewen",9/12/2024,2,7,2,0,0,1,2880
+Expedia,"Taylor, Meredith",9/12/2024,3,6,2,0,0,0,6600
+Trip.com,"SHEN, QING",9/12/2024,3,10,2,0,0,0,6749.7
+Direct Booking,"Na,Photchana",9/12/2024,1,1,2,0,0,0,2500
+Trip.com,"Zhang, Yuan",9/12/2024,2,5,2,0,0,0,3009.8
+Booking.com,"Belikava, Dziyana",9/12/2024,1,9,2,0,0,0,2188.8
+Booking.com,"Wharton, Renee",10/12/2024,2,1,2,1,2,1,8189.2
+Trip.com,"Feng, Xiaoqiang",10/12/2024,1,9,2,0,0,0,1818.75
+Trip.com,"MA, JIAHAO",10/12/2024,3,2,2,0,0,0,6030
+Trip.com,"FAN, YANJIAO",10/12/2024,1,8,2,0,0,1,1430.4
+Direct Booking,"Leto, Khun",10/12/2024,1,11,0,0,0,0,2000
+Booking.com,"GUO, XIAOMU",11/11/2024,10,5,2,0,0,0,26451.6
+Booking.com,"GUO, XIAOMU",11/12/2024,10,8,3,0,0,0,26451.6
+Trip.com,"PAN, MINHAN",11/12/2024,2,7,2,0,0,1,3052.8
+Trip.com,"Tian, Xiangyuan",11/12/2024,1,9,2,0,0,0,1653.9
+Trip.com,"FAN, YANJIAO",11/12/2024,1,11,2,0,0,0,2398.9
+Booking.com,"Kim, Seongju",12/12/2024,4,9,2,0,0,0,16485.12
+Expedia,"Mann, Catherine",12/12/2024,2,11,2,0,0,0,7020
+Expedia,"Martelli Glaza, Uriah",12/12/2024,2,4,2,0,0,0,5940
+Trip.com,"XIAO, YING",12/12/2024,4,6,2,0,0,0,8040
+Trip.com,"Tian, Xiangyuan",12/12/2024,1,4,2,0,0,0,1996.6
+Trip.com,"ZHENG, BINGYUAN",12/12/2024,2,10,2,0,0,0,4499.8
+Trip.com,"Harkness, Justin",12/12/2024,1,1,2,0,0,0,1760
+Direct Booking,"McColl, Katie",13/12/2024,5,1,2,0,0,0,16750
+Trip.com,"ZHAO, SHUANG",13/12/2024,1,4,2,0,0,0,1996.6
+Trip.com,"WU, QIANNI",13/12/2024,2,3,3,0,0,0,3307.8
+Booking.com,"QU, CHENG",13/12/2024,2,2,3,0,0,0,5150.88
+Booking.com,"QU, CHENG",13/12/2024,2,7,2,0,0,0,5150.88
+Trip.com,"MANEECHOTE, RATIRAT",14/12/2024,1,10,2,0,0,0,2249.9
+Booking.com,"pillai, monesh",14/12/2024,3,11,2,0,0,0,9633.6
+Trip.com,"WANG, MEIYI",14/12/2024,2,4,2,0,0,0,3529.8
+B2B,"Forney, Nicole",14/12/2024,4,4,2,0,0,0,24000
+Trip.com,"LIAO, YAYUE",15/12/2024,3,2,2,0,0,0,6391.8
+Booking.com,"Shantia, Ali",15/12/2024,1,3,2,1,2,1,1877.2
+Trip.com,"DAI, XIAOWEI",15/12/2024,1,7,2,0,0,1,1287.9
+Booking.com,"Muther, Roger",15/12/2024,1,10,1,0,0,0,1949.18
+Trip.com,"CORBEAU, JOEL",16/12/2024,4,7,2,0,0,1,6297
+Trip.com,"Liu, YUMIN",16/12/2024,1,9,2,0,0,0,13800
+Trip.com,"JUNG, YEONMI",16/12/2024,2,3,2,0,0,0,3307.8
+Trip.com,"LIANG, XIAOJUN",16/12/2024,1,6,2,0,0,0,1431
+Trip.com,"LI, CUIWEN",16/12/2024,1,4,2,0,0,0,1605.9
+Trip.com,"ZHENG, NINGZHEN",16/12/2024,1,10,2,0,0,0,1500
+Trip.com,"WANG, YAN",17/12/2024,6,10,2,0,0,0,15744
+Booking.com,"Saeed, Shaf",17/12/2024,3,6,1,0,0,0,10654.08
+Trip.com,"SANTIPITAKS, BUSADEE",17/12/2024,1,4,2,0,0,0,1996.6
+Trip.com,"SANTIPITAKS, BURIN",17/12/2024,1,11,2,0,0,0,2398.9
+Trip.com,"SAGHEDDU, MARCANTONIO",17/12/2024,1,9,2,0,0,0,1341
+Expedia,"Kodali, Pranav",18/12/2024,1,1,2,0,0,0,5446.2
+Expedia,"CHOI, JIHYUN",18/12/2024,4,2,2,0,0,0,10800
+Trip.com,"JI, YUZHEN",18/12/2024,2,4,2,0,0,0,3529.8
+Booking.com,"Bordonskaya, Evgeniya",18/12/2024,1,11,2,0,0,0,2030.4
+Trip.com,"SAGHEDDU, MARCANTONIO",18/12/2024,1,9,2,0,0,0,1341
+Trip.com,"CAO, WENQI",19/12/2024,3,9,2,0,0,0,5419.86
+Trip.com,"CHEN, ZIANG",19/12/2024,3,4,2,0,0,0,6391.8
+Trip.com,"GUO, SHIYAO",19/12/2024,4,3,2,0,0,0,7059.6
+Expedia,"HO, WAI LUN",19/12/2024,3,1,2,0,0,0,9720
+Trip.com,"LIN, XIAOJUN",19/12/2024,1,11,2,0,0,0,2398.9
+Trip.com,"LIU, CHANG",20/12/2024,3,11,2,0,0,0,7800
+Trip.com,"BRISTOW-KEATING, BRITTANY",20/12/2024,4,4,2,0,0,0,8040
+Trip.com,"VASILEVA, ANASTASIIA",20/12/2024,2,7,2,0,0,1,2860.8
+Trip.com,"LIN, XIAOJUN",20/12/2024,1,6,2,0,0,0,1996.6
+Trip.com,"Smith, Darby",21/12/2024,2,6,2,0,0,0,4080
+Trip.com,"TAY, PHILLIP",21/12/2024,2,5,2,0,0,0,3307.8
+Trip.com,"LIU, BO",21/12/2024,2,8,2,0,0,1,2250
+Booking.com,"Heimgartner, Thomas",22/12/2024,3,1,2,1,2,1,13738.89
+Trip.com,"NG, JOSEPH",22/12/2024,3,9,2,0,0,0,11886
+Trip.com,"YOU, XINYUE",22/12/2024,1,7,2,0,0,0,3052.8
+Booking.com,"Milligan, Naomi",22/12/2024,1,4,1,0,0,0,2257.92
+Trip.com,"HO, WAI LUN",22/12/2024,2,2,2,0,0,0,4589.2
+Booking.com,"Kilner, Damien",23/12/2024,3,6,2,0,0,0,17773.83
+Booking.com,"Saurer, Christoph",23/12/2024,4,4,2,0,0,0,11298.82
+Direct Booking,"MILAN, ALEXANDRE",23/12/2024,2,3,2,0,0,0,3424.08
+Trip.com,"YANG, HUIYA",23/12/2024,2,8,2,0,0,1,2966.4
+Booking.com,"Milligan, Naomi",23/12/2024,1,5,1,0,0,0,1681
+Booking.com,"Yamashita, Yuhki",23/12/2024,1,11,2,0,0,0,3525.12
+Trip.com,"SHEN, WENJIE",23/12/2024,1,10,2,0,0,0,2130.6
+Trip.com,"INJAI-UE, NATTAYUT",23/12/2024,1,7,2,0,0,1,1043
+Direct Booking,Carolina Gutierrez Rudas,24/12/2024,3,5,2,0,0,0,8100
+Booking.com,"Kam, Karmen",24/12/2024,5,10,4,0,0,0,25920
+Booking.com,"Kam, Karmen",24/12/2024,5,11,4,0,0,0,25920
+Trip.com,"Martinez, Michael",24/12/2024,2,4,2,0,0,0,6944
+Trip.com,"FENG, MEILAN",24/12/2024,2,7,2,0,0,1,3936
+Booking.com,"Myung, Sooeun",24/12/2024,2,2,1,0,0,0,7581
+Booking.com,"Avatichi, assaf",25/12/2024,4,3,3,0,0,0,30345
+Booking.com,"Avatichi, assaf",25/12/2024,4,8,3,0,0,0,30345
+Direct Booking,"NG, JOSEPH",25/12/2024,1,1,2,0,0,0,500
+Booking.com,"Brar, Jaspret",26/12/2024,4,2,2,0,0,0,22920.17
+Booking.com,"Brar, Jaspret",26/12/2024,4,6,2,0,0,0,22920.17
+Booking.com,"Heimgartner, Thomas",26/12/2024,1,1,2,1,2,1,4579.63
+Booking.com,"Marina, Plouzennec",26/12/2024,3,9,1,0,0,0,8236.5
+Trip.com,"XIAO, YEHAN",26/12/2024,2,4,2,0,0,0,4556
+Trip.com,"XU, TIANJIAO",26/12/2024,1,7,2,0,0,1,1536
+Expedia,"WANG, TING",27/12/2024,2,1,2,0,0,0,7560.02
+Trip.com,"Corliss, Michael",27/12/2024,2,5,2,0,0,0,4800
+Trip.com,"KIM, JONGHWA",27/12/2024,1,7,2,0,0,1,1776
+Booking.com,"Yournboon, Amornthep",27/12/2024,1,4,2,0,0,0,2451.46
+Trip.com,"ZHENG, QI",28/12/2024,3,7,2,0,0,1,6288
+Booking.com,"Zhao, Juan",28/12/2024,1,4,2,0,0,0,2754
+Trip.com,"SUN, KUN",28/12/2024,2,4,2,0,0,0,6432
+Expedia,"CHUNG, AMY",29/12/2024,3,8,1,0,0,0,13260
+Booking.com,"Hooft van Huysduynen, Stefi",29/12/2024,4,5,2,0,0,0,13711.92
+Trip.com,"GOLUBENKOV, VIKTOR",29/12/2024,4,4,2,0,0,0,8640
+Booking.com,"Weidinger, Dorothee",29/12/2024,3,3,1,0,0,0,7830
+Booking.com,"Keating, Madeline",29/12/2024,3,9,2,0,0,0,11016
+Booking.com,"Keunecke, Michael",29/12/2024,4,10,2,0,0,0,18523.75
+Booking.com,"Yurt, Yagiz",29/12/2024,4,1,2,0,0,0,17145.53
+Booking.com,"Zhao, Juan",29/12/2024,1,11,2,0,0,0,3672
+Booking.com,"Gassner, Christina",30/12/2024,4,6,2,0,0,0,11337.84
+Booking.com,"Gatt, Leah",30/12/2024,3,2,2,0,0,0,12300
+Trip.com,"WANG, JIALE",30/12/2024,1,4,2,0,0,0,2400
+Booking.com,"Pesci, Silvia",31/12/2024,3,4,2,0,0,0,9800.7
+Trip.com,"WANG, YIDAN",31/12/2024,2,7,2,0,0,1,4650
+Booking.com,"XIBERRAS, Martin",31/12/2024,1,11,2,0,0,0,5440
+Booking.com,"Blaszkowski, Kristin",1/1/2025,4,3,2,1,2,1,13210.76
+Trip.com,"SUN, KEWEI",1/1/2025,4,11,2,0,0,0,13782.5
+Booking.com,"M?cgane, Sardet",1/1/2025,4,8,1,0,0,0,7865.96
+Trip.com,"LI, NANNAN",1/1/2025,1,9,2,0,0,0,1415.5
+Trip.com,"WANG, YIDAN",2/1/2025,1,10,2,0,0,0,2265
+Booking.com,"Sakogawa, Kaoru",2/1/2025,2,4.2,1,0,0,0,6220.8
+Direct Booking,"Kennedy, Charles",2/1/2025,3,2,2,0,0,0,4985.34
+Trip.com,"WONG, YUK SHAN",2/1/2025,1,5,2,0,0,0,1653.9
+Trip.com,"Zellman, Jody",2/1/2025,1,1,2,0,0,0,2265
+Expedia,"thomas, Andrew",3/1/2025,3,6,2,0,0,0,8100
+Trip.com,"Yu, Kyo",3/1/2025,2,5,2,0,0,0,3552
+Booking.com,"UEHARA, Izumi",3/1/2025,1,10,2,0,0,0,3681.79
+Trip.com,"WANG, RONGRONG",3/1/2025,2,1,2,0,0,0,3993.2
+Expedia,"Moore, Cory Rose",3/1/2025,1,4.1,2,0,0,0,3024
+Booking.com,"Guerrero, Carmen",3/1/2025,1,7,1,0,0,0,1451.52
+Booking.com,"chatelet, jacques",4/1/2025,5,10,2,0,0,0,15172.5
+Trip.com,"Toh, Wee Beng",4/1/2025,4,4.2,2,0,0,0,7986.4
+Trip.com,"GAN, YINGYING",4/1/2025,5,7,2,0,0,1,7200
+Booking.com,"HUANG, CHIUJUNG",4/1/2025,1,4.1,2,0,0,0,2322.43
+Trip.com,"CHOY, KAM HUEI",5/1/2025,2,2,2,0,0,0,3993.2
+Trip.com,"CHOY, ZI JING",5/1/2025,2,1,2,0,0,0,4499.8
+Booking.com,"Schatzmann, Mich??le",5/1/2025,4,11,2,0,0,0,13824
+Booking.com,"Vuckovic, Mina",5/1/2025,2,4.1,2,0,0,0,5031.94
+Trip.com,"LI, NA",5/1/2025,1,3,2,0,0,0,1653.9
+Trip.com,"Wongsathapornpat, Voraprach",5/1/2025,1,8,2,0,0,1,1430.4
+Booking.com,"Sp??rl, Reinhold",5/1/2025,1,5,2,0,0,0,1786.06
+Trip.com,"CHEN, QIANLEI",6/1/2025,2,3,2,0,0,0,3307.8
+Trip.com,"ZHANG, ZIBIN",6/1/2025,2,5,2,0,0,0,3529.8
+Trip.com,"LI, NA",6/1/2025,1,6,2,0,0,0,1996.6
+Trip.com,"WU, CHIU YEN",6/1/2025,2,9,2,0,0,0,4797.8
+Trip.com,"OUYANG, DANQING",6/1/2025,1,8,2,0,0,1,1430.4
+Booking.com,"fox, steven",7/1/2025,3,2,2,0,0,0,8324.73
+Trip.com,"ROJANABENJAKUL, ARADA",7/1/2025,1,4.1,2,0,0,0,2010
+Trip.com,"FANG, YUXIANG",7/1/2025,6,8,2,0,0,1,8582.4
+Booking.com,"TSENG, PAO TZU",7/1/2025,1,1,2,0,0,0,3317.76
+Booking.com,"shabir, hinna",7/1/2025,3,6,2,0,0,0,7311.36
+Booking.com,"Bertsch, Lisa",8/1/2025,1,3,2,1,2,1,2304
+Booking.com,"Vasconcelos Calheiros O Costa, George",8/1/2025,2,1,2,0,0,0,5050.36
+Direct Booking,"milan, Alexandre Derek",8/1/2025,1,4.1,1,0,0,0,3000
+Trip.com,"LU, LU",8/1/2025,1,4.2,2,0,0,0,2130.6
+Trip.com,"LI, SIHAN",8/1/2025,1,5,2,0,0,0,1764.9
+Booking.com,"Parisi, Ludovica",9/1/2025,3,4.1,2,1,2,1,12484.8
+Booking.com,"Lee, Hsin Ying",9/1/2025,6,12,4,0,0,0,17865.54
+Booking.com,"Lee, Hsin Ying",9/1/2025,6,3,4,0,0,0,17865.54
+Direct Booking,"and Char Aune, Jeff",9/1/2025,7,5,2,0,0,0,11632.46
+Booking.com,"Borsotti, jacqueline",9/1/2025,2,4.1,2,0,0,0,6048
+Trip.com,"MARTIN ALVAREZ, JOSE MANUEL",9/1/2025,3,7,2,0,0,1,4291.2
+Booking.com,"Weir, Helen",9/1/2025,2,11,2,0,0,0,6071.04
+Direct Booking,"Milan, Alexander",9/1/2025,1,10,1,0,0,0,3000
+Trip.com,"TAY, PATRICK SOON TECK",10/1/2025,3,6,2,0,0,0,7200
+Trip.com,"yuan, su",10/1/2025,5,2,2,0,0,0,10050
+Trip.com,"TONG, WAI KIT",10/1/2025,3,10,2,0,0,0,7202.7
+Booking.com,"MARTINEAU, MARINE",10/1/2025,3,1,2,0,0,0,8294.4
+Trip.com,"YU, CHIFANG",11/1/2025,2,4.1,2,0,0,0,5100
+Booking.com,"Sp??rl, Reinhold",11/1/2025,1,11,2,0,0,0,3015.94
+Trip.com,"SOUNDERRAJAN, VELLORE",12/1/2025,3,4.2,2,0,0,0,6391.8
+Booking.com,"MAZUR, EWA",12/1/2025,2,7,1,0,0,0,4252.5
+Direct Booking,"NAN, RENAN",12/1/2025,1,11,0,0,0,0,3500
+Expedia,"Dang, Khoi",13/1/2025,2,1,2,0,0,0,5065.22
+Booking.com,"Weir, Helen",13/1/2025,1,6,2,0,0,0,2161.15
+Booking.com,"Laouici, soraya",13/1/2025,1,8,1,0,0,0,2108.16
+Booking.com,"Pievani, Simone",14/1/2025,2,4.1,2,1,2,1,6686.94
+Trip.com,"Li, Lanjun",14/1/2025,3,6,2,0,0,0,4961.7
+Trip.com,"KAWABE, KUMI",14/1/2025,1,7,2,0,0,1,1430.4
+Trip.com,"TAKESHITA, KAORI",14/1/2025,1,8,2,0,0,1,1430.4
+Booking.com,"Geraci, Giuseppe",14/1/2025,3,11,2,0,0,0,10105.35
+Direct Booking,"YaLing, Luo",14/1/2025,2,10,0,0,0,0,6000
+Trip.com,"WU, MING HUI",15/1/2025,7,4.1,2,0,0,0,17850
+Direct Booking,"Miraglia, Antoinette",15/1/2025,4,3,2,0,0,0,6647.12
+Trip.com,"LIANG, YONG",15/1/2025,1,1,2,0,0,0,2265
+Booking.com,"Borsotti, jacqueline",15/1/2025,1,7,1,0,0,0,2205
+Booking.com,"Monfort Gonzalez, Noelia F.",15/1/2025,1,8,1,0,0,0,1869.7
+Trip.com,"LI, WEICHAN",15/1/2025,1,2,2,0,0,0,1698.6
+Booking.com,"Ramgoolam, Prunesha",16/1/2025,4,4.1,3,0,0,0,13184
+Booking.com,"Ramgoolam, Prunesha",16/1/2025,4,8,3,0,0,0,13184
+Expedia,"Dang, Khoi",16/1/2025,1,12,2,0,0,0,3240
+Trip.com,"LIANG, YONG",16/1/2025,3,2,2,0,0,0,6030
+Trip.com,"KOSHIDA, TAMIE",16/1/2025,1,1,2,0,0,0,2265
+Booking.com,"Fall, Geoff",16/1/2025,1,7,1,0,0,0,1774.08
+Trip.com,"WANG, YI",16/1/2025,1,10,2,0,0,0,2106.75
+Expedia,"LU, FANG TZU",17/1/2025,5,1,2,0,0,0,12663.05
+Direct Booking,"LIN, YUTSUN",17/1/2025,2,5,2,0,0,0,3323.56
+Trip.com,"CHENG, CHAONAN",17/1/2025,1,10,2,0,0,0,2249.9
+Trip.com,"YU, MINGYAN",17/1/2025,2,12,2,0,0,0,4797.8
+Trip.com,"WANG, QIANXIU",17/1/2025,1,6,2,0,0,0,2130.6
+Booking.com,"Cannizzaro, Anthony",17/1/2025,1,7,1,0,0,0,1869.7
+Trip.com,"PAN, QIDA",18/1/2025,3,10,2,0,0,0,6030
+Trip.com,"PAN, QICHAO",18/1/2025,1,11,2,0,0,0,1818.75
+Trip.com,"WANG, QIANXIU",18/1/2025,1,6,2,0,0,0,2130.6
+Booking.com,"Pieper, Diana",18/1/2025,2,7,1,0,0,0,3527.42
+Trip.com,"QIN, YALIN",19/1/2025,4,12,2,0,0,0,7711.48
+Trip.com,"QIN, YALIN",19/1/2025,3,5,2,0,0,0,5294.7
+Trip.com,"ZHU, TIANRUI",19/1/2025,4,6,2,0,0,0,8040
+Trip.com,"PAN, QICHAO",19/1/2025,1,11,2,0,0,0,2265
+Trip.com,"LU, XIN",19/1/2025,1,2,2,0,0,0,2010
+Booking.com,"Bland, Eleanor",19/1/2025,1,3,2,0,0,0,1899.66
+Trip.com,"PAN, QICHAO",20/1/2025,1,11,2,0,0,0,2010
+Trip.com,"Ruiz Figueroa, Jose Angel",20/1/2025,5,2,2,0,0,0,10050
+Trip.com,"CHUNG, CHING SHENG",20/1/2025,3,3,2,0,0,0,4961.7
+Trip.com,"XU, MEILING",20/1/2025,2,8,2,0,0,1,2880
+Trip.com,"SU, JUAN",20/1/2025,1,7,2,0,0,1,1287.9
+Direct Booking,"Castano, Isabell",20/1/2025,1,4.1,2,0,0,0,2500
+Booking.com,"Gove, Kevin",21/1/2025,1,4.1,2,0,0,0,2867.2
+Trip.com,"ZUO, YUNJIE",21/1/2025,1,10,2,0,0,0,2249.9
+Trip.com,"NI, SHAOLAN",21/1/2025,1,7,2,0,0,1,1430.4
+Expedia,"Sridhar, Kavitha",21/1/2025,2,11,2,0,0,0,10283.74
+Trip.com,"QIN, YALIN",22/1/2025,1,7,2,0,0,1,1526.4
+Trip.com,"Guo, Danfei",22/1/2025,3,4.1,2,0,0,0,6391.8
+Trip.com,"ZHANG, JINYUAN",22/1/2025,1,10,2,0,0,0,2249.9
+Booking.com,"Nguyen, Amy",22/1/2025,1,8,1,0,0,0,1814.4
+Booking.com,"Luetolf, Andrea",22/1/2025,2,5,2,0,0,0,4608
+Direct Booking,"Hafsteinsson, Arsaell",22/1/2025,1,1,2,0,0,0,2500
+Booking.com,"Greenman, Janet",22/1/2025,1,4.2,2,0,0,0,2546.38
+Trip.com,"HAN, LU",23/1/2025,1,1,2,0,0,0,2249.9
+Trip.com,"ZHOU, RONGDI",23/1/2025,1,7,4,0,0,0,1430.4
+Trip.com,"ZHOU, RONGDI",23/1/2025,1,8,4,0,0,0,1430.4
+Trip.com,"RONG, HUAN",23/1/2025,4,11,2,0,0,0,9595.6
+Trip.com,"ZHANG, JINYUAN",23/1/2025,4,10,2,0,0,0,8999.6
+Trip.com,"WU, BIAO",23/1/2025,1,6,2,0,0,0,1996.6
+Trip.com,"XU, YAN",23/1/2025,4,3,2,0,0,0,6615.6
+Trip.com,"LI, YANNAN",23/1/2025,2,4.2,2,0,0,0,4261.2
+Booking.com,"Mansure, Mehek",23/1/2025,4,12,2,0,0,0,11280.4
+Trip.com,"HYUNJUNGSO, SO",24/1/2025,4,1,2,0,0,0,11590.4
+Trip.com,"SO, HYUNJIN",24/1/2025,4,6,2,0,0,0,9600
+Trip.com,"FU, ZHENYI",24/1/2025,1,7,2,0,0,1,1526.4
+Trip.com,"HUNG, SHIHMIN",24/1/2025,3,5,2,0,0,0,4961.7
+Trip.com,"Lee, Yurim",24/1/2025,2,8,2,0,0,1,2880
+Booking.com,"Cioffi, Julian",25/1/2025,5,2,1,0,0,0,17870.25
+Trip.com,"SUWANPRAKORN, NATTHA",25/1/2025,1,4.2,2,0,0,0,1996.6
+Trip.com,"PAN, WEN LI",25/1/2025,1,7,2,0,0,1,1430.4
+Trip.com,"NIU, JIANING",25/1/2025,1,4.1,2,0,0,0,1996.6
+Trip.com,"LIU, ZIJING",26/1/2025,1,7,4,0,0,2,1679.2
+Trip.com,"LIU, ZIJING",26/1/2025,1,8,4,0,0,2,1679.2
+Trip.com,"NIU, JIANING",26/1/2025,1,4.1,2,0,0,0,1996.6
+Booking.com,"Tsochantari, Melia Anthi",26/1/2025,2,4.2,1,0,0,0,5375.7
+Trip.com,"HAN, YUXUAN",27/1/2025,3,5,2,0,0,0,5640
+Trip.com,"Su, Wenwen",27/1/2025,1,3,2,0,0,0,1653.9
+Trip.com,"Su, Zhijian",27/1/2025,1,7,2,0,0,1,1430.4
+Trip.com,"GAO, FENG",27/1/2025,2,4.1,2,0,0,0,3993.2
+Booking.com,"Nebeling, Andreas",27/1/2025,4,11,2,0,0,0,13105.72
+Trip.com,"YOU, YINGZI",27/1/2025,3,12,2,0,0,0,7202.7
+Booking.com,"Gawron, Isabel",27/1/2025,2,8,1,0,0,0,3527.42
+Trip.com,"cho, jingu",27/1/2025,2,10,2,0,0,0,3975
+Trip.com,"Erdetschnig, Stefan",28/1/2025,4,6,2,0,0,0,8160
+Trip.com,"CHO, MISUNG",28/1/2025,1,1,2,0,0,0,2249.9
+Trip.com,"CHENG, WENJI",28/1/2025,2,7,2,0,0,1,2860.8
+Trip.com,"LIU, Min",28/1/2025,1,3,2,0,0,0,1653.9
+Trip.com,"CHEN, MINSI",28/1/2025,2,4.2,2,0,0,0,4261.2
+Booking.com,"Atkinson, Nigel",29/1/2025,7,1,2,0,0,0,26108.25
+Expedia,"CHAE, SANGMIN",29/1/2025,2,4.1,4,0,0,2,6804
+Expedia,"CHO, MISUNG",29/1/2025,1,10,2,0,0,0,2970
+Trip.com,"LIU, Min",29/1/2025,1,8,2,0,0,1,1430.4
+Booking.com,"Orellana, Tanya",29/1/2025,5,3,2,0,0,0,10304.2
+Trip.com,"WU, YIDI",30/1/2025,4,8,2,0,0,1,6105.6
+Booking.com,"Thang, Joanne",30/1/2025,5,2,2,0,0,0,11999.25
+Booking.com,"Kuok, Meng Chao",30/1/2025,2,4.2,2,0,0,0,5375.7
+Trip.com,"SAITO, YUKIKA",30/1/2025,2,7,2,0,0,1,2413.8
+Direct Booking,"Buchman, Michael",30/1/2025,4,10,2,0,0,0,12000
+Expedia,"Weiss, Dave",30/1/2025,3,12,2,0,0,0,15425.61
+Booking.com,"roncone, Silvia",30/1/2025,1,5,2,0,0,0,2181.43
+Booking.com,"Aldous, Katie",31/1/2025,3,4.1,2,0,0,0,8164.8
+Booking.com,"perez, patty",31/1/2025,3,5,1,0,0,0,5680.29
+Direct Booking,"Pee Nok, Pee Nok",31/1/2025,1,11,2,0,0,0,2300
+Trip.com,"WANG, JING",1/2/2025,3,4.1,2,1,2,0,10590
+Trip.com,"WANG, WEIHAI",1/2/2025,2,6,2,0,0,0,4020
+Trip.com,"LO, YUTUAN",1/2/2025,3,7,2,0,0,0,4291.2
+Booking.com,"Cadillon, Neli",2/2/2025,2,11,2,0,0,0,4896
+Booking.com,"Williams, Melanie",3/2/2025,3,4.2,2,0,0,0,7803
+Expedia,"yuen, hoi man",3/2/2025,1,5,2,0,0,0,2484
+Trip.com,"WANG, YUJIA",3/2/2025,3,6,2,0,0,0,5989.8
+Trip.com,"Hong, Seulkee",3/2/2025,2,12,2,0,0,0,4860.8
+Trip.com,"WANG, BI",3/2/2025,1,10,2,0,0,0,2265.75
+Trip.com,"HE, JINGWEI",3/2/2025,1,3,2,0,0,0,1764.9
+Booking.com,"di donato, daniela",3/2/2025,1,8,1,0,0,0,2013.7
+Booking.com,"Tangtidtham, Satit",4/2/2025,1,5,2,0,0,0,2160
+Trip.com,"ZHU, NINGYU",4/2/2025,2,7,2,0,0,1,3052.8
+Trip.com,"HE, JINGWEI",4/2/2025,1,3,2,0,0,0,1764.9
+Booking.com,"Oakes, Jared",4/2/2025,1,8,1,0,0,0,1907.71
+Trip.com,"DU, ZHE",4/2/2025,3,11,2,0,0,0,6797.25
+Booking.com,"Pinis-Rzemieniec, Anna",4/2/2025,1,4.1,2,1,2,1,2795.21
+Trip.com,"pham, mu poe",4/2/2025,1,2,2,0,0,0,1687.5
+Trip.com,"pham, mu poe",4/2/2025,1,10,2,0,0,0,1837.5
+Booking.com,"Frans, Lenty",5/2/2025,2,5,2,0,0,0,4320
+Trip.com,"CHEN, KAI",5/2/2025,2,8,2,0,0,1,2860.8
+Booking.com,"Smith, Kevin",5/2/2025,1,1,2,1,2,1,2688
+Booking.com,"Chiang, kok meng",5/2/2025,1,2,2,0,0,0,2293.75
+Booking.com,"Capelle, Jade",5/2/2025,4,4.1,2,0,0,0,11317.24
+Booking.com,"Huang, Yongyi",5/2/2025,6,3,2,0,0,0,14238.72
+Trip.com,"SASAKI, SAORI",5/2/2025,1,10,2,0,0,0,1974.25
+Trip.com,"WU, JING",6/2/2025,5,6,2,0,0,0,9983
+Trip.com,"CEN, ZHAOWEN",6/2/2025,3,10,2,0,0,0,6749.7
+Trip.com,"LI, JIAZHI",6/2/2025,3,12,2,0,0,0,7196.7
+Booking.com,"Smith, Kevin",6/2/2025,1,2,2,1,2,1,2352
+Booking.com,"Wood, Alex",6/2/2025,1,7,1,0,0,0,1587.6
+Booking.com,"Benveniste, Jean-Pierre",6/2/2025,2,4.2,2,0,0,0,6365.96
+Trip.com,"PAN, JIAXIN",6/2/2025,1,1,2,0,0,0,2123.25
+Trip.com,"HOU, YUHAO",7/2/2025,1,5,2,0,0,0,1653.9
+Booking.com,"Substad, Anna",7/2/2025,3,2,2,0,0,0,11788.8
+Booking.com,"Benjamin, Mercedes",7/2/2025,1,1,1,0,0,0,2785.08
+Trip.com,"YEW, WEI LING",7/2/2025,2,7,2,0,0,1,2430
+Trip.com,"PAN, JIAXIN",7/2/2025,1,8,2,0,0,1,1206.9
+Trip.com,"LI, WENFANG",7/2/2025,2,11,2,0,0,0,3975
+Trip.com,"HOU, YUHAO",8/2/2025,1,8,2,0,0,1,1430.4
+Booking.com,"magalhaes, arthur",8/2/2025,2,5,2,0,0,0,3693.6
+Booking.com,"Van Damme, Ellen",8/2/2025,1,1,2,0,0,0,2688
+Trip.com,"SHI, JING",8/2/2025,2,4.2,2,0,0,0,4020
+Trip.com,"HOU, YUHAO",9/2/2025,1,8,2,0,0,1,1430.4
+Booking.com,"HÂcklin, Oliver",9/2/2025,3,1,2,0,0,0,7257.6
+Booking.com,"Zoe, de Bellefeuille",9/2/2025,3,10,2,0,0,0,9331.2
+Booking.com,"Melissa, Meinecke",9/2/2025,3,7,1,0,0,0,7948.8
+Booking.com,"Chiang, kok meng",9/2/2025,1,4.1,2,0,0,0,2829.31
+Booking.com,"Van Grootenbruel, Aude",10/2/2025,4,12,2,0,0,0,9792
+Trip.com,"NOPAKUN, NUTTAPHOL",10/2/2025,2,11,2,0,0,0,4797.8
+Booking.com,"Romero, Pedro",10/2/2025,5,8,1,0,0,0,11340
+Booking.com,"Isabelle, Le Nouail",10/2/2025,2,4.1,2,1,2,1,7526.4
+Booking.com,"Decker, Shaun",10/2/2025,3,4.2,1,0,0,0,9072
+Booking.com,"Russell, David",10/2/2025,3,2,2,0,0,0,7623.93
+Trip.com,"CHEN, YANTAO",11/2/2025,1,6,2,0,0,0,4530
+Booking.com,"Romanova, Liliia",11/2/2025,3,3,2,0,0,0,9852.96
+Booking.com,"Dennis, Sarah",12/2/2025,1,7,1,0,0,0,1854.72
+Booking.com,"MANZONI, ANNA",12/2/2025,2,1,2,0,0,0,6784.12
+Trip.com,"SHEN, QI",12/2/2025,1,6,2,0,0,0,1303.75
+Trip.com,"QIAN, CHAOFAN",12/2/2025,1,5,2,0,0,0,1154.75
+Trip.com,"BENET, Sylvain",13/2/2025,4,7,2,0,0,1,5385
+Booking.com,"Schmidt, Robin",13/2/2025,1,4.1,2,0,0,0,4838.4
+Booking.com,"Moldovan, Ramona",13/2/2025,1,,1,0,0,0,2541.31
+Trip.com,"Carlson, Elise",13/2/2025,2,11,2,0,0,0,5152
+Booking.com,"Smith, Justin",13/2/2025,1,4.2,2,0,0,0,2546.38
+Booking.com,"Field, Debra",13/2/2025,1,6,1,0,0,0,3499.8
+Trip.com,"ZHANG, WEI",13/2/2025,1,5,2,0,0,0,1154.75
+Trip.com,"LONG, WEI",13/2/2025,1,10,2,0,0,0,1601.75
+Expedia,"Manca, Mathieu",14/2/2025,2,2,2,0,0,0,6600
+Booking.com,"Abdullasim, Nazri",14/2/2025,1,6,2,0,0,0,2352
+Trip.com,"CHACON CABELLO, CESAR DANIEL",14/2/2025,3,3,2,0,0,0,6626.76
+Booking.com,"Field, Debra",14/2/2025,1,1,1,0,0,0,3600
+Trip.com,"Waters, Fiona",14/2/2025,2,4.1,2,0,0,0,3920
+Trip.com,"CHEN, LINBIN",14/2/2025,1,10,2,0,0,0,1947.75
+Trip.com,"ZHANG, WEI",14/2/2025,1,5,2,0,0,0,1154.75
+Booking.com,"AL THUWAINI, AHMAD",14/2/2025,1,12,2,0,0,0,3018.6
+Booking.com,"LIM, KIAN LOO",15/2/2025,3,1,2,0,0,0,7776
+Booking.com,"klimek, klaudia",15/2/2025,3,8,1,0,0,0,4762.8
+Booking.com,"Stallard, Paula",15/2/2025,4,12,2,0,0,0,11520
+Booking.com,"Williams, Parker",15/2/2025,1,6,2,1,2,1,3024
+Trip.com,"CAO, YI",15/2/2025,1,10,2,0,0,0,2559.9
+Trip.com,"LI, ZIMENG",15/2/2025,1,4.2,2,0,0,0,1764.9
+Trip.com,"Santin, Jacqueline",15/2/2025,2,5,2,0,0,0,3072
+Trip.com,"WANG, JIN PING",15/2/2025,3,11,2,0,0,0,4805.25
+Trip.com,"WU, MINGJUAN",16/2/2025,3,4.1,2,0,0,0,3863.7
+Booking.com,"Ciobanu, Maria",16/2/2025,3,10,2,0,0,0,6998.4
+Trip.com,"LI, ZIMENG",16/2/2025,2,4.2,2,0,0,0,2893.8
+Trip.com,"WANG, YEQING",16/2/2025,1,2,2,0,0,0,1391.25
+Trip.com,"CHEN, CHAO YI",17/2/2025,3,7,2,0,0,1,3195
+Trip.com,"LEE, RANG",17/2/2025,2,6,2,0,0,0,2711.8
+Trip.com,"WILLIAMS, JULIA LYNN",17/2/2025,4,2,2,0,0,0,5423.6
+Booking.com,"GUDIÂ¥O VAZQUEZ, NOE",17/2/2025,1,5,2,0,0,0,2248.65
+Booking.com,"Holmstrom van der Weyden, lars",17/2/2025,1,3,2,0,0,0,2238.66
+Trip.com,"HUANG, SHIHWEI",18/2/2025,5,11,2,0,0,0,10575
+Trip.com,"XIA, WENBIN",18/2/2025,1,8,2,0,0,1,1128.9
+Booking.com,"Verres, Dario",18/2/2025,4,1,2,0,0,0,12595.96
+Booking.com,"Cornelisz, Natascha",18/2/2025,3,5,2,0,0,0,6994.2
+Booking.com,"Zohar, Anat",18/2/2025,1,4.2,1,0,0,0,2693.52
+Trip.com,"KIM, EUNKYOUNG",18/2/2025,1,3,2,0,0,0,1117.5
+Booking.com,"Brambilla, Caroline",19/2/2025,3,4.2,2,0,0,0,8164.8
+Trip.com,"ZHANG, YUE",19/2/2025,2,6,2,0,0,0,2730
+Trip.com,"SENTURK, SEDA",19/2/2025,1,10,2,0,0,0,1653.9
+Trip.com,"PAN, YUETONG",19/2/2025,3,12,2,0,0,0,5127.75
+Booking.com,"An, Miran",19/2/2025,2,8,1,0,0,0,3132
+Trip.com,"CHANG, HSUEHLING",20/2/2025,4,3,2,0,0,0,5184
+Booking.com,"Parulekar, Preeti",20/2/2025,4,10,2,0,0,0,12288
+Booking.com,"Iles, Joe",20/2/2025,1,7,1,0,0,0,1512
+Trip.com,"JUAN, LINGYU",21/2/2025,4,7,2,0,0,1,4231.6
+Trip.com,"Tanaka, Yoshiyuki",21/2/2025,3,2,2,0,0,0,4095
+Trip.com,"NAKAGAWA, NOA",21/2/2025,1,8,2,0,0,1,1206.9
+Trip.com,"ZHAO, JINGHONG",21/2/2025,2,5,2,0,0,0,2309.5
+Trip.com,"CHEN, BING LING",21/2/2025,2,6,2,0,0,0,2607.5
+Booking.com,"Petrus, Benoit",21/2/2025,1,4.1,2,0,0,0,1922.4
+Trip.com,"Xu, Xiaomeng",22/2/2025,2,4.1,2,0,0,0,2893.8
+Trip.com,"Wu, Yanfei",22/2/2025,2,8,2,0,0,1,2257.8
+Trip.com,"WANG, SHIYI",22/2/2025,1,4.2,2,0,0,0,1446.9
+Expedia,"Hunt, Andrew",22/2/2025,3,1,2,0,0,0,10368
+Trip.com,"HUANG, YAN",22/2/2025,1,12,2,0,0,0,1431
+Trip.com,"WANG, SHIYI",23/2/2025,1,4.2,2,0,0,0,1446.9
+Booking.com,"Jose Manuel, Casares",23/2/2025,4,6,2,0,0,0,8467.2
+Trip.com,"PADRE, FREDERICK",23/2/2025,1,11,2,0,0,0,2123.25
+Booking.com,"Johnson, Christine",23/2/2025,4,12,2,0,0,0,11241
+Trip.com,"Lemeshko, Roman",23/2/2025,1,5,2,0,0,0,1162.5
+Booking.com,"Ramadan, Haneine",24/2/2025,3,4.1,2,0,0,0,8952.12
+Booking.com,"Yu, Boyi",24/2/2025,3,11,2,0,0,0,9668.16
+Booking.com,"Solovyeva, Anastasia",24/2/2025,3,8,1,0,0,0,6624
+Direct Booking,"Gudka, Sheena",24/2/2025,2,3,1,0,0,0,1700
+Booking.com,"Meessen, Jan",24/2/2025,1,4.2,2,0,0,0,1473.12
+Booking.com,"Serra, Francesco",24/2/2025,1,10,3,0,0,0,1667.95
+Booking.com,"Serra, Francesco",24/2/2025,1,5,3,0,0,0,1667.95
+Booking.com,"BUENO VENEGAS, ANDRÂS",25/2/2025,4,2,2,0,0,0,8467.2
+Booking.com,"araia, eden",25/2/2025,2,5,2,0,0,0,3888
+Trip.com,"Lemeshko, Roman",25/2/2025,1,4.2,2,0,0,0,1312.5
+Booking.com,"Blanco Falcioni, Lorena",25/2/2025,1,1,2,0,0,0,1736.64
+Direct Booking,"TESTA, Emanuele",25/2/2025,1,7,1,0,0,0,2000
+Booking.com,"Denmark, Ryan",26/2/2025,2,1,2,0,0,0,9246.16
+Booking.com,"Yang, Hui Hung",26/2/2025,5,7,1,0,0,0,7695
+Trip.com,"Karnaukhova, Nataliia",26/2/2025,3,4.2,2,0,0,0,4095
+Booking.com,"david, panepinto",26/2/2025,1,10,2,0,0,0,2224.8
+Trip.com,"BELETSKAIA, ALENA",27/2/2025,3,4.1,2,0,0,0,4313.55
+Booking.com,"Yeganeh, Sam",27/2/2025,5,8,1,0,0,0,7560
+Trip.com,"CHO, QIN HWEI KENNY",27/2/2025,4,10,2,0,0,0,7032.8
+Trip.com,"PHAN, NGOC HIEU",27/2/2025,4,3,2,0,0,0,4946.8
+Trip.com,"Crutcher, Madeline",27/2/2025,4,6,2,0,0,0,6272
+Trip.com,"HUANG, GUIJUAN",27/2/2025,2,11,2,0,0,0,2862
+Booking.com,"GOMEZ, Daniela",27/2/2025,1,5,2,0,0,0,1354.32
+Direct Booking,"Anonymous, Customer",27/2/2025,1,12,0,0,0,0,1800
+Booking.com,"Gowande, Gaurang",28/2/2025,1,5,2,0,0,0,2509.49
+Booking.com,"Summers, Becks",28/2/2025,1,1,2,0,0,0,1900.8
+Direct Booking,"Serra, Francesco",28/2/2025,1,12,2,0,0,0,2700
+Booking.com,"GOWANDE, Gaurang",1/3/2025,3,4.2,2,0,0,0,5832
+Booking.com,"PrÂcourt, Dominique",1/3/2025,1,11,2,0,0,0,2916
+Booking.com,"Cristofari, Giulia",1/3/2025,1,1,2,0,0,0,2952.18
+Trip.com,"CHOMPOOMING, SOMARAT",1/3/2025,1,5,2,0,0,0,1229.25
+Trip.com,"HUANG, GUIJUAN",1/3/2025,1,2,2,0,0,0,1391.25
+Direct Booking,"CHOMPOOMING, SOMARAT",1/3/2025,1,12,1,0,0,0,2700
+Booking.com,"Pfitzer, Marcel",2/3/2025,4,5,2,0,0,0,6648.48
+Booking.com,"Cristofari, Giulia",2/3/2025,4,1,2,0,0,0,7776
+Booking.com,"ter Huurne, Tim",2/3/2025,3,4.1,2,0,0,0,5508
+Trip.com,"BELETSKAIA, ALENA",2/3/2025,1,2,2,0,0,0,1303.75
+Booking.com,"Glaser, Ralf",3/3/2025,3,2,2,0,0,0,5400
+Booking.com,"Li, Linjie",3/3/2025,2,3,2,0,0,0,3693.6
+Booking.com,"Jennings, Mark",3/3/2025,3,6,2,0,0,0,6111.72
+Booking.com,"Tscherevko, Tatjana",4/3/2025,1,8,1,0,0,0,1987.2
+Trip.com,"CHEN, PEIYI",4/3/2025,2,11,2,0,0,0,3600
+B2B,"Dall, Kimber",4/3/2025,1,4.2,2,0,0,0,4000
+Trip.com,"KWON, GI CHEOL",5/3/2025,4,3,2,0,0,0,4231.6
+Traveloka.com,"Obaniana, Haydeelyn",5/3/2025,3,8,2,0,0,1,3780
+Trip.com,"WANG, SIQI",5/3/2025,2,12,2,0,0,0,3418.5
+Trip.com,"WANG, HONGWEI",5/3/2025,2,4.1,2,0,0,0,2782.5
+Booking.com,"tian, yuan",5/3/2025,2,4.2,1,0,0,0,5637.6
+Booking.com,"Genosar, Estee",5/3/2025,1,7,1,0,0,0,1857.6
+Expedia,"Vikas, Vikas",6/3/2025,1,10,2,0,0,0,3347.99
+Direct Booking,"Jiangsu guangdong, Jiangsu guangdong",6/3/2025,5,11,1,0,0,0,8800
+Trip.com,"LEONG, LEO",7/3/2025,3,4.1,4,0,0,0,4067.7
+Trip.com,"LEONG, LEO",7/3/2025,3,4.2,4,0,0,0,4067.7
+Booking.com,"deleau, charlotte",7/3/2025,3,6,2,0,0,0,5400
+Booking.com,"Tuck, Stephen",7/3/2025,1,1,2,0,0,0,2592
+Booking.com,"Dumke, Thomas",7/3/2025,2,10,2,0,0,0,5508
+Booking.com,"Guilherme, AndrÂ",7/3/2025,3,5,2,0,0,0,5047.92
+Booking.com,"Thiele, Marlene",7/3/2025,1,2,2,0,0,0,2016.36
+Booking.com,"Verretto, Nicholas",8/3/2025,4,8,1,0,0,0,7680
+Booking.com,"Chu, Yi-Lin",8/3/2025,3,1,2,0,0,0,5832
+Booking.com,"Logunova, Ekaterina",8/3/2025,2,2,2,0,0,0,4471.2
+Trip.com,"WAN, JIANMIN",8/3/2025,1,7,2,0,0,1,961.05
+Booking.com,"Shaw, Kelly",9/3/2025,2,7,1,0,0,0,5184
+Booking.com,"sellers, shellie",9/3/2025,3,10,3,1,2,0,7796.25
+Booking.com,"sellers, shellie",9/3/2025,3,12,3,1,2,0,7796.25
+Booking.com,"Cook, Hannah",9/3/2025,2,3,2,0,0,0,3250.36
+Booking.com,"deleau, charlotte",10/3/2025,1,6,2,1,2,1,1800
+Booking.com,"Ding, Dino",10/3/2025,5,5,2,0,0,0,7257.6
+Booking.com,"Pontoreau, Patrick",10/3/2025,3,2,2,0,0,0,8841.6
+Trip.com,"Houyang, Lou",10/3/2025,1,4.2,1,0,0,0,3600
+Booking.com,"Rabut, HÂloÂse",10/3/2025,2,4.1,1,0,0,0,5387.04
+Booking.com,"Stasiak, Eva",11/3/2025,3,1,2,0,0,0,6124.8
+Booking.com,"de Wever, Megan",11/3/2025,2,3,2,0,0,0,3499.2
+Trip.com,"JIANG, DAQUAN",11/3/2025,2,4.2,2,0,0,0,2782.5
+Trip.com,"ZHENG, YANAN",11/3/2025,2,7,2,0,0,1,2146.5
+Trip.com,"HU, WENBIN",11/3/2025,1,6,2,0,0,0,1391.25
+Trip.com,"TARASOV, BORIS",11/3/2025,5,11,2,0,0,0,7450
+Trip.com,"AVCI, AHMET ABDULLAH",12/3/2025,3,6,2,0,0,0,3911.25
+Direct Booking,"Doyle, Vickie",12/3/2025,5,4.1,2,0,0,0,9000
+Trip.com,"HU, WENBIN",12/3/2025,1,12,2,0,0,0,1709.25
+Trip.com,"SONG, ZHILIN",12/3/2025,3,8,2,0,0,1,3219.75
+Booking.com,"LEDOUX, MURIELLE",13/3/2025,5,3,2,0,0,0,7560
+Trip.com,"Lee, Juanita",13/3/2025,3,12,2,0,0,0,6480
+Booking.com,"Orlova, Alena",13/3/2025,2,4.2,2,0,0,0,6012.28
+Booking.com,"Doubikin, Cameron",14/3/2025,4,7,2,0,0,0,5184
+Trip.com,"Heizmann, Stefanie",14/3/2025,4,2,2,0,0,0,5250
+Trip.com,"CHONG, SIAW LEE",15/3/2025,3,1,2,0,0,0,4889.25
+Booking.com,"Leyh, Susanne",15/3/2025,4,4.2,1,0,0,0,8942.4
+Booking.com,"Rangel Grande, Paola",15/3/2025,2,5,1,0,0,0,3693.6
+Direct Booking,"Verrento, Nick",15/3/2025,1,6,1,0,0,0,2000
+Trip.com,"LIMPABANDHU, PHANAVIKA",15/3/2025,1,8,2,0,0,1,961.05
+Trip.com,"LIMPABANDHU, PHANAVIKA",15/3/2025,1,10,2,0,0,0,1341
+Trip.com,"LIMPABANDHU, PHANAVIKA",16/3/2025,1,10,2,0,0,0,1341
+Trip.com,"LIMPABANDHU, PHANAVIKA",16/3/2025,1,8,2,0,0,1,961.05
+Trip.com,"CHAIYAVONG, SITTIPONG",16/3/2025,1,6,2,0,0,0,1192
+Booking.com,"Palmero, Cecilia",17/3/2025,3,8,1,0,0,0,3628.8
+Booking.com,"Ottewill, Sarah",17/3/2025,2,5,2,0,0,0,3024
+Booking.com,"Rangel Grande, Paola",17/3/2025,1,6,1,0,0,0,2392.2
+Trip.com,"sriprasong, Sriprasongwicha",17/3/2025,1,,2,0,0,1,225
+Booking.com,"MULHEIM, Marie",18/3/2025,3,3,2,0,0,0,4536
+Trip.com,"AN, XIAOFENG",18/3/2025,3,4.1,2,0,0,0,4173.75
+Trip.com,"WANG, HUI",18/3/2025,1,7,2,0,0,1,961.05
+Booking.com,"Holmes, Sydney",18/3/2025,1,1,2,0,0,0,2224.8
+Trip.com,"sriprasong, Sriprasongwicha",18/3/2025,1,,2,0,0,1,157.5
+Trip.com,"thana on, teak",18/3/2025,1,,2,0,0,1,157.5
+Trip.com,"AN, HYUNJU",19/3/2025,2,7,2,0,0,1,2011.5
+Booking.com,"Feldberg, Sarah",20/3/2025,2,8,1,0,0,0,3456
+Booking.com,"Sillanp????, Tapani",20/3/2025,3,4.2,2,0,0,0,5666.61
+Booking.com,"Fredeman, Katherine",20/3/2025,3,,2,0,0,0,8019
+Trip.com,"Kaewwichai, Anusara",21/3/2025,1,7,2,0,0,1,862.5
+Booking.com,"Munoz, Gonzalo",21/3/2025,3,3,2,0,0,0,4391.28
+Trip.com,"HANNAH, ROBERT TODD",22/3/2025,1,11,2,0,0,0,1490
+Trip.com,"Ngamthinkunlaphat, Phattarnan",22/3/2025,1,7,4,0,0,2,968
+Trip.com,"Ngamthinkunlaphat, Phattarnan",22/3/2025,1,8,4,0,0,2,968
+Trip.com,"JANSRILA, ORNWANYA",22/3/2025,1,4.1,2,0,0,0,1043
+Booking.com,"Stephanie, Durant",23/3/2025,6,1,2,0,0,0,10886.4
+Booking.com,"justy, iishi",23/3/2025,2,7,1,0,0,0,4471.2
+Booking.com,"Gubanov, Denis",23/3/2025,2,11,2,0,0,0,5076
+Expedia,"Kataoka, Kai",23/3/2025,1,8,1,0,0,0,2268
+Trip.com,"JEON, YUJIN",23/3/2025,5,2,2,0,0,0,5215
+Trip.com,"TANG, BOKANG",23/3/2025,1,5,2,0,0,0,968.5
+Trip.com,"TANG, BOKANG",23/3/2025,1,4.2,2,0,0,0,1043
+Trip.com,"Cook, Hannah",23/3/2025,2,12,2,0,0,0,3200
+Booking.com,"smith, stephanie",24/3/2025,2,4.1,2,2,2,0,4560
+Booking.com,"smith, stephanie",24/3/2025,2,4.2,2,2,2,0,4560
+Booking.com,"ROSA, Nadia",24/3/2025,2,5,2,0,0,0,3447.36
+Trip.com,"Sukhova, Sofiia",24/3/2025,5,10,2,0,0,0,6750
+Trip.com,"LIU, YULING",24/3/2025,3,6,2,0,0,0,3129
+Trip.com,"WANG, TAISHAN",24/3/2025,1,8,2,0,0,1,856.75
+Booking.com,"Bruinsma, Elisabeth",25/3/2025,5,11,2,0,0,0,17120.7
+Booking.com,"Fyfe, Hannah",25/3/2025,3,3,2,0,0,0,5346
+Trip.com,"Li, Chao",25/3/2025,2,12,2,0,0,0,2980
+Trip.com,"Cook, Hannah",25/3/2025,1,8,2,0,0,1,920
+Trip.com,"YANG, HU",25/3/2025,1,7,2,0,0,1,856.75
+Trip.com,"SRIGOSIA, PRAPASSORN",26/3/2025,4,7,2,0,0,1,4611
+Booking.com,"Stephanie, Smith",26/3/2025,1,4.1,4,0,0,0,3315.6
+Booking.com,"Stephanie, Smith",26/3/2025,1,4.2,4,0,0,0,3315.6
+Booking.com,"den Hollander, Arjo",27/3/2025,3,6,2,0,0,0,6385.5
+Booking.com,"Jelle, Klein",27/3/2025,1,5,2,0,0,0,1814.4
+Trip.com,"TANG, GESHUN",27/3/2025,3,12,2,0,0,0,4470
+Trip.com,"LIU, YULING",27/3/2025,1,4.1,2,0,0,0,1043
+Booking.com,"Rimanas, Andrejus",28/3/2025,2,3,2,0,0,0,2916
+Booking.com,"Rimanas, Andrejus",28/3/2025,2,5,2,0,0,0,2916
+Booking.com,"Mai, Lisa",28/3/2025,1,4.1,2,0,0,0,2160
+Booking.com,"Henderson, Sean",28/3/2025,3,4.2,2,0,0,0,9600
+Booking.com,"armstrong, anthony",28/3/2025,3,8,1,0,0,0,11040
+Trip.com,"CHIEN, LI CHIEN",28/3/2025,4,2,2,0,0,0,4768
+Booking.com,"morgan, derek",29/3/2025,2,1,2,0,0,0,3628.8
+Trip.com,"CHANDLER, LAINIE",29/3/2025,6,4.1,2,0,0,0,8111.25
+Trip.com,"ZHANG, XIAOLIN",29/3/2025,2,10,2,0,0,0,2384
+Trip.com,"SERKIZ, JOHN",30/3/2025,5,11,2,0,0,0,7780
+Trip.com,"TANG, GESHUN",30/3/2025,2,12,2,0,0,0,3086
+Booking.com,"Cai, Lei",30/3/2025,4,5,1,0,0,0,6842.4
+Booking.com,"Porter, Elizabeth",30/3/2025,1,6,2,0,0,0,1439.64
+Direct Booking,"THANOMPRICHACHAI, Ladda",30/3/2025,2,7,1,0,0,0,2000
+Booking.com,"Singh, Gursartaj",31/3/2025,2,1,2,0,0,0,5060
+Direct Booking,"armstrong, anthony",31/3/2025,3,4.2,1,0,0,0,6600
+Trip.com,"ERROI, FEDERICO",31/3/2025,1,8,2,0,0,1,856.75
+Trip.com,"SANGALLI, LUIGI",31/3/2025,1,3,2,0,0,0,968.5
+Trip.com,"ERROI, ANTONIO",31/3/2025,1,6,2,0,0,0,1043
+Trip.com,"NELSON, STEPHEN LEE",31/3/2025,1,10,2,0,0,0,1192
+Booking.com,"De combles, Magali",1/4/2025,1,3,2,0,0,0,1695.98
+Trip.com,"NELSON, STEPHEN LEE",1/4/2025,1,10,2,0,0,0,1280
+Booking.com,"KUAN, HUNGMING",2/4/2025,5,10,2,0,0,0,11385
+Booking.com,"Kletsova, Alena",2/4/2025,4,6,2,0,0,0,8197.2
+Booking.com,"Mouhime, Sabri",2/4/2025,2,1,1,0,0,0,4968
+Trip.com,"SANGALLI, LUIGI",2/4/2025,1,2,2,0,0,0,1120
+Trip.com,"ERROI, FEDERICO",2/4/2025,1,7,4,0,0,2,920
+Trip.com,"ERROI, FEDERICO",2/4/2025,1,8,4,0,0,2,920
+Trip.com,"Prego, Alexis",3/4/2025,3,5,2,0,0,0,4080
+Expedia,"Ramesh, Rahul",3/4/2025,1,3,2,0,0,0,5464.8
+Booking.com,"Kreuchen, Heidi",3/4/2025,7,4.2,1,0,0,0,16077.6
+Trip.com,"SU, HUIYING",3/4/2025,3,7,2,0,0,1,3240
+Trip.com,"OU, XIAOLI",3/4/2025,3,8,2,0,0,1,3096
+Trip.com,"ZHONG, HAOMIAO",3/4/2025,1,2,2,0,0,0,1280
+Booking.com,"Den Houting, Maike",3/4/2025,4,12,2,0,0,0,8942.4
+Booking.com,"Dobrasinovic, Ana",4/4/2025,8,1,2,0,0,0,17280
+Trip.com,"POON, CHI HUNG TERENCE",4/4/2025,7,4.1,2,0,0,0,8960
+Booking.com,"CRIERE, ChloÂ",4/4/2025,1,3,2,0,0,0,1325.59
+Trip.com,"RUANG-IYARAWUT, NAPHATTHAON",4/4/2025,1,2,2,0,0,0,1120
+Booking.com,"Hodges, John",4/4/2025,2,11,2,0,0,0,3456
+Trip.com,"YAO, YAN",5/4/2025,3,3,2,0,0,0,3720
+Trip.com,"FANG, YUANYUAN",5/4/2025,2,2,2,0,0,0,2240
+Trip.com,"LAU, KIMCHIU",6/4/2025,1,11,2,0,0,0,1280
+Booking.com,"Andres, D'Aleman",6/4/2025,1,5,2,0,0,0,1247.62
+Trip.com,"Rungnonpho, Kesorn",6/4/2025,1,7,2,0,0,1,720
+Trip.com,"Rungnonpho, Kesorn",6/4/2025,1,6,2,0,0,0,1024
+Trip.com,"WANG, XUAN",6/4/2025,1,8,2,0,0,1,720
+Booking.com,"Shirsalkar, Neha",7/4/2025,3,2,2,0,0,0,8928
+Trip.com,"WANG, XUAN",7/4/2025,3,8,2,0,0,1,2760
+Direct Booking,"SAELEE, SAENGCHAI",7/4/2025,1,5,2,0,0,0,300
+Direct Booking,"brook, catherine",8/4/2025,1,3,2,0,0,0,1521
+Direct Booking,"Heal, emma",8/4/2025,1,5,2,0,0,0,1521.82
+Booking.com,"Gauthier, Andrea",8/4/2025,2,10,2,0,0,0,4730
+Booking.com,"Chang Liao, Dylan",8/4/2025,2,6,2,0,0,0,4320
+Trip.com,"SAELEE, SAENGCHAI",8/4/2025,1,12,2,0,0,0,1840
+Booking.com,"Goldberg Sabillon, Iris Maria",9/4/2025,4,3,2,0,0,0,6771.6
+Trip.com,"LAU, KIM CHIU",9/4/2025,1,12,2,0,0,0,1280
+Booking.com,"Talon, Ambre",10/4/2025,2,5,2,1,2,1,2916
+Booking.com,"Kreuchen, Heidi",10/4/2025,1,4.2,1,0,0,0,2049.3
+Booking.com,"Silva, Luana Silva Jesus dos Santos",10/4/2025,4,11,2,0,0,0,16024.76
+Expedia,"heale, emma",10/4/2025,1,6,2,0,0,0,3132
+Expedia,"brook, catherine",10/4/2025,1,2,2,0,0,0,3132
+Trip.com,"CHARPENTIER, CYRILLE WILLIAM JEAN",10/4/2025,1,10,2,0,0,0,1120
+Booking.com,"Tomlinson, Donald",11/4/2025,3,12,2,0,0,0,8748
+Booking.com,"A-nuphan, Napaphorn",11/4/2025,2,10,1,0,0,0,5520
+Booking.com,"monro, lucy",11/4/2025,1,4.1,2,0,0,0,1607.04
+Booking.com,"Pata, Razvan",11/4/2025,1,7,1,0,0,0,1166.4
+Direct Booking,"chawala, Ravideepsingh",12/4/2025,1,4.2,2,0,0,0,2100
+Trip.com,"HOMPHANA, WANANONG",12/4/2025,1,7,2,0,0,1,1160
+Booking.com,"Wijnhoud, joyce",12/4/2025,4,2,2,0,0,0,10609.92
+Trip.com,"Reedy, Therese",12/4/2025,4,4.1,2,0,0,0,7040
+Booking.com,"TOMKISS, TERRY",12/4/2025,5,5,2,0,0,0,7560
+Trip.com,"SHE, MINGHAN",12/4/2025,1,8,2,0,0,1,720
+Booking.com,"Talon, Ambre",12/4/2025,1,6,2,1,2,1,1447.2
+Trip.com,"WANG, KAI",12/4/2025,1,1,2,0,0,0,1120
+Booking.com,"Rungruk, Haiwattananukool",13/4/2025,3,6,2,0,0,0,6998.4
+Booking.com,"Zelic, Iva",13/4/2025,2,1,2,2,2,1,3870
+Booking.com,"Zelic, Iva",13/4/2025,2,7,2,2,2,1,3870
+Booking.com,"Dickson, Jennifer",13/4/2025,5,4.2,2,0,0,0,10246.5
+Trip.com,"KIM, JIHYEON",13/4/2025,3,8,2,0,0,1,4320
+Trip.com,"GE, FEI",13/4/2025,1,3,2,0,0,0,864
+Booking.com,"Thanaphumikulphorn, Phasuthorn",13/4/2025,1,10,2,0,0,0,1652.4
+Expedia,"Colina, Wilfredo",14/4/2025,2,11,2,0,0,0,5184.02
+Booking.com,"komai, Yu",14/4/2025,3,3,1,0,0,0,5417.28
+Trip.com,"GE, FEI",14/4/2025,1,10,2,0,0,0,1440
+Trip.com,"PUKCHOEI, KONGROB",15/4/2025,1,7,2,0,0,1,1080
+Trip.com,"PEI, AILAN",15/4/2025,3,1,2,0,0,0,3360
+Trip.com,"GE, FEI",15/4/2025,1,10,2,0,0,0,1440
+Trip.com,"CHEN, LIPING",16/4/2025,1,7,2,0,0,1,720
+Trip.com,"GE, FEI",16/4/2025,1,8,2,0,0,1,720
+Booking.com,"Chrystello, Anita",16/4/2025,3,10,2,0,0,0,4860
+Trip.com,"weng, yiheng",16/4/2025,2,2,2,0,0,0,2048
+Trip.com,"Cook, Hannah",16/4/2025,3,6,2,0,0,0,3072
+Booking.com,"Keyt, Michelle",16/4/2025,1,4.1,2,0,0,0,1512
+Booking.com,"Laurent, Christian",16/4/2025,1,11,2,0,0,0,1890
+Trip.com,"GUTIERRES, STEPHANE",17/4/2025,2,3,2,0,0,0,1728
+Trip.com,"GE, FEI",17/4/2025,1,8,2,0,0,1,720
+Trip.com,"PATCHARACHAISAK, JADEPIYA",17/4/2025,1,7,2,0,0,1,720
+Trip.com,"CHEN, Cheng Fu",17/4/2025,2,11,2,0,0,0,2880
+Trip.com,"PANYATUI, SUPANSA",17/4/2025,1,5,2,0,0,0,864
+Booking.com,"Leibovici, Pascal",18/4/2025,1,2,2,0,0,0,2235.6
+Booking.com,"Leibovici, Pascal",18/4/2025,1,4.1,2,0,0,0,2235.6
+Trip.com,"GUO, RUONAN",18/4/2025,2,7,2,0,0,1,1440
+Booking.com,"Roulette, Fanny",18/4/2025,3,1,2,0,0,0,4811.4
+Trip.com,"WU, TAO",18/4/2025,1,5,2,0,0,0,864
+Booking.com,"Leibovici, Pascal",19/4/2025,3,11,1,0,0,0,7614
+Booking.com,"Richards, LW",19/4/2025,3,2,3,1,2,0,8613
+Booking.com,"Richards, LW",19/4/2025,3,6,3,1,2,0,8613
+Expedia,"Chigurupati, Tilak",19/4/2025,2,10,2,0,0,0,5832
+Trip.com,"Cook, Hannah",19/4/2025,4,8,2,0,0,1,2880
+Trip.com,"GUTIERRES, STEPHANE",19/4/2025,1,3,2,0,0,0,864
+Booking.com,"Ben Hadj, Adel",20/4/2025,3,7,2,3,2,2,6571.13
+Booking.com,"Ben Hadj, Adel",20/4/2025,3,4.1,2,3,2,2,6571.13
+Booking.com,"Auger, Sam",20/4/2025,1,3,2,0,0,0,1292.76
+Trip.com,"leong, eugene",20/4/2025,2,5,2,0,0,0,1728
+Trip.com,"GUO, RUONAN",20/4/2025,1,4.2,2,0,0,0,1024
+Booking.com,"Zatarain Chiquete, Jos?? Alfredo",21/4/2025,2,3,2,0,0,0,2721.6
+Booking.com,"Fu, Hung Wen",21/4/2025,4,4.2,1,0,0,0,5659.2
+Trip.com,"VASKOV, PAVEL",21/4/2025,2,12,2,0,0,0,2560
+Booking.com,"Figueroa Riquelme, Claudia",22/4/2025,3,5,2,0,0,0,4740.12
+Trip.com,"Duan, Ya Chen",22/4/2025,5,10,2,0,0,0,7800
+Trip.com,"XI, LUXUAN",22/4/2025,3,2,2,0,0,0,3072
+Trip.com,"Sriwitchayangkul, Duangdanai",22/4/2025,1,1,2,0,0,0,1120
+Booking.com,"Steinfeldt, Craig",22/4/2025,1,6,2,0,0,0,2232
+Booking.com,"HERISSAY, LEOPOLD",23/4/2025,4,11,2,0,0,0,9306
+Booking.com,"Marques, Aline",23/4/2025,2,6,2,0,0,0,2808
+Trip.com,"Cook, Hannah",23/4/2025,4,12,2,0,0,0,5760
+Trip.com,"CAMPOLONGO CUTOLO, GIOVANNI",23/4/2025,1,1,2,0,0,0,680
+Trip.com,"Webb, Bradley David",23/4/2025,1,8,2,0,0,1,680
+Trip.com,"LEE, AREUM",24/4/2025,2,7,2,0,0,1,2320
+Trip.com,"Bickel, Ingo",24/4/2025,5,4.1,2,0,0,0,7000
+Booking.com,"Boskovic, Anja",24/4/2025,4,3,2,0,0,0,6652.8
+Trip.com,"REICH, ASHLEY",25/4/2025,4,1,2,0,0,0,8640
+Trip.com,"CAMPOLONGO CUTOLO, GIOVANNI",25/4/2025,1,4.2,2,0,0,0,1000
+Trip.com,"Webb, Bradley David",25/4/2025,1,,2,0,0,0,840
+Booking.com,"maloney, joanna",25/4/2025,1,5,1,0,0,0,1131.17
+Trip.com,"CHEN, PIN HUNG",26/4/2025,2,7,2,0,0,1,2160
+Trip.com,"YAO, JIAHUI",26/4/2025,2,4.2,2,0,0,0,3200
+Booking.com,"Pollano, Giulio",26/4/2025,2,6,2,0,0,0,3628.8
+Trip.com,"Baidya, Shibaprasad",26/4/2025,2,2,2,0,0,0,2048
+Trip.com,"SHIMIZU, RYOKO",26/4/2025,3,5,2,0,0,0,2592
+Trip.com,"Cook, Hannah",26/4/2025,2,8,2,0,0,1,1392
+Trip.com,"baxter, tegan",27/4/2025,1,10,2,0,0,0,1280
+Booking.com,"MORITA, SHOKO",27/4/2025,4,11,1,0,0,0,7209
+Booking.com,"CastaÂ¤eda De Los Rios, Luisa",28/4/2025,4,4.2,2,0,0,0,4406.4
+Trip.com,"LIU, YUJIE",28/4/2025,2,10,2,0,0,0,2240
+Booking.com,"LabbÂ, Pauline",28/4/2025,2,3,2,0,0,0,2531.66
+Booking.com,"Ramachandran, Gautham",28/4/2025,2,7,2,0,0,0,2365.2
+Booking.com,"Ramachandran, Gautham",28/4/2025,2,8,2,0,0,0,2365.2
+Trip.com,"Cook, Hannah",28/4/2025,2,6,2,0,0,0,2000
+Booking.com,"Bol, Linda",29/4/2025,3,5,1,0,0,0,4389
+Trip.com,"TAN, XIAOJUAN",29/4/2025,2,2,2,0,0,0,2048
+Booking.com,"Kim, Jihye",29/4/2025,2,1,1,0,0,0,3693.6
+Booking.com,"Smith, Dana",30/4/2025,2,12,2,0,0,0,5170
+Booking.com,"Clare, James",30/4/2025,4,3,1,0,0,0,5266.8
+Traveloka.com,"zhang, jiayu",30/4/2025,2,4.1,2,0,0,0,2520
+Trip.com,"WU, YANMING",30/4/2025,2,6,2,0,0,0,2048
+Trip.com,"WOO, HIN LOK",30/4/2025,1,7,2,0,0,1,680
+Trip.com,"CHEN, JIAYI",30/4/2025,1,8,2,0,0,1,680
+Expedia,"Moulton, Kasey",1/5/2025,3,1,1,0,0,0,8748
+Booking.com,"Campos, Ana",1/5/2025,4,2,2,0,0,0,7444.8
+Booking.com,"Campos, Ana",1/5/2025,4,10,2,0,0,0,7444.8
+Booking.com,"Otim, Vanessa",1/5/2025,5,11,2,0,0,0,14355
+Trip.com,"CHEN, JIAYI",1/5/2025,5,8,2,0,0,1,4600
+Trip.com,"CHEN, XIAOQIAN",1/5/2025,1,7,2,0,0,1,720
+Trip.com,"XU, LEI",2/5/2025,4,4.1,2,0,0,0,4480
+Trip.com,"Cheng, Chiao-Leng",2/5/2025,2,7,2,0,0,1,1840
+Trip.com,"ZHONG, XIAOJING",2/5/2025,2,12,2,0,0,0,2880
+Trip.com,"YAN, LIN",2/5/2025,1,4.2,2,0,0,0,1024
+Trip.com,"LI, XINYI",2/5/2025,1,5,2,0,0,0,864
+Trip.com,"CHEN, XIAOQIAN",2/5/2025,1,6,2,0,0,0,1024
+Booking.com,"Tokuda, Akihiro",3/5/2025,1,4.2,2,0,0,0,2376
+Trip.com,"FENG, MINING",3/5/2025,3,6,2,0,0,0,3072
+Trip.com,"LERTKOVIT, NATTACHAI",3/5/2025,1,5,2,0,0,0,864
+Trip.com,"ZHONG, XIAOJING",4/5/2025,2,7,2,0,0,1,1440
+Trip.com,"LIN, JIAMING",4/5/2025,4,4.2,2,0,0,0,4096
+Booking.com,"Andreasyan, Karine",4/5/2025,3,12,1,0,0,0,5481
+Trip.com,"LI, DONGMING",4/5/2025,2,5,2,0,0,0,1728
+Trip.com,"LIANG, YARONG",4/5/2025,1,3,2,0,0,0,864
+Trip.com,"YANG, XUE",4/5/2025,1,1,2,0,0,0,1112
+Booking.com,"wigley, troy",5/5/2025,4,1,2,0,0,0,8064
+Booking.com,"Westwick, Katie",5/5/2025,3,3,2,0,0,0,5078.7
+Trip.com,"WANG, CHENYA",5/5/2025,2,2,2,0,0,0,2048
+Trip.com,"ZENG, JIAYUE",5/5/2025,2,10,2,0,0,0,2240
+Trip.com,"navarro, mario",6/5/2025,3,4.1,2,0,0,0,4200
+Booking.com,"Gustafsson, Luisa",6/5/2025,2,7,1,0,0,0,3564
+Booking.com,"CHANNA, WAQAS ALI",6/5/2025,2,5,2,0,0,0,2262.34
+Booking.com,"Le Coguic, Morgane",6/5/2025,1,6,1,0,0,0,1167.08
+Trip.com,"SUTTHAPHIWAT, ARIYA",6/5/2025,1,8,2,0,0,1,712
+Trip.com,"KIM, RIA",7/5/2025,2,8,2,0,0,1,1440
+Booking.com,"Bhatnagar, Radha",7/5/2025,5,10,1,0,0,0,12150
+Booking.com,"Vlietstra, Nynke",7/5/2025,2,6,1,0,0,0,3600
+Trip.com,"WANG, CHENYA",7/5/2025,1,2,2,0,0,0,1024
+Booking.com,"Andreasyan, Karine",7/5/2025,2,12,2,0,0,0,3645
+Booking.com,"Josefa, Jaravalero",8/5/2025,3,2,2,0,0,0,4536
+Booking.com,"Kuhn, Tamikah",8/5/2025,4,3,2,0,0,0,6320.16
+Booking.com,"De La Fuente Metola, Sara",8/5/2025,3,11,2,0,0,0,6075
+Trip.com,"LIM, SEAN CHRISTIAN",8/5/2025,3,7,2,0,0,1,2136
+Trip.com,"VADIVELU, GOWRI",8/5/2025,1,5,2,0,0,0,864
+Trip.com,"ZHUO, YUCHEN",8/5/2025,1,4.2,2,0,0,0,1024
+Trip.com,"SU, YUE",9/5/2025,3,1,2,1,2,1,3336
+Booking.com,"Parts, Lada",9/5/2025,3,4.1,6,0,0,0,2500
+Booking.com,"Parts, Lada",9/6/2025,3,4.2,6,0,0,0,2500
+Booking.com,"Parts, Lada",9/5/2025,3,12,6,0,0,0,2500
+Trip.com,"ZHUO, YUCHEN",9/5/2025,1,8,2,0,0,1,712
+Trip.com,"ZHENG, XIUYING",9/5/2025,1,5,2,0,0,0,864
+Booking.com,"Susaengsongnathee, Asamaphan",10/5/2025,2,6,2,0,0,0,3024
+Trip.com,"NAKHATA, SARANKORN",10/5/2025,1,8,2,0,0,1,712
+Trip.com,"NAKHATA, SARANKORN",10/5/2025,1,5,2,0,0,0,864
+Booking.com,"Gustafsson, Luisa",11/5/2025,3,5,1,0,0,0,4722.18
+Trip.com,"NAKHATA, SARANKORN",11/5/2025,1,7,4,0,0,2,712
+Trip.com,"NAKHATA, SARANKORN",11/5/2025,1,8,4,0,0,2,712
+Trip.com,"VILAS MORENO, JOSE FRANCISCO",11/5/2025,2,4.1,2,0,0,0,2048
+Booking.com,"Bilbao, Nerea",11/5/2025,3,11,2,0,0,0,5454
+Trip.com,"ZHAO, ZUNKAI",11/5/2025,1,4.2,2,0,0,0,1024
+Trip.com,"ZHENG, XIUYING",11/5/2025,1,2,2,0,0,0,1024
+Trip.com,"GONZALEZ PINEDA, CLAUDIA",12/5/2025,1,7,2,0,0,1,920
+Booking.com,"Khairwar, Rahul",12/5/2025,3,12,1,0,0,0,5238
+Booking.com,"Jong Kwon, Lee",12/5/2025,1,3,2,0,0,0,1795.5
+Direct Booking,"ping, ping",12/5/2025,1,6,2,0,0,0,0
+Trip.com,"WEI, KAICHEN",12/5/2025,1,10,2,0,0,0,1112
+Booking.com,"EGASHIRA, Toshihiko",13/5/2025,3,4.1,2,0,0,0,4860
+Trip.com,"LUO, JING",13/5/2025,3,3,2,0,0,0,2592
+Booking.com,"Gross, Noa",13/5/2025,3,10,2,0,0,0,6366.6
+Trip.com,"WEI, KAICHEN",13/5/2025,1,4.2,2,0,0,0,1024
+Trip.com,"CAI, TAOFENG",13/5/2025,1,7,2,0,0,1,712
+Trip.com,"GONZALEZ PINEDA, CLAUDIA",14/5/2025,2,8,2,0,0,1,1840
+Booking.com,"Pankova, Alina",14/5/2025,1,4.2,2,0,0,0,1512
+Trip.com,"Cholhatai, Sujit",14/5/2025,1,1,2,0,0,0,1112
+Trip.com,"Moungyai, Rath",14/5/2025,1,6,2,0,0,0,1024
+Booking.com,"Bilbao, Nerea",14/5/2025,1,11,2,0,0,0,1755
+Trip.com,"WEI, KAICHEN",14/5/2025,1,7,2,0,0,1,712
+Trip.com,"DAUSCH, STEFANIE",15/5/2025,3,7,2,0,0,1,3480
+Trip.com,"THAR, KAUNG KHON",15/5/2025,2,4.2,2,0,0,0,2048
+Booking.com,"tian, yuan",15/5/2025,1,5,1,0,0,0,1526.18
+Trip.com,"MA, TIANFEI",15/5/2025,1,6,2,0,0,0,1024
+Trip.com,"WANG, CHI",16/5/2025,3,2,2,0,0,0,5040
+Trip.com,"WANG, CHI",16/5/2025,3,1,2,0,0,0,6000
+Trip.com,"WANG, CHI",16/5/2025,3,3,2,0,0,0,4080
+Booking.com,"tian, yuan",16/5/2025,2,4.1,1,0,0,0,3672
+Trip.com,"YAMAMOTO, HARUMI",16/5/2025,2,10,2,0,0,0,2224
+Booking.com,"Gustafsson, Luisa",16/5/2025,1,5,1,0,0,0,2411.96
+Booking.com,"Prieto Cano, Javier",17/5/2025,3,8,2,0,0,0,2937.6
+Trip.com,"LIU, CAIYUN",17/5/2025,3,4.2,2,0,0,0,3360
+Trip.com,"Jaradwichakon, Tanika",17/5/2025,2,6,2,0,0,0,2048
+Trip.com,"KANNO, YUKI",17/5/2025,1,5,2,0,0,0,864
+Booking.com,"Chrystello, Anita",17/5/2025,2,11,2,0,0,0,3780
+Booking.com,"Rackyte, Loreta",18/5/2025,3,7,1,0,0,0,4665.6
+Booking.com,"Thavapalachandran, Subesan",18/5/2025,4,4.1,2,0,0,0,6048
+Trip.com,"ham, jimin",18/5/2025,1,10,2,1,2,1,1529.6
+Booking.com,"tian, yuan",18/5/2025,2,5,2,0,0,0,3052.36
+Booking.com,"Felicilda, Loveme",19/5/2025,3,1,2,0,0,0,5103
+Direct Booking,"Gross, Noah",19/5/2025,1,10,2,0,0,0,2200
+Booking.com,"morris, alan",20/5/2025,3,3,2,0,0,0,4374
+Booking.com,"MacDonald, Micah",20/5/2025,3,11,2,0,0,0,9720
+Trip.com,"SONG, WEICHENG",20/5/2025,1,4.2,2,0,0,0,1024
+Booking.com,"tian, yuan",20/5/2025,2,5,2,0,0,0,3052.36
+Trip.com,"ZENG, SHUYA",20/5/2025,4,8,2,0,0,1,2848
+Trip.com,"SONG, WEICHENG",21/5/2025,1,4.2,2,0,0,0,1080
+Direct Booking,"Netta frank, Netta frank",22/5/2025,4,2,2,0,0,0,5200
+Trip.com,"WU, KEYUAN",22/5/2025,5,5,2,0,0,0,4200
+Trip.com,"HUNTER, LUCY GRACE",22/5/2025,3,7,2,0,0,0,2136
+Booking.com,"Zheng, Xiaoye",23/5/2025,4,10,2,0,0,0,7290
+Trip.com,"TAN, RUISI",23/5/2025,2,3,2,0,0,0,1680
+Trip.com,"HU, XINYUN",23/5/2025,1,1,2,0,0,0,1000
+Trip.com,"WANG, WENQI",25/5/2025,3,7,2,0,0,1,2136
+Trip.com,"NOITANG, JARIYA",25/5/2025,2,8,2,0,0,1,1424
+Booking.com,"Sayed, Aleemuddin",25/5/2025,2,6,2,1,2,1,3864
+Booking.com,"Drebes, Henrique",26/5/2025,4,2,2,0,0,0,6720
+Trip.com,"glushkov, andrei",26/5/2025,4,4.1,2,0,0,0,4480
+Booking.com,"Welz, Laura",26/5/2025,5,4.2,2,0,0,0,9967.05
+Trip.com,"PEDERSEN, ALEXANDER",26/5/2025,3,3,2,0,0,0,2760
+Trip.com,"LI, TONG",27/5/2025,5,5,2,0,0,0,4320
+Trip.com,"HSIEH, LI MEI",27/5/2025,1,8,2,0,0,1,712
+Trip.com,"LAORVILAI, KANOKPORN",27/5/2025,2,6,2,0,0,0,2000
+Trip.com,"CHEN, FENG",28/5/2025,2,10,2,0,0,0,2224
+Trip.com,"BEEN, JIYEON",28/5/2025,2,7,2,0,0,1,1424
+Expedia,"Chan, Yuk King",28/5/2025,4,11,2,0,0,0,8400
+Trip.com,"HSIEH, LI MEI",28/5/2025,1,8,2,0,0,1,712
+Booking.com,"Pieri, Florent",28/5/2025,2,12,2,0,0,0,3072.48
+Trip.com,"CHUANG, TSAICHUAN",29/5/2025,3,1,2,0,0,0,3544.5
+Booking.com,"WANG, YUAN",29/5/2025,3,3,2,0,0,0,4343.63
+Booking.com,"WANG, YUAN",29/5/2025,3,6,2,0,0,0,4343.63
+Booking.com,"WANG, YUAN",29/5/2025,3,8,2,0,0,0,4343.63
+Booking.com,"Wager, Moritz",30/5/2025,5,10,2,0,0,0,11616.66
+Trip.com,"FAN, NINI",30/5/2025,3,12,2,1,2,1,4462.5
+Trip.com,"AN, RAN",30/5/2025,3,2,2,0,0,0,3187.5
+Direct Booking,"Pieri, Florent",30/5/2025,1,4.1,1,0,0,0,1300
+Trip.com,"CHEN, FENG",30/5/2025,1,7,2,0,0,1,712
+Trip.com,"FAN, QICHAO",31/5/2025,4,4.1,2,0,0,0,5392
+Trip.com,"REN, RANCI",31/5/2025,1,4.2,2,0,0,0,1024
+Trip.com,"QIN, CHUNCHUN",31/5/2025,2,7,2,0,0,1,1528
+Trip.com,"REN, RANCI",1/6/2025,2,4.2,2,0,0,0,2912
+Trip.com,"SONG, YUXIN",1/6/2025,5,8,2,0,0,1,3560
+Direct Booking,"M, Gabi",1/6/2025,5,6,1,0,0,0,6500
+Trip.com,"Machaiwong, Lalana",1/6/2025,1,3,2,0,0,0,840
+Trip.com,"YANG, TAE YOUNG",1/6/2025,2,1,2,0,0,0,2480
+Trip.com,"LI, YIJIA",1/6/2025,2,5,2,0,0,0,1680
+Booking.com,"Pieri, Florent",1/6/2025,2,11,2,0,0,0,3950.64
+Booking.com,"Mackay, Emma",2/6/2025,4,7,1,0,0,0,7683.68
+Booking.com,"KARATATAR DIKER, KUBRA",2/6/2025,3,3,1,0,0,0,4145.91
+Booking.com,"Hillson, David",3/6/2025,3,4.2,2,0,0,0,4757.52
+Booking.com,"LAFFAY, Fr??d??ric",3/6/2025,2,2,2,0,0,0,3349.68
+Booking.com,"Pieri, Florent",3/6/2025,2,11,2,0,0,0,3950.64
+Direct Booking,"Lim, Chin",3/6/2025,2,5,2,0,0,0,2000
+Trip.com,"FARREN, JUSTIN ARDEN",3/6/2025,1,12,2,0,0,0,1400
+Trip.com,"SUPRIHATIN, HANA",4/6/2025,3,10,2,0,0,0,3720
+Trip.com,"BAI, DONGXUE",5/6/2025,9,5,2,0,0,0,8280
+Trip.com,"WANG, QIONG",5/6/2025,2,4.1,2,0,0,0,2000
+Trip.com,"Lim, Chin",5/6/2025,1,3,2,0,0,0,1000
+Trip.com,"LIU, XINTONG",6/6/2025,3,3,2,0,0,0,2520
+Direct Booking,"M, Gabi",6/6/2025,3,6,1,0,0,0,3900
+Trip.com,"SONG, YUXIN",6/6/2025,2,8,2,0,0,1,1424
+Trip.com,"CHU, I JOU",6/6/2025,4,4.2,2,0,0,0,4000
+Booking.com,"Rockwell, Erin",6/6/2025,7,11,2,0,0,0,15144.43
+Booking.com,"KARATATAR DIKER, KUBRA",6/6/2025,2,12,1,0,0,0,3612.5
+Direct Booking,"Hillson, David",6/6/2025,1,2,2,0,0,0,1580
+Direct Booking,"Lim, Chin",6/6/2025,4,1,2,0,0,0,3900
+Trip.com,"WANG, QIONG",7/6/2025,1,7,2,0,0,1,712
+Trip.com,"LIANG, SHUANG",7/6/2025,5,4.2,2,0,0,0,5000
+Trip.com,"liang, cuiying",7/6/2025,1,2,2,0,0,0,1000
+Booking.com,"Shtaer, Alena",7/6/2025,2,10,2,0,0,0,3452.9
+Trip.com,"Surakiatkul, Wannida",8/6/2025,1,2,2,0,0,0,1000
+Trip.com,"WANG, QIONG",8/6/2025,1,12,2,0,0,0,1992
+Trip.com,"LIANG, CUIYING",8/6/2025,1,8,2,0,0,1,792
+Trip.com,"LIU, XIANG",8/6/2025,1,7,2,0,0,1,792
+Direct Booking,"M, Gabi",9/6/2025,23,6,1,0,0,0,29900
+Trip.com,"LIU, XINTONG",9/6/2025,1,3,2,0,0,0,840
+Trip.com,"KULACHOL, Rathachanok",9/5/2025,0,7,4,0,0,2,712
+Trip.com,"KULACHOL, Rathachanok",9/6/2025,1,8,4,0,0,2,712
+Trip.com,"AURJONGMANEE, ACHIRAYA",9/6/2025,1,2,2,0,0,0,1000
+Booking.com,"Shtaer, Alena",9/6/2025,1,10,2,0,0,0,1751.84
+Direct Booking,"yuanyuan, guo",9/6/2025,2,12,1,0,0,0,4400
+Trip.com,"YANG, LU",10/6/2025,4,4.1,2,0,0,0,4000
+Booking.com,"Ludlow, Richard",10/6/2025,2,2,2,0,0,0,3252.58
+Booking.com,"Shtaer, Alena",10/6/2025,1,1,2,0,0,0,1726.45
+Trip.com,"LUCAS, CORENTINE",10/6/2025,2,3,2,0,0,0,1840
+Trip.com,"HTWEHTWEMON, NANG",11/6/2025,4,7,2,0,0,1,2848
+Trip.com,"LIU, XINTONG",11/6/2025,1,8,2,0,0,1,712
+Booking.com,"TOKELOVE, SHIRLEY",11/6/2025,7,1,2,0,0,0,11374.3
+Booking.com,"Shtaer, Alena",11/6/2025,1,10,2,0,0,0,1751.84
+Trip.com,"Wannajit, Chomfa",12/6/2025,2,8,2,0,0,1,1424
+Trip.com,"Rithaanuphap, Christjak",12/6/2025,1,3,2,0,0,0,840
+Trip.com,"SOPENKO, ALEKSANDR",12/6/2025,3,12,2,0,0,0,4200
+Trip.com,"RO, HEERAE",12/6/2025,3,10,2,0,0,0,3720
+Trip.com,"LUCAS, CORENTINE",12/6/2025,1,2,2,0,0,0,1229.25
+Booking.com,"Ludlow, Richard",12/6/2025,1,4.1,1,0,0,0,1842.25
+Booking.com,"Knapp, Laura Mary",13/6/2025,1,3,1,0,0,0,2216.61
+Trip.com,"RUANKAM, SUPONG",13/6/2025,2,4.1,2,0,0,0,2000
+Trip.com,"MAJEEN, PAIRIN",13/6/2025,2,2,2,0,0,0,2000
+Booking.com,"Tan, Tse Yuen",13/6/2025,5,11,1,0,0,0,9876.6
+Trip.com,"Aguirre Rivillas, Mariana",14/6/2025,5,3,2,0,0,0,4600
+Trip.com,"Sheldon, Libby Mei",14/6/2025,2,8,2,0,0,1,1584
+Booking.com,"Brand, David",14/6/2025,4,4.2,1,0,0,0,7497.68
+Trip.com,"ZHOU, LONG",14/6/2025,1,5,2,0,0,0,856.75
+Direct Booking,"HTWEH HTWEMON, NANG",15/6/2025,2,7,2,0,0,0,1424
+Trip.com,"ALGHAMDI, SAUD",15/6/2025,3,4.1,2,0,0,0,3017.25
+Trip.com,"JIN, QIAN",15/6/2025,1,5,2,0,0,0,856.75
+Trip.com,"CHEN, LEQING",16/6/2025,2,8,2,0,0,1,1475.1
+Trip.com,"SAEIA, KASIMA",16/6/2025,2,5,2,0,0,0,1713.5
+Booking.com,"oh, nari",16/6/2025,1,2,2,0,0,0,1761.74
+Trip.com,"MATSUMOTO, CHIHIRO",17/6/2025,1,10,2,0,0,0,1240
+Trip.com,"LEE, YOONKYU",17/6/2025,3,2,2,0,0,0,3000
+Direct Booking,"Rithaanuphap, Christjak",17/6/2025,1,7,1,0,0,0,850
+Trip.com,"demaggio, Steven",17/6/2025,3,12,2,0,0,0,3911.25
+Trip.com,"LIU, HAITAO",18/6/2025,2,8,2,0,0,1,1475.1
+Booking.com,"Swayne, Peter",18/6/2025,1,4.1,2,0,0,0,1505.21
+Trip.com,"ZHAO, LIANG",18/6/2025,1,4.2,2,0,0,0,1005.75
+Booking.com,"Svigelj, Brigita",18/6/2025,3,1,2,1,2,1,6522.45
+Booking.com,"Church, Brandon",19/6/2025,2,4.1,3,0,0,0,5437.58
+Booking.com,"Church, Brandon",19/6/2025,2,4.2,3,0,0,0,5437.58
+Trip.com,"YEAGJEON, PAPATSON",19/6/2025,1,7,2,0,0,1,712
+Expedia,"Breen, Ben",19/6/2025,3,3,2,0,0,0,4158
+Expedia,"Nguyen, Tan Loc",19/6/2025,2,10,1,0,0,0,3636
+Trip.com,"LI, SHIQI",20/6/2025,1,7,2,0,0,1,816
+Trip.com,"YINSAKULCHAI, SANCHAI",20/6/2025,2,12,2,0,0,0,2607.5
+Trip.com,"KUNCHON, SAREERA",20/6/2025,1,8,2,0,0,1,737.55
+Trip.com,"XUE, TIANYI",20/6/2025,4,2,2,0,0,0,4283.75
+Trip.com,"Herkrath, Sven Oliver",20/6/2025,5,11,2,0,0,0,6518.75
+Trip.com,"Kamouan, Piyatida",20/6/2025,1,5,2,0,0,0,856.75
+Booking.com,"Curphey, Richard",21/6/2025,6,7,1,0,0,0,11515.14
+Trip.com,"CHIM, TSZ YAN JODY",21/6/2025,2,8,2,0,0,1,1513
+Trip.com,"LING, YIN",21/6/2025,2,10,2,0,0,0,2635
+Trip.com,"CHANTHORN, PORNPHAN",21/6/2025,1,4.1,2,0,0,0,937.5
+Trip.com,"LI, LIJIN",21/6/2025,5,4.2,2,0,0,0,5028.75
+Trip.com,"BUNSIDDHI, PORSA",21/6/2025,1,1,2,1,2,1,1154.75
+Trip.com,"CHEUNG, HEI CHING",22/6/2025,4,3,2,0,0,0,3680
+Booking.com,"Eun-Hee, Park",22/6/2025,2,1,2,0,0,0,4502.02
+Trip.com,"SU, LIUJUN",22/6/2025,1,12,2,0,0,0,1303.75
+Booking.com,"Baraniak, Bonnie",22/6/2025,1,4.1,2,0,0,0,1482.05
+Trip.com,"ZHANG, MAONING",22/6/2025,1,5,2,0,0,0,812.05
+Trip.com,"LEE, MINWEI",23/6/2025,3,8,2,0,0,1,2448
+Trip.com,"ZHANG, MAONING",23/6/2025,1,5,2,0,0,0,812.05
+Trip.com,"SU, LIUJUN",23/6/2025,1,12,2,0,0,0,1303.75
+Trip.com,"yang, zhensheng",24/6/2025,4,5,2,0,0,0,3450
+Trip.com,"SU, LIUJUN",24/6/2025,1,12,2,0,0,0,1303.75
+Trip.com,"HUYNH, THANG",25/6/2025,2,4.1,2,0,0,0,2011.5
+Trip.com,"WU, HUITING",25/6/2025,1,2,2,0,0,0,1117.5
+Booking.com,"monleon, edwin",26/6/2025,3,11,2,0,0,0,6374.37
+Trip.com,"LU, HONGXIA",26/6/2025,1,2,2,0,0,0,931.25
+Booking.com,"Raty, Pyry",26/6/2025,2,1,2,0,0,0,4330.08
+Trip.com,"LUO, YAXIN",26/6/2025,2,4.2,2,0,0,0,2011.5
+Trip.com,"VIRYASIRI, KAHN",26/6/2025,3,3,2,0,0,0,2570.25
+Trip.com,"YANG, CAN",26/6/2025,1,10,2,1,2,1,1543.64
+Trip.com,"LIU, CHIAWEI",27/6/2025,1,7,2,0,0,1,792
+Trip.com,"TSAI, TZUYING",27/6/2025,4,10,2,0,0,0,4650
+Trip.com,"LIU, YIXUAN",27/6/2025,1,4.1,2,0,0,0,1117.5
+Booking.com,"Kr??geloh, Nele",28/6/2025,4,4.1,2,0,0,0,9354.4
+Trip.com,"KIM, SOOHYUN",28/6/2025,3,4.2,2,0,0,0,3017.25
+Trip.com,"Win, Zin Thuzar",28/6/2025,1,7,2,0,0,1,737.55
+Expedia,"DENG, FANGFANG",28/6/2025,3,1,2,0,0,0,4492.8
+Trip.com,"ROSE, MARY",28/6/2025,1,8,2,0,0,1,737.55
+Booking.com,"Kane, Sumit",29/6/2025,6,2,2,0,0,0,13365
+Trip.com,"GOMEZ, SANTIAGO",29/6/2025,4,8,2,0,0,1,2950.2
+Trip.com,"WEI, Miao",29/6/2025,1,3,2,0,0,0,908.9
+Expedia,"cabrera, florencia",29/6/2025,2,7,1,0,0,0,2059.2
+Trip.com,"WEN, LIUQIAN",29/6/2025,2,5,2,0,0,0,1817.8
+Trip.com,"Shlomo, Amit",29/6/2025,1,11,2,0,0,0,1877.4
+Trip.com,"Shlomo, Amit",30/6/2025,1,11,2,0,0,0,1877.4

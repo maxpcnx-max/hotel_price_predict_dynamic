@@ -1,0 +1,7 @@
+streamlit
+pandas
+gdown
+holidays
+scikit-learn
+xgboost
+plotly
