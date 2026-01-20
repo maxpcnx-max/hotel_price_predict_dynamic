@@ -142,14 +142,15 @@ def load_data():
     except: return pd.DataFrame()
 
 def calculate_historical_avg(df):
-    """คำนวณราคาเฉลี่ยต่อคืนในอดีตของแต่ละห้อง (ใช้เป็นบรรทัดฐาน)"""
+    """คำนวณราคาเฉลี่ยต่อคืนในอดีตของแต่ละห้อง (ใช้เป็นบรรทัดฐานสำหรับ Calibration)"""
     if df.empty: return {}
-    # คำนวณ ADR (Average Daily Rate) จริงในประวัติ
-    # ระวัง: Price ใน CSV คือ Total Price ต้องหาร Night ก่อน
+    # ต้องหาร Night ก่อน เพราะ Price ใน CSV คือ Total Price
     if 'Night' not in df.columns: df['Night'] = 1
-    df['ADR_Actual'] = df['Price'] / df['Night']
+    # ป้องกันการหารด้วย 0
+    df_clean = df[df['Night'] > 0].copy()
+    df_clean['ADR_Actual'] = df_clean['Price'] / df_clean['Night']
     
-    avg_map = df.groupby('Target_Room_Type')['ADR_Actual'].mean().to_dict()
+    avg_map = df_clean.groupby('Target_Room_Type')['ADR_Actual'].mean().to_dict()
     return avg_map
 
 @st.cache_resource
@@ -258,9 +259,8 @@ def retrain_system():
         
         feature_cols = ['Night', 'total_guests', 'is_holiday', 'is_weekend', 'month', 'weekday', 'RoomType_encoded', 'Reservation_encoded']
         X = df[feature_cols]
-        y = df['Price']
-        
         X = X.fillna(0)
+        y = df['Price']
         
         progress_bar.progress(40)
         status_text.text("🏋️‍♂️ Training new models...")
@@ -297,6 +297,9 @@ def retrain_system():
             'importance': new_importance
         }
         with open(METRICS_FILE, 'w') as f: json.dump(new_metrics, f)
+            
+        # อัปเดตค่าเฉลี่ยใหม่ด้วย
+        st.session_state['historical_avg'] = calculate_historical_avg(df)
             
         st.cache_resource.clear()
         progress_bar.progress(100)
@@ -335,7 +338,7 @@ if not st.session_state['logged_in']:
 else:
     df_raw = load_data() 
     
-    # 📌 คำนวณ Historical Average ครั้งเดียวตอนโหลด
+    # 📌 คำนวณ Historical Average ครั้งเดียวตอนโหลด (ถ้ายังไม่มี)
     if not df_raw.empty and not st.session_state['historical_avg']:
         st.session_state['historical_avg'] = calculate_historical_avg(df_raw)
 
@@ -471,10 +474,8 @@ else:
         # Helper: Get Historical Average Price
         def get_historical_avg_price(room_text):
             hist_map = st.session_state.get('historical_avg', {})
-            # หาค่าเฉลี่ยจากชื่อห้อง (ถ้าไม่มีให้คืนค่า 0)
             if room_text in hist_map:
                 return hist_map[room_text]
-            # กรณีหาไม่เจอ (Fallback)
             return 0
 
         # Helper: Segmented Prediction (Rolling Window)
@@ -517,7 +518,7 @@ else:
                 
             return total_predicted
 
-        # Helper: Main Calculation with "Calibration Logic" (The Cheat)
+        # Helper: Main Calculation with "Calibration Logic" + Correct Extra Charge
         def calculate_clamped_price(model, start_date, n_nights, guests, r_code, res_code, room_name_selected):
             # 1. AI Prediction (Rolling Window)
             raw_predicted = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
@@ -527,21 +528,17 @@ else:
             total_base_price = base_per_night * n_nights
             
             # 3. Demand Index Calculation (Calibration)
-            # หาค่าเฉลี่ยในอดีต (Total Price for N nights)
             hist_avg_per_night = get_historical_avg_price(room_name_selected)
-            
-            calibrated_price = raw_predicted # Default ถ้าไม่มีประวัติ
+            calibrated_price = raw_predicted 
             
             if hist_avg_per_night > 0:
                 hist_total_expected = hist_avg_per_night * n_nights
-                
                 # Ratio: AI คิดว่าตอนนี้แรงกว่าอดีตเท่าไหร่?
                 demand_ratio = raw_predicted / hist_total_expected
-                
                 # Apply Ratio to New Base Price
                 calibrated_price = total_base_price * demand_ratio
                 
-            # 4. Final Safety Net (Still enforce Base Price as minimum)
+            # 4. Final Safety Net
             final_price = max(calibrated_price, total_base_price)
             
             return final_price, raw_predicted, total_base_price
@@ -667,14 +664,16 @@ else:
                     r2c1, r2c2 = st.columns(2)
                     
                     if extra_guests <= max_g:
-                        p_xgb_extra = p_xgb_norm + 500
-                        p_lr_extra = p_lr_norm + 500
+                        # Logic แก้ไข: บวก 500 บาท ต่อคืน (500 * nights)
+                        extra_charge = 500 * nights
+                        p_xgb_extra = p_xgb_norm + extra_charge
+                        p_lr_extra = p_lr_norm + extra_charge
                         
                         with r2c1:
                             st.container(border=True).metric(
                                 label=f"👥 XGBoost (เพิ่มแขก: {extra_guests} ท่าน)",
                                 value=f"{p_xgb_extra:,.0f} THB",
-                                delta=f"+500 THB (Add-on)",
+                                delta=f"+{extra_charge:,.0f} THB (Add-on)",
                                 delta_color="normal"
                             )
                             st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}%")
@@ -683,7 +682,7 @@ else:
                             st.container(border=True).metric(
                                 label=f"👥 Linear (เพิ่มแขก: {extra_guests} ท่าน)",
                                 value=f"{p_lr_extra:,.0f} THB",
-                                delta=f"+500 THB (Add-on)",
+                                delta=f"+{extra_charge:,.0f} THB (Add-on)",
                                 delta_color="normal"
                             )
                             st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}%")
