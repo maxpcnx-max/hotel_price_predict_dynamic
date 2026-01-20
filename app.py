@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import gdown
 import time
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta, date
 
 # Import Library สำหรับการ Retrain
 from sklearn.model_selection import train_test_split
@@ -102,15 +102,15 @@ def load_room_config():
 def get_thai_holidays():
     if not os.path.exists("thai_holidays.csv"):
         try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
-        except: return []
+        except: return set()
     
     if os.path.exists("thai_holidays.csv"):
         try:
             h_df = pd.read_csv("thai_holidays.csv")
             # แปลงเป็น date object set เพื่อความเร็วในการค้นหา
             return set(pd.to_datetime(h_df['Holiday_Date'], dayfirst=True, errors='coerce').dt.date)
-        except: return []
-    return []
+        except: return set()
+    return set()
 
 init_db()
 
@@ -513,9 +513,9 @@ else:
                         checkin_date = start
                         
                         # [FIX] Holiday Logic for Range (เช็คทุกวันใน Range)
-                        # วันเข้าพักคือ start ถึง end-1 (คืนสุดท้ายไม่นับ)
                         stay_dates = [start + timedelta(days=x) for x in range(nights)]
-                        is_h = any(d.date() in holidays_set for d in stay_dates)
+                        # ตรวจสอบว่ามีวันไหนใน Range ตรงกับวันหยุดหรือไม่ (ไม่ต้องใช้ .date() ซ้ำ)
+                        is_h = any(d in holidays_set for d in stay_dates)
                         
                     elif len(dates) == 1: checkin_date = dates[0]
                 
