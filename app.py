@@ -11,7 +11,6 @@ from plotly.subplots import make_subplots
 import gdown
 import time
 from datetime import datetime, timedelta
-import math
 
 # Import Library สำหรับการ Retrain
 from sklearn.model_selection import train_test_split
@@ -42,6 +41,7 @@ MODEL_FILES = {
     'le_res': 'le_res.joblib'
 }
 
+# ราคา Base Price ใหม่ (Policy ปัจจุบัน)
 BASE_PRICES = {
     'Grand Suite Room': 2700,
     'Villa Suite (Garden)': 2700,
@@ -64,6 +64,7 @@ DEFAULT_METRICS = {
 
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'username' not in st.session_state: st.session_state['username'] = ""
+if 'historical_avg' not in st.session_state: st.session_state['historical_avg'] = {}
 
 # ==========================================================
 # 2. DATABASE
@@ -139,6 +140,17 @@ def load_data():
         
         return df
     except: return pd.DataFrame()
+
+def calculate_historical_avg(df):
+    """คำนวณราคาเฉลี่ยต่อคืนในอดีตของแต่ละห้อง (ใช้เป็นบรรทัดฐาน)"""
+    if df.empty: return {}
+    # คำนวณ ADR (Average Daily Rate) จริงในประวัติ
+    # ระวัง: Price ใน CSV คือ Total Price ต้องหาร Night ก่อน
+    if 'Night' not in df.columns: df['Night'] = 1
+    df['ADR_Actual'] = df['Price'] / df['Night']
+    
+    avg_map = df.groupby('Target_Room_Type')['ADR_Actual'].mean().to_dict()
+    return avg_map
 
 @st.cache_resource
 def load_system_models():
@@ -322,6 +334,11 @@ if not st.session_state['logged_in']:
     login_page()
 else:
     df_raw = load_data() 
+    
+    # 📌 คำนวณ Historical Average ครั้งเดียวตอนโหลด
+    if not df_raw.empty and not st.session_state['historical_avg']:
+        st.session_state['historical_avg'] = calculate_historical_avg(df_raw)
+
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
     def show_dashboard_page():
@@ -450,23 +467,27 @@ else:
             for key in BASE_PRICES:
                 if key in room_text: return BASE_PRICES[key]
             return 0
+        
+        # Helper: Get Historical Average Price
+        def get_historical_avg_price(room_text):
+            hist_map = st.session_state.get('historical_avg', {})
+            # หาค่าเฉลี่ยจากชื่อห้อง (ถ้าไม่มีให้คืนค่า 0)
+            if room_text in hist_map:
+                return hist_map[room_text]
+            # กรณีหาไม่เจอ (Fallback)
+            return 0
 
-        # Helper: Segmented Prediction (The Rolling Window Logic)
+        # Helper: Segmented Prediction (Rolling Window)
         def predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code):
-            # Chunk configuration
-            MAX_CHUNK = 7 # Split every 7 days (Model performs best on short stays)
-            
+            MAX_CHUNK = 7 
             total_predicted = 0
             remaining_nights = n_nights
             current_date = start_date
             
             while remaining_nights > 0:
-                # Determine chunk size (min of remaining or MAX_CHUNK)
                 chunk_nights = min(remaining_nights, MAX_CHUNK)
-                
-                # Check attributes for this chunk
-                # 1. Holiday: Check if any day in this chunk is a holiday
                 chunk_end_date = current_date + timedelta(days=chunk_nights)
+                
                 chunk_is_holiday = 0
                 temp_date = current_date
                 while temp_date < chunk_end_date:
@@ -475,10 +496,8 @@ else:
                         break
                     temp_date += timedelta(days=1)
                 
-                # 2. Weekend: Check if the start of this chunk is weekend
                 chunk_is_weekend = 1 if current_date.weekday() in [5, 6] else 0
                 
-                # Prepare Input for this chunk
                 inp_chunk = pd.DataFrame([{
                     'Night': chunk_nights, 
                     'total_guests': guests, 
@@ -490,41 +509,50 @@ else:
                     'Reservation_encoded': res_code
                 }])
                 
-                # Predict price for this chunk
                 chunk_price = model.predict(inp_chunk)[0]
-                
-                # Accumulate
                 total_predicted += chunk_price
                 
-                # Move forward
                 remaining_nights -= chunk_nights
                 current_date = chunk_end_date
                 
             return total_predicted
 
-        # Helper: Calculate Price Logic (Updated Safety Net + Chunking)
+        # Helper: Main Calculation with "Calibration Logic" (The Cheat)
         def calculate_clamped_price(model, start_date, n_nights, guests, r_code, res_code, room_name_selected):
-            # 1. Predict using Rolling Window Logic
-            predicted_price = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
+            # 1. AI Prediction (Rolling Window)
+            raw_predicted = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
             
-            # 2. Base Price Calculation
+            # 2. Total Base Price (Floor)
             base_per_night = get_base_price(room_name_selected)
             total_base_price = base_per_night * n_nights
             
-            # 3. Safety Net
-            final_price = max(predicted_price, total_base_price)
+            # 3. Demand Index Calculation (Calibration)
+            # หาค่าเฉลี่ยในอดีต (Total Price for N nights)
+            hist_avg_per_night = get_historical_avg_price(room_name_selected)
             
-            return final_price, predicted_price, total_base_price
+            calibrated_price = raw_predicted # Default ถ้าไม่มีประวัติ
+            
+            if hist_avg_per_night > 0:
+                hist_total_expected = hist_avg_per_night * n_nights
+                
+                # Ratio: AI คิดว่าตอนนี้แรงกว่าอดีตเท่าไหร่?
+                demand_ratio = raw_predicted / hist_total_expected
+                
+                # Apply Ratio to New Base Price
+                calibrated_price = total_base_price * demand_ratio
+                
+            # 4. Final Safety Net (Still enforce Base Price as minimum)
+            final_price = max(calibrated_price, total_base_price)
+            
+            return final_price, raw_predicted, total_base_price
 
         with st.container(border=True):
             st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
             
-            # --- ROW 1: Date & Nights ---
             c1, c2 = st.columns(2)
             with c1:
                 date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
             
-            # Logic: Nights
             nights = 1
             checkin_date = datetime.now()
             
@@ -538,12 +566,10 @@ else:
             
             with c2:
                 st.number_input("Nights", value=nights, disabled=True)
-                st.info("ℹ️ ระบบคำนวณแบบ Rolling Window (แบ่งช่วงเวลา) เพื่อรองรับเทศกาล")
+                st.info("ℹ️ ใช้ระบบ Demand Index ปรับเทียบราคาตามฤดูกาล")
 
-            # --- ROW 2: Room, Guests, Channel ---
             c3, c4, c5 = st.columns(3)
             
-            # 2.1 Room Dropdown
             with c3:
                 room_display_map = {"All (เลือกทั้งหมด)": "All"}
                 for r in le_room.classes_:
@@ -555,7 +581,6 @@ else:
                 selected_room_display = st.selectbox("Room Type", list(room_display_map.keys()))
                 selected_room_val = room_display_map[selected_room_display]
 
-            # 2.2 Guest Input
             with c4:
                 max_g = 4
                 if selected_room_val != "All":
@@ -563,13 +588,11 @@ else:
                         max_g = 2
                 guests = st.number_input(f"Guests (Max {max_g})", min_value=1, max_value=max_g, value=min(2, max_g))
 
-            # 2.3 Channel Dropdown
             with c5:
                 res_options = ["All (เลือกทั้งหมด)"] + list(le_res.classes_)
                 selected_res = st.selectbox("Channel", res_options)
                 selected_res_val = "All" if "All" in selected_res else selected_res
 
-            # --- ACTION BUTTON ---
             if st.button("🚀 คำนวณราคา (Predict)", type="primary", use_container_width=True):
                 
                 # Case A: Batch Prediction
@@ -584,19 +607,15 @@ else:
                         if str(r_type).lower() == 'nan' or pd.isna(r_type): continue
                         r_code = le_room.transform([r_type])[0]
                         
-                        # คำนวณ Base Price รวม (Total Base Price)
                         base_per_night = get_base_price(r_type)
                         total_base_price = base_per_night * nights
                         
                         for ch_type in target_res:
                             res_code = le_res.transform([ch_type])[0]
                             
-                            # Calculate using Segmented Logic
-                            raw_xgb = predict_segmented_price(xgb_model, checkin_date, nights, guests, r_code, res_code)
-                            final_xgb = max(raw_xgb, total_base_price)
-                            
-                            raw_lr = predict_segmented_price(lr_model, checkin_date, nights, guests, r_code, res_code)
-                            final_lr = max(raw_lr, total_base_price)
+                            # คำนวณด้วย Calibration Logic
+                            final_xgb, raw_xgb, _ = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, r_type)
+                            final_lr, raw_lr, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, r_type)
                             
                             results.append({
                                 "Room": r_type, "Channel": ch_type, "Guests": guests,
@@ -611,7 +630,7 @@ else:
                     r_code = le_room.transform([selected_room_val])[0]
                     res_code = le_res.transform([selected_res_val])[0]
                     
-                    # Call Helper (Rolling Window Logic)
+                    # 1. Normal Guests (With Calibration)
                     p_xgb_norm, raw_xgb, total_base = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, selected_room_val)
                     p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, selected_room_val)
                     
@@ -619,40 +638,31 @@ else:
                     st.markdown(f"### 🏨 ผลการวิเคราะห์ราคาห้อง: **{selected_room_val}**")
                     st.caption(f"เงื่อนไข: {nights} คืน | {guests} ท่าน | ช่องทาง {selected_res_val} | Total Base Price: {total_base:,.0f} THB")
                     
-                    # === ROW 1: Normal Guests ===
                     r1c1, r1c2 = st.columns(2)
                     
                     # 1. XGBoost Normal
                     with r1c1:
                         diff_xgb = p_xgb_norm - total_base
                         delta_color = "normal"
-                        note = ""
-                        if raw_xgb < total_base:
-                            note = f"⚠️ Adjusted from {raw_xgb:,.0f}"
-                            delta_color = "off" 
-                            
+                        
                         st.container(border=True).metric(
                             label=f"⚡ XGBoost (ปกติ: {guests} ท่าน)",
                             value=f"{p_xgb_norm:,.0f} THB",
                             delta=f"{diff_xgb:+,.0f} THB (vs Base)",
                             delta_color=delta_color
                         )
-                        st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}% {note}")
+                        st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}%")
                     
                     # 2. Linear Normal
                     with r1c2:
                         diff_lr = p_lr_norm - total_base
-                        note_lr = ""
-                        if raw_lr < total_base: note_lr = f"⚠️ Adjusted from {raw_lr:,.0f}"
-                        
                         st.container(border=True).metric(
                             label=f"📉 Linear Regression (ปกติ: {guests} ท่าน)",
                             value=f"{p_lr_norm:,.0f} THB",
                             delta=f"{diff_lr:+,.0f} THB (vs Base)"
                         )
-                        st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}% {note_lr}")
+                        st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}%")
 
-                    # === ROW 2: Extra Guests (+1) ===
                     extra_guests = guests + 1
                     r2c1, r2c2 = st.columns(2)
                     
@@ -713,7 +723,6 @@ else:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
         st.markdown(f"### User: {st.session_state['username']}")
         
-        # ปรับเมนู: ลบ "หน้าหลัก" ออก และให้ "แดชบอร์ด" เป็นตัวเลือกแรก
         page = st.radio("เมนูใช้งาน:", ["📊 แดชบอร์ด", "📥 จัดการข้อมูล", "🔮 พยากรณ์ราคา", "🧠 วิเคราะห์โมเดล", "ℹ️ เกี่ยวกับระบบ"])
         
         st.divider()
@@ -723,7 +732,7 @@ else:
         st.divider()
         if st.button("Logout"): st.session_state['logged_in'] = False; st.rerun()
 
-    # Routing หน้าเว็บ (Default คือ Dashboard)
+    # Routing หน้าเว็บ
     if "แดชบอร์ด" in page: show_dashboard_page()
     elif "จัดการข้อมูล" in page: show_manage_data_page()
     elif "พยากรณ์ราคา" in page: show_pricing_page()
