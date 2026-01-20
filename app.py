@@ -11,7 +11,6 @@ from plotly.subplots import make_subplots
 import gdown
 import time
 from datetime import datetime, timedelta
-import itertools
 
 # Import Library สำหรับการ Retrain
 from sklearn.model_selection import train_test_split
@@ -324,9 +323,6 @@ else:
     df_raw = load_data() 
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
-    # Load Holidays for Logic
-    th_holidays = holidays.Thailand()
-
     def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
         if df_raw.empty: st.warning("No Data Found"); return
@@ -443,7 +439,7 @@ else:
             success, count = retrain_system()
             if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(5); st.rerun()
 
-def show_pricing_page():
+    def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         if xgb_model is None: st.error("❌ Model not found"); return
 
@@ -607,20 +603,19 @@ def show_pricing_page():
                     r2c1, r2c2 = st.columns(2)
                     
                     if extra_guests <= max_g:
-                        # Logic ใหม่: บวกเพิ่ม 500 บาทจากราคาปกติทันที (ไม่ต้องพยากรณ์ใหม่)
+                        # Logic ใหม่: บวกเพิ่ม 500 บาทจากราคาปกติทันที
                         add_on_cost = 500
                         p_xgb_extra = p_xgb_norm + add_on_cost
                         p_lr_extra = p_lr_norm + add_on_cost
                         
                         # 3. XGBoost Extra
                         with r2c1:
-                            # Delta เทียบกับราคาปกติ (Normal) จะได้ +500 เสมอ
                             diff_extra_xgb = p_xgb_extra - p_xgb_norm
                             st.container(border=True).metric(
                                 label=f"👥 XGBoost (เพิ่มแขก: {extra_guests} ท่าน)",
                                 value=f"{p_xgb_extra:,.0f} THB",
                                 delta=f"+{diff_extra_xgb:,.0f} THB (Cost Added)",
-                                delta_color="normal" # สีเขียวเมื่อค่าเป็นบวก
+                                delta_color="normal"
                             )
                             st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}%")
                         
@@ -631,13 +626,12 @@ def show_pricing_page():
                                 label=f"👥 Linear (เพิ่มแขก: {extra_guests} ท่าน)",
                                 value=f"{p_lr_extra:,.0f} THB",
                                 delta=f"+{diff_extra_lr:,.0f} THB (Cost Added)",
-                                delta_color="normal" # สีเขียวเมื่อค่าเป็นบวก
+                                delta_color="normal"
                             )
                             st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}%")
                     else:
                         with r2c1: st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
                         with r2c2: st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
-
 
     def show_model_insight_page():
         st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Dynamic Insight)")
@@ -657,8 +651,10 @@ def show_pricing_page():
         st.divider()
         c1, c2 = st.columns([1, 2])
         with c1: 
-            if os.path.exists("my_profile.jpg"): st.image("my_profile.jpg", width=250)
-            else: st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=200)
+            if os.path.exists("my_profile.jpg"):
+                st.image("my_profile.jpg", width=250)
+            else:
+                st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", width=200)
         with c2:
             st.header("ผู้จัดทำ")
             st.markdown("**ว่าที่ร้อยตรีพรพินิต วิรัตน์สกุลชัย** สาขาวิทยาการข้อมูล และ นวัตกรรมดิจิทัล\n\nคณะ นวัตกรรม เทคโนโลยีและการสร้างสรรค์ **มหาวิทยาลัยฟาร์อีสเทอร์น**")
@@ -668,7 +664,10 @@ def show_pricing_page():
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
         st.markdown(f"### User: {st.session_state['username']}")
+        
+        # ปรับเมนู: ลบ "หน้าหลัก" ออก และให้ "แดชบอร์ด" เป็นตัวเลือกแรก
         page = st.radio("เมนูใช้งาน:", ["📊 แดชบอร์ด", "📥 จัดการข้อมูล", "🔮 พยากรณ์ราคา", "🧠 วิเคราะห์โมเดล", "ℹ️ เกี่ยวกับระบบ"])
+        
         st.divider()
         st.markdown("#### ⚙️ Real-time Performance")
         st.progress(metrics['xgb']['r2'], text=f"XGBoost: {metrics['xgb']['r2']*100:.1f}%")
@@ -676,6 +675,7 @@ def show_pricing_page():
         st.divider()
         if st.button("Logout"): st.session_state['logged_in'] = False; st.rerun()
 
+    # Routing หน้าเว็บ (Default คือ Dashboard)
     if "แดชบอร์ด" in page: show_dashboard_page()
     elif "จัดการข้อมูล" in page: show_manage_data_page()
     elif "พยากรณ์ราคา" in page: show_pricing_page()
