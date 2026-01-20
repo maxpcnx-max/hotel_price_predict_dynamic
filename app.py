@@ -439,7 +439,7 @@ else:
             success, count = retrain_system()
             if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(5); st.rerun()
 
-    def show_pricing_page():
+def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         if xgb_model is None: st.error("❌ Model not found"); return
 
@@ -450,12 +450,20 @@ else:
                 if key in room_text: return BASE_PRICES[key]
             return 0
 
-        # Helper: Calculate Price Logic
-        def calculate_clamped_price(model, input_df, room_name_selected):
+        # Helper: Calculate Price Logic (Updated Safety Net)
+        def calculate_clamped_price(model, input_df, room_name_selected, n_nights):
             predicted_price = model.predict(input_df)[0]
-            current_base = get_base_price(room_name_selected)
-            final_price = max(predicted_price, current_base)
-            return final_price, predicted_price, current_base
+            
+            # 1. หา Base Price ต่อคืน
+            base_per_night = get_base_price(room_name_selected)
+            
+            # 2. คำนวณ Floor Price (ราคาทุน * จำนวนคืน) <-- แก้ไขจุดนี้
+            floor_price = base_per_night * n_nights
+            
+            # 3. เลือกค่าที่มากกว่า (ห้ามต่ำกว่าทุน)
+            final_price = max(predicted_price, floor_price)
+            
+            return final_price, predicted_price, floor_price
 
         with st.container(border=True):
             st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
@@ -532,7 +540,9 @@ else:
                     for r_type in target_rooms:
                         if str(r_type).lower() == 'nan' or pd.isna(r_type): continue
                         r_code = le_room.transform([r_type])[0]
-                        base_p = get_base_price(r_type)
+                        # คำนวณ Floor Price (Base * Night)
+                        base_per_night = get_base_price(r_type)
+                        total_base_price = base_per_night * nights
                         
                         for ch_type in target_res:
                             res_code = le_res.transform([ch_type])[0]
@@ -543,17 +553,21 @@ else:
                                 'RoomType_encoded': r_code, 'Reservation_encoded': res_code
                             }])
                             
+                            # XGB Calculation
                             raw_xgb = xgb_model.predict(inp)[0]
-                            final_xgb = max(raw_xgb, base_p)
+                            final_xgb = max(raw_xgb, total_base_price) # Safety Net
+                            
+                            # LR Calculation
                             raw_lr = lr_model.predict(inp)[0]
-                            final_lr = max(raw_lr, base_p)
+                            final_lr = max(raw_lr, total_base_price) # Safety Net
                             
                             results.append({
                                 "Room": r_type, "Channel": ch_type, "Guests": guests,
-                                "Base Price": base_p, "XGB Price": final_xgb, "LR Price": final_lr
+                                "Floor Price (Base*N)": total_base_price, 
+                                "XGB Price": final_xgb, "LR Price": final_lr
                             })
                     
-                    st.dataframe(pd.DataFrame(results).style.format("{:,.0f}", subset=["Base Price", "XGB Price", "LR Price"]), use_container_width=True, height=500)
+                    st.dataframe(pd.DataFrame(results).style.format("{:,.0f}", subset=["Floor Price (Base*N)", "XGB Price", "LR Price"]), use_container_width=True, height=500)
 
                 # Case B: Single Prediction
                 else:
@@ -568,71 +582,90 @@ else:
                         'RoomType_encoded': r_code, 'Reservation_encoded': res_code
                     }])
                     
-                    p_xgb_norm, _, base_p = calculate_clamped_price(xgb_model, inp_norm, selected_room_val)
-                    p_lr_norm, _, _ = calculate_clamped_price(lr_model, inp_norm, selected_room_val)
+                    # Call Helper with 'nights' parameter
+                    p_xgb_norm, raw_xgb, floor_p = calculate_clamped_price(xgb_model, inp_norm, selected_room_val, nights)
+                    p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, inp_norm, selected_room_val, nights)
                     
                     st.divider()
                     st.markdown(f"### 🏨 ผลการวิเคราะห์ราคาห้อง: **{selected_room_val}**")
-                    st.caption(f"เงื่อนไข: {nights} คืน | {guests} ท่าน | ช่องทาง {selected_res_val} | Base Price: {base_p:,.0f} THB")
+                    st.caption(f"เงื่อนไข: {nights} คืน | {guests} ท่าน | ช่องทาง {selected_res_val} | Floor Price (Base x Night): {floor_p:,.0f} THB")
                     
                     # === ROW 1: Normal Guests ===
                     r1c1, r1c2 = st.columns(2)
                     
                     # 1. XGBoost Normal
                     with r1c1:
-                        diff_xgb = p_xgb_norm - base_p
+                        # Diff เทียบกับ Floor Price
+                        diff_xgb = p_xgb_norm - floor_p
+                        
+                        # Logic แสดงสี: ถ้าค่าพยากรณ์จริงต่ำกว่า Floor ให้เตือน
+                        delta_color = "normal"
+                        note = ""
+                        if raw_xgb < floor_p:
+                            note = f"⚠️ Adjusted from {raw_xgb:,.0f}"
+                            delta_color = "off" # สีเทาๆ แสดงว่าไม่ได้มาจาก Model โดยตรง
+                            
                         st.container(border=True).metric(
                             label=f"⚡ XGBoost (ปกติ: {guests} ท่าน)",
                             value=f"{p_xgb_norm:,.0f} THB",
-                            delta=f"{diff_xgb:+,.0f} THB (vs Base)"
+                            delta=f"{diff_xgb:+,.0f} THB (vs Floor)",
+                            delta_color=delta_color
                         )
-                        st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}%")
+                        st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}% {note}")
                     
                     # 2. Linear Normal
                     with r1c2:
-                        diff_lr = p_lr_norm - base_p
+                        diff_lr = p_lr_norm - floor_p
+                        note_lr = ""
+                        if raw_lr < floor_p: note_lr = f"⚠️ Adjusted from {raw_lr:,.0f}"
+                        
                         st.container(border=True).metric(
                             label=f"📉 Linear Regression (ปกติ: {guests} ท่าน)",
                             value=f"{p_lr_norm:,.0f} THB",
-                            delta=f"{diff_lr:+,.0f} THB (vs Base)"
+                            delta=f"{diff_lr:+,.0f} THB (vs Floor)"
                         )
-                        st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}%")
+                        st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}% {note_lr}")
 
                     # === ROW 2: Extra Guests (+1) ===
                     extra_guests = guests + 1
                     r2c1, r2c2 = st.columns(2)
                     
                     if extra_guests <= max_g:
-                        # Logic ใหม่: บวกเพิ่ม 500 บาทจากราคาปกติทันที
-                        add_on_cost = 500
-                        p_xgb_extra = p_xgb_norm + add_on_cost
-                        p_lr_extra = p_lr_norm + add_on_cost
+                        # Logic ใหม่: บวกเพิ่ม 500 บาท/คน จากราคา Final ของ Normal
+                        add_on_cost = 500 * nights # บวก 500 ต่อคืน หรือ ต่อทริป? (ปกติ Extra Bed คิดต่อคืน)
+                        # สมมติคิดต่อคนต่อทริปตาม Logic เดิม หรือถ้าคิดต่อคืนต้อง * nights
+                        # ในที่นี้ขอใช้ +500 flat rate ตามที่คุณระบุก่อนหน้านี้ "บวกเพิ่มจากของเดิมไป 500 บาทต่อคน"
+                        # ถ้าจะเอาละเอียดธุรกิจจริงๆ ควรเป็น 500 * nights แต่ตามคำสั่งคือ 500 เฉยๆ
+                        
+                        # เพื่อความสมจริง ผมขออนุญาตคูณ nights ให้นะครับ (Extra Person Charge usually per night)
+                        # หรือถ้าเอาตามคำสั่งเป๊ะๆ คือ +500 ก็ลบ * nights ออกได้ครับ
+                        # *ปรับ:* เอาตามคำสั่งเป๊ะ คือ +500 บาท (Flat Fee) 
+                        
+                        p_xgb_extra = p_xgb_norm + 500 
+                        p_lr_extra = p_lr_norm + 500
                         
                         # 3. XGBoost Extra
                         with r2c1:
-                            diff_extra_xgb = p_xgb_extra - p_xgb_norm
                             st.container(border=True).metric(
                                 label=f"👥 XGBoost (เพิ่มแขก: {extra_guests} ท่าน)",
                                 value=f"{p_xgb_extra:,.0f} THB",
-                                delta=f"+{diff_extra_xgb:,.0f} THB (Cost Added)",
+                                delta=f"+500 THB (Add-on)",
                                 delta_color="normal"
                             )
                             st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}%")
                         
                         # 4. Linear Extra
                         with r2c2:
-                            diff_extra_lr = p_lr_extra - p_lr_norm
                             st.container(border=True).metric(
                                 label=f"👥 Linear (เพิ่มแขก: {extra_guests} ท่าน)",
                                 value=f"{p_lr_extra:,.0f} THB",
-                                delta=f"+{diff_extra_lr:,.0f} THB (Cost Added)",
+                                delta=f"+500 THB (Add-on)",
                                 delta_color="normal"
                             )
                             st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}%")
                     else:
                         with r2c1: st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
                         with r2c2: st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
-
     def show_model_insight_page():
         st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Dynamic Insight)")
         imp_data = metrics.get('importance', DEFAULT_METRICS['importance'])
