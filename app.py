@@ -447,36 +447,28 @@ else:
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         if xgb_model is None: st.error("❌ Model not found"); return
 
-        # Helper เพื่อคำนวณราคาและป้องกันค่าติดลบ/ต่ำกว่า Base
+        # Helper: Get Base Price
+        def get_base_price(room_text):
+            for key in BASE_PRICES:
+                if key in room_text: return BASE_PRICES[key]
+            return 0
+
+        # Helper: Calculate Price Logic
         def calculate_clamped_price(model, input_df, room_name_selected):
             predicted_price = model.predict(input_df)[0]
-            
-            # หา Base Price ของห้องที่เลือก
-            base_price = 0
-            for key in BASE_PRICES:
-                if key in room_name_selected:
-                    base_price = BASE_PRICES[key]
-                    break
-            
-            # Logic: ห้ามต่ำกว่า Base Price (และห้ามติดลบโดยปริยายเพราะ Base > 0)
-            final_price = max(predicted_price, base_price)
-            return final_price, predicted_price, base_price
+            current_base = get_base_price(room_name_selected)
+            final_price = max(predicted_price, current_base)
+            return final_price, predicted_price, current_base
 
         with st.container(border=True):
             st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
             
-            # 1. Date Range Input & Auto Holiday/Night Logic
+            # --- ROW 1: Date & Nights ---
             c1, c2 = st.columns(2)
             with c1:
-                # ให้เลือกเป็นช่วง (Range) และยอมรับวันในอดีต (min_value=None)
-                date_range = st.date_input(
-                    "Select Dates (Check-in - Check-out)",
-                    value=[],
-                    min_value=None, 
-                    help="เลือกวันเข้าพักและวันเช็คเอาท์"
-                )
+                date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
             
-            # Logic คำนวณคืนและวันหยุด
+            # Logic: Nights & Holiday
             nights = 1
             is_h = False
             checkin_date = datetime.now()
@@ -486,132 +478,156 @@ else:
                 checkout_date = date_range[1]
                 nights = (checkout_date - checkin_date).days
                 if nights < 1: nights = 1
-                
-                # ตรวจสอบว่าช่วงวันที่เลือก คร่อมวันหยุดหรือไม่
                 current_date = checkin_date
                 while current_date < checkout_date:
-                    if current_date in th_holidays:
-                        is_h = True
-                        break
+                    if current_date in holidays.Thailand(): is_h = True; break
                     current_date += timedelta(days=1)
             elif len(date_range) == 1:
                 checkin_date = date_range[0]
             
-            # แสดงผล Nights และ Holiday Checkbox (Auto Check)
             with c2:
                 col_night, col_hol = st.columns(2)
-                with col_night:
-                    st.number_input("Nights (คำนวณอัตโนมัติ)", value=nights, disabled=True)
+                with col_night: st.number_input("Nights", value=nights, disabled=True)
                 with col_hol:
-                    # ถ้าเจอวันหยุดจากการคำนวณ ให้ติ๊กถูก ถ้าไม่ ให้ผู้ใช้เลือกได้
-                    manual_holiday = st.checkbox("Holiday (วันหยุดนักขัตฤกษ์)", value=is_h)
+                    manual_holiday = st.checkbox("Holiday (วันหยุด)", value=is_h)
                     final_is_holiday = 1 if manual_holiday else 0
 
+            # --- ROW 2: Room, Guests, Channel ---
             c3, c4, c5 = st.columns(3)
+            
+            # 2.1 Room Dropdown with Base Price & "All"
             with c3:
-                room = st.selectbox("Room Type", le_room.classes_)
+                # สร้าง List สำหรับแสดงผล (Show Base Price)
+                room_display_map = {"All (เลือกทั้งหมด)": "All"}
+                for r in le_room.classes_:
+                    bp = get_base_price(r)
+                    display_text = f"{r} (Base: {bp:,.0f})"
+                    room_display_map[display_text] = r
+                
+                selected_room_display = st.selectbox("Room Type", list(room_display_map.keys()))
+                selected_room_val = room_display_map[selected_room_display]
+
+            # 2.2 Guest Input with Constraints
             with c4:
-                # Default guests = 2
-                guests = st.number_input("Guests (จำนวนผู้เข้าพัก)", 1, 10, 2)
+                # Logic: Standard/Deluxe max 2, Others max 4
+                max_g = 4
+                if selected_room_val != "All":
+                    if "Standard" in selected_room_val or "Deluxe" in selected_room_val:
+                        max_g = 2
+                
+                guests = st.number_input(f"Guests (Max {max_g})", min_value=1, max_value=max_g, value=min(2, max_g))
+
+            # 2.3 Channel Dropdown with "All"
             with c5:
-                res = st.selectbox("Channel", le_res.classes_)
+                res_options = ["All (เลือกทั้งหมด)"] + list(le_res.classes_)
+                selected_res = st.selectbox("Channel", res_options)
+                selected_res_val = "All" if "All" in selected_res else selected_res
 
-            # --- PREDICTION LOGIC ---
+            # --- ACTION BUTTON ---
             if st.button("🚀 คำนวณราคา (Predict)", type="primary", use_container_width=True):
-                r_code = le_room.transform([room])[0]
-                res_code = le_res.transform([res])[0]
                 
-                # Input 1: ปกติ
-                input_data_normal = pd.DataFrame([{
-                    'Night': nights, 'total_guests': guests, 
-                    'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
-                    'month': checkin_date.month, 'weekday': checkin_date.weekday(),
-                    'RoomType_encoded': r_code, 'Reservation_encoded': res_code
-                }])
-                
-                # Input 2: แขกเพิ่ม (+1)
-                input_data_extra = input_data_normal.copy()
-                input_data_extra['total_guests'] = guests + 1
-
-                # Calculate Prices
-                price_xgb_normal, raw_xgb_norm, base_p = calculate_clamped_price(xgb_model, input_data_normal, room)
-                price_xgb_extra, raw_xgb_ext, _ = calculate_clamped_price(xgb_model, input_data_extra, room)
-                price_lr, raw_lr, _ = calculate_clamped_price(lr_model, input_data_normal, room)
-
-                st.divider()
-                
-                # --- DISPLAY RESULTS ---
-                res_c1, res_c2, res_c3 = st.columns(3)
-                
-                # 1. XGBoost Normal
-                with res_c1:
-                    st.success(f"### ⚡ XGBoost (ปกติ: {guests} ท่าน)")
-                    st.metric("ราคาแนะนำ", f"{price_xgb_normal:,.0f} THB", delta=f"Base: {base_p:,.0f}")
-                    if raw_xgb_norm < base_p:
-                        st.caption(f"⚠️ ราคาพยากรณ์จริง ({raw_xgb_norm:,.0f}) ต่ำกว่า Base จึงปรับเป็น Base Price")
-                    st.markdown(f"**Accuracy:** MAE ±{metrics['xgb']['mae']:,.0f} | R² {metrics['xgb']['r2']:.4f}")
-
-                # 2. XGBoost Extra Guest
-                with res_c2:
-                    st.info(f"### 👥 XGBoost (เพิ่มผู้เข้าพัก: {guests+1} ท่าน)")
-                    st.metric("ราคาแนะนำ (+1 คน)", f"{price_xgb_extra:,.0f} THB", delta=f"{price_xgb_extra - price_xgb_normal:,.0f} THB (Diff)")
-                    st.markdown(f"**Accuracy:** MAE ±{metrics['xgb']['mae']:,.0f} | R² {metrics['xgb']['r2']:.4f}")
-
-                # 3. Linear Regression
-                with res_c3:
-                    st.warning("### 📉 Linear Regression")
-                    st.metric("ราคาประเมิน", f"{price_lr:,.0f} THB")
-                    if raw_lr < base_p:
-                        st.caption("⚠️ Adjusted to Base Price")
-                    st.markdown(f"**Accuracy:** MAE ±{metrics['lr']['mae']:,.0f} | R² {metrics['lr']['r2']:.4f}")
-
-        # --- PREDICT ALL FEATURE ---
-        st.divider()
-        with st.expander("⚡ พยากรณ์ราคา 'ทุกห้อง & ทุกช่องทาง' (Batch Prediction)"):
-            if st.button("Generate All Predictions"):
-                all_results = []
-                # Loop through all combinations
-                progress_text = st.empty()
-                progress_text.text("Processing...")
-                
-                for r_type in le_room.classes_:
-                    r_c = le_room.transform([r_type])[0]
-                    base_p_loop = BASE_PRICES.get(r_type, BASE_PRICES.get(r_type.split()[0], 0)) # Try exact match then partial
+                # Case A: Batch Prediction (เลือก All อย่างใดอย่างหนึ่ง)
+                if selected_room_val == "All" or selected_res_val == "All":
+                    st.info(f"📊 รายงานผลการพยากรณ์รวม (Batch Report)")
                     
-                    for ch_type in le_res.classes_:
-                        res_c = le_res.transform([ch_type])[0]
+                    target_rooms = le_room.classes_ if selected_room_val == "All" else [selected_room_val]
+                    target_res = le_res.classes_ if selected_res_val == "All" else [selected_res_val]
+                    
+                    results = []
+                    for r_type in target_rooms:
+                        r_code = le_room.transform([r_type])[0]
+                        base_p = get_base_price(r_type)
                         
-                        # Prepare Input
-                        inp_loop = pd.DataFrame([{
-                            'Night': nights, 'total_guests': guests, 
-                            'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
-                            'month': checkin_date.month, 'weekday': checkin_date.weekday(),
-                            'RoomType_encoded': r_c, 'Reservation_encoded': res_c
-                        }])
-                        
-                        # Predict
-                        raw_p = xgb_model.predict(inp_loop)[0]
-                        
-                        # Find Base Price specific to this room type in loop
-                        # (Simplistic lookup based on string matching keys in BASE_PRICES)
-                        current_base = 0
-                        for k, v in BASE_PRICES.items():
-                            if k in r_type:
-                                current_base = v
-                                break
-                        
-                        final_p = max(raw_p, current_base)
-                        
-                        all_results.append({
-                            'Room Type': r_type,
-                            'Channel': ch_type,
-                            'Base Price': current_base,
-                            'Predicted Price': final_p,
-                            'Raw Prediction': raw_p
-                        })
-                
-                res_df = pd.DataFrame(all_results)
-                st.dataframe(res_df.style.format({'Base Price': '{:,.0f}', 'Predicted Price': '{:,.0f}', 'Raw Prediction': '{:,.2f}'}))
+                        for ch_type in target_res:
+                            res_code = le_res.transform([ch_type])[0]
+                            
+                            # Input Data
+                            inp = pd.DataFrame([{
+                                'Night': nights, 'total_guests': guests, 
+                                'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
+                                'month': checkin_date.month, 'weekday': checkin_date.weekday(),
+                                'RoomType_encoded': r_code, 'Reservation_encoded': res_code
+                            }])
+                            
+                            # Predict XGB
+                            raw_xgb = xgb_model.predict(inp)[0]
+                            final_xgb = max(raw_xgb, base_p)
+                            
+                            # Predict LR
+                            raw_lr = lr_model.predict(inp)[0]
+                            final_lr = max(raw_lr, base_p)
+                            
+                            results.append({
+                                "Room": r_type,
+                                "Channel": ch_type,
+                                "Guests": guests,
+                                "Base Price": base_p,
+                                "XGB Price": final_xgb,
+                                "LR Price": final_lr
+                            })
+                    
+                    res_df = pd.DataFrame(results)
+                    st.dataframe(
+                        res_df.style.format({
+                            "Base Price": "{:,.0f}", 
+                            "XGB Price": "{:,.0f}", 
+                            "LR Price": "{:,.0f}"
+                        }), 
+                        use_container_width=True,
+                        height=500
+                    )
+
+                # Case B: Single Prediction (Specific Room & Channel)
+                else:
+                    r_code = le_room.transform([selected_room_val])[0]
+                    res_code = le_res.transform([selected_res_val])[0]
+                    
+                    # 1. Normal Guests
+                    inp_norm = pd.DataFrame([{
+                        'Night': nights, 'total_guests': guests, 
+                        'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
+                        'month': checkin_date.month, 'weekday': checkin_date.weekday(),
+                        'RoomType_encoded': r_code, 'Reservation_encoded': res_code
+                    }])
+                    
+                    p_xgb_norm, _, base_p = calculate_clamped_price(xgb_model, inp_norm, selected_room_val)
+                    p_lr_norm, _, _ = calculate_clamped_price(lr_model, inp_norm, selected_room_val)
+                    
+                    st.divider()
+                    
+                    # Layout Results
+                    col_res1, col_res2, col_res3 = st.columns(3)
+                    
+                    # CARD 1: XGBoost Normal
+                    with col_res1:
+                        st.success(f"### ⚡ XGBoost ({guests} ท่าน)")
+                        st.metric("ราคาแนะนำ", f"{p_xgb_norm:,.0f} THB", delta=f"Base: {base_p:,.0f}")
+                        st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']:.4f}")
+
+                    # CARD 2: XGBoost Extra Guest (Check Limit)
+                    with col_res2:
+                        extra_guests = guests + 1
+                        # Check logic: Extra guests must not exceed max limit
+                        if extra_guests <= max_g:
+                            inp_extra = inp_norm.copy()
+                            inp_extra['total_guests'] = extra_guests
+                            p_xgb_extra, _, _ = calculate_clamped_price(xgb_model, inp_extra, selected_room_val)
+                            
+                            diff = p_xgb_extra - p_xgb_norm
+                            st.info(f"### 👥 เพิ่มผู้เข้าพัก ({extra_guests} ท่าน)")
+                            st.metric(f"ราคา ({extra_guests} คน)", f"{p_xgb_extra:,.0f} THB", delta=f"{diff:,.0f} THB (Diff)")
+                            st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']:.4f}")
+                        else:
+                            st.secondary("### 🚫 เพิ่มผู้เข้าพัก")
+                            st.warning(f"ไม่สามารถคำนวณแบบ +1 คนได้ เนื่องจากเกินโควตาห้อง (Max {max_g} ท่าน)")
+
+                    # CARD 3: Linear Regression (With Diff)
+                    with col_res3:
+                        st.warning(f"### 📉 Linear Regression ({guests} ท่าน)")
+                        # Show diff from Base Price
+                        lr_diff = p_lr_norm - base_p
+                        st.metric("ราคาประเมิน", f"{p_lr_norm:,.0f} THB", delta=f"{lr_diff:,.0f} THB (vs Base)")
+                        st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']:.4f}")
 
 
     def show_model_insight_page():
