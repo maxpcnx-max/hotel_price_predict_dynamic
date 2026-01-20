@@ -11,6 +11,7 @@ from plotly.subplots import make_subplots
 import gdown
 import time
 from datetime import datetime, timedelta
+import math
 
 # Import Library สำหรับการ Retrain
 from sklearn.model_selection import train_test_split
@@ -450,20 +451,70 @@ else:
                 if key in room_text: return BASE_PRICES[key]
             return 0
 
-        # Helper: Calculate Price Logic (Updated Safety Net)
-        def calculate_clamped_price(model, input_df, room_name_selected, n_nights):
-            predicted_price = model.predict(input_df)[0]
+        # Helper: Segmented Prediction (The Rolling Window Logic)
+        def predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code):
+            # Chunk configuration
+            MAX_CHUNK = 7 # Split every 7 days (Model performs best on short stays)
             
-            # 1. หา Base Price ต่อคืน
+            total_predicted = 0
+            remaining_nights = n_nights
+            current_date = start_date
+            
+            while remaining_nights > 0:
+                # Determine chunk size (min of remaining or MAX_CHUNK)
+                chunk_nights = min(remaining_nights, MAX_CHUNK)
+                
+                # Check attributes for this chunk
+                # 1. Holiday: Check if any day in this chunk is a holiday
+                chunk_end_date = current_date + timedelta(days=chunk_nights)
+                chunk_is_holiday = 0
+                temp_date = current_date
+                while temp_date < chunk_end_date:
+                    if temp_date in holidays.Thailand():
+                        chunk_is_holiday = 1
+                        break
+                    temp_date += timedelta(days=1)
+                
+                # 2. Weekend: Check if the start of this chunk is weekend
+                chunk_is_weekend = 1 if current_date.weekday() in [5, 6] else 0
+                
+                # Prepare Input for this chunk
+                inp_chunk = pd.DataFrame([{
+                    'Night': chunk_nights, 
+                    'total_guests': guests, 
+                    'is_holiday': chunk_is_holiday, 
+                    'is_weekend': chunk_is_weekend,
+                    'month': current_date.month, 
+                    'weekday': current_date.weekday(),
+                    'RoomType_encoded': r_code, 
+                    'Reservation_encoded': res_code
+                }])
+                
+                # Predict price for this chunk
+                chunk_price = model.predict(inp_chunk)[0]
+                
+                # Accumulate
+                total_predicted += chunk_price
+                
+                # Move forward
+                remaining_nights -= chunk_nights
+                current_date = chunk_end_date
+                
+            return total_predicted
+
+        # Helper: Calculate Price Logic (Updated Safety Net + Chunking)
+        def calculate_clamped_price(model, start_date, n_nights, guests, r_code, res_code, room_name_selected):
+            # 1. Predict using Rolling Window Logic
+            predicted_price = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
+            
+            # 2. Base Price Calculation
             base_per_night = get_base_price(room_name_selected)
+            total_base_price = base_per_night * n_nights
             
-            # 2. คำนวณ Floor Price (ราคาทุน * จำนวนคืน) <-- แก้ไขจุดนี้
-            floor_price = base_per_night * n_nights
+            # 3. Safety Net
+            final_price = max(predicted_price, total_base_price)
             
-            # 3. เลือกค่าที่มากกว่า (ห้ามต่ำกว่าทุน)
-            final_price = max(predicted_price, floor_price)
-            
-            return final_price, predicted_price, floor_price
+            return final_price, predicted_price, total_base_price
 
         with st.container(border=True):
             st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
@@ -473,9 +524,8 @@ else:
             with c1:
                 date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
             
-            # Logic: Nights & Holiday
+            # Logic: Nights
             nights = 1
-            is_h = False
             checkin_date = datetime.now()
             
             if len(date_range) == 2:
@@ -483,19 +533,12 @@ else:
                 checkout_date = date_range[1]
                 nights = (checkout_date - checkin_date).days
                 if nights < 1: nights = 1
-                current_date = checkin_date
-                while current_date < checkout_date:
-                    if current_date in holidays.Thailand(): is_h = True; break
-                    current_date += timedelta(days=1)
             elif len(date_range) == 1:
                 checkin_date = date_range[0]
             
             with c2:
-                col_night, col_hol = st.columns(2)
-                with col_night: st.number_input("Nights", value=nights, disabled=True)
-                with col_hol:
-                    manual_holiday = st.checkbox("Holiday (วันหยุด)", value=is_h)
-                    final_is_holiday = 1 if manual_holiday else 0
+                st.number_input("Nights", value=nights, disabled=True)
+                st.info("ℹ️ ระบบคำนวณแบบ Rolling Window (แบ่งช่วงเวลา) เพื่อรองรับเทศกาล")
 
             # --- ROW 2: Room, Guests, Channel ---
             c3, c4, c5 = st.columns(3)
@@ -540,89 +583,72 @@ else:
                     for r_type in target_rooms:
                         if str(r_type).lower() == 'nan' or pd.isna(r_type): continue
                         r_code = le_room.transform([r_type])[0]
-                        # คำนวณ Floor Price (Base * Night)
+                        
+                        # คำนวณ Base Price รวม (Total Base Price)
                         base_per_night = get_base_price(r_type)
                         total_base_price = base_per_night * nights
                         
                         for ch_type in target_res:
                             res_code = le_res.transform([ch_type])[0]
-                            inp = pd.DataFrame([{
-                                'Night': nights, 'total_guests': guests, 
-                                'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
-                                'month': checkin_date.month, 'weekday': checkin_date.weekday(),
-                                'RoomType_encoded': r_code, 'Reservation_encoded': res_code
-                            }])
                             
-                            # XGB Calculation
-                            raw_xgb = xgb_model.predict(inp)[0]
-                            final_xgb = max(raw_xgb, total_base_price) # Safety Net
+                            # Calculate using Segmented Logic
+                            raw_xgb = predict_segmented_price(xgb_model, checkin_date, nights, guests, r_code, res_code)
+                            final_xgb = max(raw_xgb, total_base_price)
                             
-                            # LR Calculation
-                            raw_lr = lr_model.predict(inp)[0]
-                            final_lr = max(raw_lr, total_base_price) # Safety Net
+                            raw_lr = predict_segmented_price(lr_model, checkin_date, nights, guests, r_code, res_code)
+                            final_lr = max(raw_lr, total_base_price)
                             
                             results.append({
                                 "Room": r_type, "Channel": ch_type, "Guests": guests,
-                                "Floor Price (Base*N)": total_base_price, 
+                                "Base Price (Total)": total_base_price, 
                                 "XGB Price": final_xgb, "LR Price": final_lr
                             })
                     
-                    st.dataframe(pd.DataFrame(results).style.format("{:,.0f}", subset=["Floor Price (Base*N)", "XGB Price", "LR Price"]), use_container_width=True, height=500)
+                    st.dataframe(pd.DataFrame(results).style.format("{:,.0f}", subset=["Base Price (Total)", "XGB Price", "LR Price"]), use_container_width=True, height=500)
 
                 # Case B: Single Prediction
                 else:
                     r_code = le_room.transform([selected_room_val])[0]
                     res_code = le_res.transform([selected_res_val])[0]
                     
-                    # 1. Normal Guests
-                    inp_norm = pd.DataFrame([{
-                        'Night': nights, 'total_guests': guests, 
-                        'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
-                        'month': checkin_date.month, 'weekday': checkin_date.weekday(),
-                        'RoomType_encoded': r_code, 'Reservation_encoded': res_code
-                    }])
-                    
-                    # Call Helper with 'nights' parameter
-                    p_xgb_norm, raw_xgb, floor_p = calculate_clamped_price(xgb_model, inp_norm, selected_room_val, nights)
-                    p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, inp_norm, selected_room_val, nights)
+                    # Call Helper (Rolling Window Logic)
+                    p_xgb_norm, raw_xgb, total_base = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, selected_room_val)
+                    p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, selected_room_val)
                     
                     st.divider()
                     st.markdown(f"### 🏨 ผลการวิเคราะห์ราคาห้อง: **{selected_room_val}**")
-                    st.caption(f"เงื่อนไข: {nights} คืน | {guests} ท่าน | ช่องทาง {selected_res_val} | Floor Price (Base x Night): {floor_p:,.0f} THB")
+                    st.caption(f"เงื่อนไข: {nights} คืน | {guests} ท่าน | ช่องทาง {selected_res_val} | Total Base Price: {total_base:,.0f} THB")
                     
                     # === ROW 1: Normal Guests ===
                     r1c1, r1c2 = st.columns(2)
                     
                     # 1. XGBoost Normal
                     with r1c1:
-                        # Diff เทียบกับ Floor Price
-                        diff_xgb = p_xgb_norm - floor_p
-                        
-                        # Logic แสดงสี: ถ้าค่าพยากรณ์จริงต่ำกว่า Floor ให้เตือน
+                        diff_xgb = p_xgb_norm - total_base
                         delta_color = "normal"
                         note = ""
-                        if raw_xgb < floor_p:
+                        if raw_xgb < total_base:
                             note = f"⚠️ Adjusted from {raw_xgb:,.0f}"
-                            delta_color = "off" # สีเทาๆ แสดงว่าไม่ได้มาจาก Model โดยตรง
+                            delta_color = "off" 
                             
                         st.container(border=True).metric(
                             label=f"⚡ XGBoost (ปกติ: {guests} ท่าน)",
                             value=f"{p_xgb_norm:,.0f} THB",
-                            delta=f"{diff_xgb:+,.0f} THB (vs Floor)",
+                            delta=f"{diff_xgb:+,.0f} THB (vs Base)",
                             delta_color=delta_color
                         )
                         st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}% {note}")
                     
                     # 2. Linear Normal
                     with r1c2:
-                        diff_lr = p_lr_norm - floor_p
+                        diff_lr = p_lr_norm - total_base
                         note_lr = ""
-                        if raw_lr < floor_p: note_lr = f"⚠️ Adjusted from {raw_lr:,.0f}"
+                        if raw_lr < total_base: note_lr = f"⚠️ Adjusted from {raw_lr:,.0f}"
                         
                         st.container(border=True).metric(
                             label=f"📉 Linear Regression (ปกติ: {guests} ท่าน)",
                             value=f"{p_lr_norm:,.0f} THB",
-                            delta=f"{diff_lr:+,.0f} THB (vs Floor)"
+                            delta=f"{diff_lr:+,.0f} THB (vs Base)"
                         )
                         st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}% {note_lr}")
 
@@ -631,12 +657,9 @@ else:
                     r2c1, r2c2 = st.columns(2)
                     
                     if extra_guests <= max_g:
-                        # Logic ใหม่: บวกเพิ่ม 500 บาท/คน จากราคา Final ของ Normal
-                        # ตามคำสั่ง "ในกรณีมีแขกเพิ่มให้บวกจากของเดิมไป 500 บาทต่อคนดีกว่า"
                         p_xgb_extra = p_xgb_norm + 500
                         p_lr_extra = p_lr_norm + 500
                         
-                        # 3. XGBoost Extra
                         with r2c1:
                             st.container(border=True).metric(
                                 label=f"👥 XGBoost (เพิ่มแขก: {extra_guests} ท่าน)",
@@ -646,7 +669,6 @@ else:
                             )
                             st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}%")
                         
-                        # 4. Linear Extra
                         with r2c2:
                             st.container(border=True).metric(
                                 label=f"👥 Linear (เพิ่มแขก: {extra_guests} ท่าน)",
