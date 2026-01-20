@@ -31,7 +31,7 @@ st.set_page_config(
 
 DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
-ROOM_MAPPING_FILE = "room_type.csv" # ไฟล์จับคู่เลขห้อง
+ROOM_MAPPING_FILE = "room_type.csv" # ไฟล์จับคู่เลขห้อง (Mapping)
 ROOM_CONFIG_FILE = "room_config.csv" # ไฟล์ตั้งค่าราคาและกฎของห้อง (Master Data)
 METRICS_FILE = "model_metrics.json"
 
@@ -42,7 +42,7 @@ MODEL_FILES = {
     'le_res': 'le_res.joblib'
 }
 
-# ค่า Default กรณีสร้างไฟล์ครั้งแรก (Fallback)
+# ค่า Default กรณีสร้างไฟล์ครั้งแรก
 DEFAULT_ROOM_CONFIG = [
     {"Room_Type": "Grand Suite Room", "Base_Price": 2700, "Allow_Extra": True},
     {"Room_Type": "Villa Suite (Garden)", "Base_Price": 2700, "Allow_Extra": True},
@@ -229,18 +229,10 @@ def login_page():
     with col2:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=120)
         st.title("🔒 Login System")
-        st.caption("กรุณาเข้าสู่ระบบเพื่อใช้งาน (สำหรับ Admin และ Staff)")
-        
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
-        
+        u = st.text_input("Username"); p = st.text_input("Password", type="password")
         if st.button("Login", type="primary", use_container_width=True):
-            if login_user(u, p): 
-                st.session_state['logged_in'] = True
-                st.session_state['username'] = u
-                st.rerun()
-            else: 
-                st.error("Username หรือ Password ไม่ถูกต้อง")
+            if login_user(u, p): st.session_state['logged_in'] = True; st.session_state['username'] = u; st.rerun()
+            else: st.error("Username หรือ Password ไม่ถูกต้อง")
 
 if not st.session_state['logged_in']:
     login_page()
@@ -260,18 +252,24 @@ else:
     # --- PAGE: DASHBOARD ---
     def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
-        if df.empty: st.warning("No Data"); return
+        if df.empty: st.warning("No Data Available"); return
 
         with st.expander("🔎 ตัวกรองข้อมูล (Filter)", expanded=False):
             c_y, c_m = st.columns(2)
-            years = sorted(df['year'].unique())
-            sel_year = c_y.selectbox("เลือกปี (Year)", ["All"] + list(years))
+            # FIX: Filter NaN & Float
+            valid_years = sorted([int(y) for y in df['year'].unique() if pd.notna(y)])
+            
+            sel_year = c_y.selectbox("เลือกปี (Year)", ["All"] + valid_years)
             sel_month = c_m.selectbox("เลือกเดือน (Month)", ["All"] + list(range(1, 13)))
         
         df_show = df.copy()
         if sel_year != "All": df_show = df_show[df_show['year'] == sel_year]
         if sel_month != "All": df_show = df_show[df_show['month'] == sel_month]
         
+        if df_show.empty:
+            st.warning("ไม่พบข้อมูลในช่วงเวลาที่เลือก")
+            return
+
         st.divider()
         k1, k2, k3 = st.columns(3)
         with k1: st.metric("💰 Total Revenue", f"{df_show['Price'].sum()/1e6:.2f} M THB")
@@ -282,11 +280,12 @@ else:
         st.divider()
         tab_fin, tab_chan, tab_cust = st.tabs(["💰 ภาพรวมการเงิน", "🌐 ช่องทางการขาย", "👥 พฤติกรรมลูกค้า"])
         
+        group_col = 'Target_Room_Type' if 'Target_Room_Type' in df_show.columns else 'Room'
+        
         with tab_fin:
             st.markdown("### Financial Overview")
             c1, c2 = st.columns(2)
             with c1:
-                group_col = 'Target_Room_Type' if 'Target_Room_Type' in df_show.columns else 'Room'
                 room_perf = df_show.groupby(group_col).agg({'Price': 'sum', 'Night': 'sum'}).reset_index().sort_values('Price', ascending=False)
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
                 fig.add_trace(go.Bar(x=room_perf[group_col], y=room_perf['Price'], name="Revenue", marker_color='#1f77b4'), secondary_y=False)
@@ -295,7 +294,7 @@ else:
             with c2:
                 if 'month' in df_show.columns:
                     monthly_adr = df_show.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum() if x['Night'].sum() > 0 else 0).reset_index(name='ADR')
-                    fig_adr = px.line(monthly_adr, x='month', y='ADR', markers=True, title="ADR Trend")
+                    fig_adr = px.line(monthly_adr, x='month', y='ADR', markers=True, title="ADR Trend Analysis")
                     st.plotly_chart(fig_adr, use_container_width=True)
 
         with tab_chan:
@@ -303,25 +302,32 @@ else:
             c3, c4 = st.columns(2)
             with c3:
                 res_rev = df_show.groupby('Reservation')['Price'].sum().reset_index()
-                st.plotly_chart(px.pie(res_rev, values='Price', names='Reservation', hole=0.4), use_container_width=True)
+                st.plotly_chart(px.pie(res_rev, values='Price', names='Reservation', hole=0.4, title="Revenue Share"), use_container_width=True)
             with c4:
                 m_res = df.groupby(['month', 'Reservation']).size().reset_index(name='Count')
                 m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
                 st.plotly_chart(px.bar(m_res, x='M_Name', y='Count', color='Reservation', title="Monthly Bookings"), use_container_width=True)
 
         with tab_cust:
-            heatmap_data = df_show.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
-            fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues')
-            st.plotly_chart(fig_heat, use_container_width=True)
+            c5, c6 = st.columns(2)
+            with c5:
+                heatmap_data = df_show.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
+                fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues', title="Room vs Channel Heatmap")
+                st.plotly_chart(fig_heat, use_container_width=True)
+            with c6:
+                if 'is_weekend' in df_show.columns:
+                    df_show['DayType'] = df_show['is_weekend'].map({1: 'Weekend', 0: 'Weekday'})
+                    day_rev = df_show.groupby('DayType')['Price'].sum().reset_index()
+                    st.plotly_chart(px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Revenue: Weekday vs Weekend"), use_container_width=True)
 
     # --- PAGE: MANAGE DATA (ADMIN ONLY) ---
     def show_manage_data_page():
         st.title("🛠️ จัดการข้อมูล (Data Management)")
         
-        tab_config, tab_edit, tab_import, tab_retrain = st.tabs(["⚙️ ตั้งค่าห้องพัก (Master Data)", "📝 แก้ไขข้อมูลจอง", "📥 นำเข้าไฟล์ (Import)", "🔄 อัปเดตโมเดล"])
+        tab_config, tab_edit, tab_import, tab_retrain = st.tabs(["⚙️ ตั้งค่าห้องพัก", "📝 แก้ไขข้อมูลจอง", "📥 นำเข้าไฟล์", "🔄 อัปเดตโมเดล"])
         
         with tab_config:
-            st.markdown("### ⚙️ Room Configuration")
+            st.markdown("### ⚙️ Room Configuration (Master Data)")
             current_config = load_room_config()
             edited_config = st.data_editor(
                 current_config, 
@@ -335,11 +341,25 @@ else:
                 st.success("✅ บันทึกเรียบร้อย!"); st.rerun()
 
         with tab_edit:
-            st.markdown("### 📝 ข้อมูลการจองในระบบ")
-            edited_df = st.data_editor(df, num_rows="dynamic", use_container_width=True, key="data_editor")
-            if st.button("💾 บันทึกการแก้ไขข้อมูลจอง"):
-                edited_df.to_csv(DATA_FILE, index=False)
-                st.success("✅ บันทึกสำเร็จ!"); st.cache_data.clear(); time.sleep(1); st.rerun()
+            st.markdown("### 📝 ข้อมูลการจองในระบบ (Edit/Delete)")
+            
+            # [FIX] โหลด RAW CSV ตรงๆ เพื่อป้องกัน Column ซ้ำจากการ Merge
+            if os.path.exists(DATA_FILE):
+                raw_df = pd.read_csv(DATA_FILE)
+                # Ensure Room is string
+                if 'Room' in raw_df.columns: raw_df['Room'] = raw_df['Room'].astype(str)
+                
+                edited_df = st.data_editor(raw_df, num_rows="dynamic", use_container_width=True, key="data_editor_raw")
+                
+                if st.button("💾 บันทึกการแก้ไขข้อมูลจอง"):
+                    try:
+                        edited_df.to_csv(DATA_FILE, index=False)
+                        st.success("✅ บันทึกสำเร็จ!")
+                        st.cache_data.clear()
+                        time.sleep(1); st.rerun()
+                    except Exception as e: st.error(f"Error: {e}")
+            else:
+                st.warning("ไม่พบไฟล์ข้อมูล (check_in_report.csv)")
 
         with tab_import:
             st.markdown("### 📥 Import CSV")
@@ -347,31 +367,60 @@ else:
             if up_file and st.button("Append Data"):
                 try:
                     new_data = pd.read_csv(up_file)
-                    current = pd.read_csv(DATA_FILE)
-                    updated = pd.concat([current, new_data], ignore_index=True)
+                    if 'Room' in new_data.columns: new_data['Room'] = new_data['Room'].astype(str)
+                    
+                    if os.path.exists(DATA_FILE):
+                        current = pd.read_csv(DATA_FILE)
+                        if 'Room' in current.columns: current['Room'] = current['Room'].astype(str)
+                        updated = pd.concat([current, new_data], ignore_index=True)
+                    else: updated = new_data
+                        
                     updated.to_csv(DATA_FILE, index=False)
                     st.success("✅ นำเข้าสำเร็จ!"); st.cache_data.clear(); st.rerun()
                 except Exception as e: st.error(f"Failed: {e}")
                 
         with tab_retrain:
-             st.markdown("### 🔄 Update Model")
+             st.markdown("### 🔄 Update Model Intelligence")
+             col_m1, col_m2 = st.columns(2)
+             with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
+             
              if st.button("🚀 Start Retraining"):
-                success, count = retrain_system()
-                if success: st.success(f"🎉 เสร็จสิ้น! ({count} รายการ)"); time.sleep(2); st.rerun()
+                with st.spinner("Training models... Please wait."):
+                    success, count = retrain_system()
+                    if success: st.success(f"🎉 Training เสร็จสิ้น! (เรียนรู้จาก {count} รายการ)"); time.sleep(2); st.rerun()
+
+    # --- PAGE: FEATURE IMPORTANCE ---
+    def show_importance_page():
+        st.title("🧠 ความสำคัญของตัวแปร (Feature Importance)")
+        st.markdown("ปัจจัยที่ส่งผลต่อการตั้งราคาห้องพัก (วิเคราะห์จาก XGBoost Model)")
+        
+        imp_data = metrics.get('importance', DEFAULT_METRICS['importance'])
+        if not imp_data: st.warning("ยังไม่มีข้อมูล Model ให้ Retrain ก่อน"); return
+
+        fi_df = pd.DataFrame(list(imp_data.items()), columns=['Feature', 'Importance']).sort_values('Importance', ascending=True)
+        
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.plotly_chart(px.bar(fi_df, x='Importance', y='Feature', orientation='h', text_auto='.4f', color='Importance', color_continuous_scale='Blues'), use_container_width=True)
+        with c2:
+            st.dataframe(fi_df.sort_values('Importance', ascending=False), use_container_width=True, height=400)
 
     # --- PAGE: PREDICTION ---
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Prediction)")
-        if xgb_model is None: st.error("❌ Model not found"); return
+        
+        if xgb_model is None: st.error("❌ Model not found. Please Retrain first."); return
 
         config_df = load_room_config()
         available_channels = sorted(list(set(le_res.classes_) | set(df['Reservation'].unique()))) if not df.empty else le_res.classes_
 
         with st.container(border=True):
-            st.subheader("🛠️ กำหนดข้อมูลการเข้าพัก")
+            st.subheader("1. กำหนดข้อมูลการเข้าพัก")
             c_date, c_room, c_chan = st.columns(3)
             with c_date:
-                dates = st.date_input("เลือกวัน Check-in / Check-out", value=(datetime.now(), datetime.now() + timedelta(days=1)), min_value=datetime.now())
+                # FIX: Allow past dates (min_value=None)
+                dates = st.date_input("เลือกวัน Check-in / Check-out", value=(datetime.now(), datetime.now() + timedelta(days=1)))
+                
                 nights = 1; is_h = False; checkin_date = datetime.now()
                 if isinstance(dates, tuple):
                     if len(dates) == 2:
@@ -381,7 +430,8 @@ else:
                         date_range = pd.date_range(start, end - timedelta(days=1))
                         is_h = any(d.date() in th_holidays for d in date_range)
                     elif len(dates) == 1: checkin_date = dates[0]
-                st.caption(f"📅 จำนวนคืน: **{nights} คืน** | 🏖️ เทศกาล: **{'✅ ใช่' if is_h else '❌ ไม่ใช่'}**")
+                
+                st.markdown(f"📅 **{nights} คืน** | 🏖️ เทศกาล: **{'✅ ใช่' if is_h else '❌ ไม่ใช่'}**")
 
             with c_room:
                 room_opts = [f"{row['Room_Type']} (Start {row['Base_Price']:,})" for _, row in config_df.iterrows()]
@@ -389,7 +439,7 @@ else:
                 selected_room_name = selected_opt.split(" (Start")[0]
                 room_info = config_df[config_df['Room_Type'] == selected_room_name].iloc[0]
                 base_p = room_info['Base_Price']; allow_extra = room_info['Allow_Extra']
-                guests = st.number_input("จำนวนผู้เข้าพัก (Fix)", value=2, disabled=True)
+                st.number_input("จำนวนผู้เข้าพัก (Fix)", value=2, disabled=True)
             
             with c_chan: res = st.selectbox("ช่องทาง (Channel)", available_channels)
                 
@@ -399,8 +449,9 @@ else:
             try: res_code = le_res.transform([res])[0]
             except: res_code = 0
             
-            inp = pd.DataFrame([{'Night': nights, 'total_guests': guests, 'is_holiday': 1 if is_h else 0, 'is_weekend': 1 if is_w else 0, 'month': checkin_date.month, 'weekday': checkin_date.weekday(), 'RoomType_encoded': r_code, 'Reservation_encoded': res_code}])
+            inp = pd.DataFrame([{'Night': nights, 'total_guests': 2, 'is_holiday': 1 if is_h else 0, 'is_weekend': 1 if is_w else 0, 'month': checkin_date.month, 'weekday': checkin_date.weekday(), 'RoomType_encoded': r_code, 'Reservation_encoded': res_code}])
 
+            st.divider()
             b1, b2 = st.columns(2)
             calc = b1.button("🚀 คำนวณราคาห้องนี้", type="primary", use_container_width=True)
             calc_all = b2.button("📋 ประเมินราคาทุกห้อง (All Types)", type="secondary", use_container_width=True)
@@ -410,25 +461,34 @@ else:
                 final_xgb, mul_xgb = calculate_price_logic(p_xgb, base_p, nights, is_h, is_w)
                 final_lr, mul_lr = calculate_price_logic(p_lr, base_p, nights, is_h, is_w)
                 
-                st.divider()
-                st.markdown(f"#### 🏷️ ผลลัพธ์: {selected_room_name} ({nights} คืน)")
+                st.markdown("### 🏷️ ผลลัพธ์การพยากรณ์")
                 col_a, col_b = st.columns(2)
+                
                 with col_a:
-                    st.success(f"**ทางเลือก A (Machine Learning)**")
-                    st.metric("ราคาแนะนำ (2 ท่าน)", f"{final_xgb:,.0f} THB")
-                    if allow_extra: st.metric("ราคาเสริมเตียง (+Extra)", f"{final_xgb + (300*nights):,.0f} THB")
-                    else: st.caption("🚫 ห้องนี้ไม่รองรับเตียงเสริม")
-                    st.caption(f"Model: XGBoost | Confidence: {metrics['xgb']['r2']*100:.1f}%")
-                    if mul_xgb > 1.0: st.info(f"💡 ปรับราคาขึ้น x{mul_xgb} (วันหยุด/สุดสัปดาห์)")
+                    with st.container(border=True):
+                        st.markdown("#### 🅰️ ทางเลือก A (Machine Learning)")
+                        st.metric("ราคาแนะนำ (2 ท่าน)", f"{final_xgb:,.0f} THB")
+                        if allow_extra: 
+                            st.metric("➕ รวมเตียงเสริม (+300)", f"{final_xgb + (300*nights):,.0f} THB")
+                        st.divider()
+                        col_m1, col_m2 = st.columns(2)
+                        with col_m1: st.markdown(f"**R² Score:** `{metrics['xgb']['r2']*100:.2f}%`")
+                        with col_m2: st.markdown(f"**MAE:** `{metrics['xgb']['mae']:.0f}`")
+                        if mul_xgb > 1.0: st.info(f"💡 ปรับราคาขึ้น x{mul_xgb} (Holiday/Weekend Rule)")
+                
                 with col_b:
-                    st.warning(f"**ทางเลือก B (Statistical)**")
-                    st.metric("ราคาประเมิน (2 ท่าน)", f"{final_lr:,.0f} THB")
-                    if allow_extra: st.metric("ราคาเสริมเตียง (+Extra)", f"{final_lr + (300*nights):,.0f} THB")
-                    st.caption(f"Model: Linear Regression")
+                    with st.container(border=True):
+                        st.markdown("#### 🅱️ ทางเลือก B (Statistical)")
+                        st.metric("ราคาประเมิน (2 ท่าน)", f"{final_lr:,.0f} THB")
+                        if allow_extra: 
+                            st.metric("➕ รวมเตียงเสริม (+300)", f"{final_lr + (300*nights):,.0f} THB")
+                        st.divider()
+                        col_m3, col_m4 = st.columns(2)
+                        with col_m3: st.markdown(f"**R² Score:** `{metrics['lr']['r2']*100:.2f}%`")
+                        with col_m4: st.markdown(f"**MAE:** `{metrics['lr']['mae']:.0f}`")
 
             if calc_all:
-                st.divider()
-                st.markdown("#### 📋 ตารางราคาแนะนำทุกห้อง (สำหรับ 2 ท่าน)")
+                st.markdown("### 📋 ตารางราคาแนะนำทุกห้อง (สำหรับ 2 ท่าน)")
                 results = []
                 for _, row in config_df.iterrows():
                     r_name = row['Room_Type']; bp = row['Base_Price']; allow_ex = row['Allow_Extra']
@@ -437,7 +497,7 @@ else:
                     tmp_inp = inp.copy(); tmp_inp['RoomType_encoded'] = r_c; tmp_inp['total_guests'] = 2
                     px = xgb_model.predict(tmp_inp)[0]
                     fx, mx = calculate_price_logic(px, bp, nights, is_h, is_w)
-                    note = f"x{mx}" if mx > 1 else "-"
+                    note = f"Rule x{mx}" if mx > 1 else "Normal"
                     if allow_ex: note += " | +Extra Option"
                     results.append({"Room Type": r_name, "Base Price": f"{bp:,}", "Recomm. Price": f"{fx:,.0f}", "Note": note})
                 st.dataframe(pd.DataFrame(results), use_container_width=True)
@@ -453,25 +513,36 @@ else:
             st.caption("คณะนวัตกรรม เทคโนโลยีและการสร้างสรรค์ มหาวิทยาลัยฟาร์อีสเทอร์น")
             st.info("วิทยานิพนธ์: การพัฒนาระบบสนับสนุนการตัดสินใจเพื่อการพยากรณ์ราคาแบบพลวัต")
 
-    # --- SIDEBAR NAV (ROLE BASED) ---
+    # --- SIDEBAR NAV (NEW STRUCTURE) ---
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
         st.markdown(f"**User:** {st.session_state['username']}")
         st.divider()
         
-        # MENU SELECTION BASED ON ROLE
-        if st.session_state['username'] == "admin":
-            menu_options = ["📊 แดชบอร์ดสรุปผล", "🔮 ระบบพยากรณ์ราคา", "🛠️ จัดการข้อมูล", "ℹ️ เกี่ยวกับระบบ"]
-        else:
-            # User เห็นแค่ 2 อย่าง
-            menu_options = ["📊 แดชบอร์ดสรุปผล", "🔮 ระบบพยากรณ์ราคา"]
+        page_selection = ""
+        st.markdown("#### 🏠 หน้าแรก")
+        if st.button("📊 Dashboard สรุปผล", use_container_width=True): page_selection = "dashboard"
             
-        page = st.radio("เมนูใช้งาน", menu_options)
+        st.markdown("#### 🔮 พยากรณ์")
+        if st.button("📈 ระบบพยากรณ์ราคา", use_container_width=True): page_selection = "pricing"
+        
+        # Admin Only Menu
+        if st.session_state['username'] == "admin":
+            if st.button("🛠️ จัดการข้อมูล (Admin)", use_container_width=True): page_selection = "manage"
+            if st.button("🧠 Feature Importance", use_container_width=True): page_selection = "importance"
+            
+        st.markdown("#### ℹ️ เกี่ยวกับ")
+        if st.button("📝 เกี่ยวกับระบบ", use_container_width=True): page_selection = "about"
         
         st.divider()
         if st.button("Logout", use_container_width=True): st.session_state['logged_in'] = False; st.rerun()
 
-    if "แดชบอร์ด" in page: show_dashboard_page()
-    elif "พยากรณ์" in page: show_pricing_page()
-    elif "จัดการ" in page: show_manage_data_page() # Admin only accessible via menu
-    elif "เกี่ยวกับ" in page: show_about_page() # Admin only accessible via menu
+    if 'current_page' not in st.session_state: st.session_state['current_page'] = "dashboard"
+    if page_selection: st.session_state['current_page'] = page_selection
+
+    curr = st.session_state['current_page']
+    if curr == "dashboard": show_dashboard_page()
+    elif curr == "pricing": show_pricing_page()
+    elif curr == "manage": show_manage_data_page()
+    elif curr == "importance": show_importance_page()
+    elif curr == "about": show_about_page()
