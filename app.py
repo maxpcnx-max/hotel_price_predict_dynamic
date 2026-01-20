@@ -31,7 +31,7 @@ st.set_page_config(
 
 DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
-ROOM_FILE = "room_type.csv" # ไฟล์ Master Data (ใส่ไว้ใน GitHub)
+ROOM_FILE = "room_type.csv" # ไฟล์ Master Data
 METRICS_FILE = "model_metrics.json"
 
 MODEL_FILES = {
@@ -103,7 +103,6 @@ init_db()
 
 @st.cache_data
 def load_data():
-    # 1. โหลดข้อมูลดิบ
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
@@ -113,21 +112,17 @@ def load_data():
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
         if 'Room' in df.columns:
-            df['Room'] = df['Room'].astype(str) # บังคับเป็น String
+            df['Room'] = df['Room'].astype(str)
 
-        # 2. โหลดไฟล์ Master (room_type.csv) จากหลังบ้าน
         if os.path.exists(ROOM_FILE):
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
             
-            # Merge ข้อมูล
             if 'Room_Type' in room_type.columns:
                 df = df.merge(room_type, on='Room', how='left')
                 if 'Room_Type' in df.columns: df = df.rename(columns={'Room_Type': 'Target_Room_Type'})
                 elif 'Room_Type_y' in df.columns: df = df.rename(columns={'Room_Type_y': 'Target_Room_Type'})
         
-        # 3. [FILTER OUTLIER] กรองทิ้งเลยถ้า Map ชื่อห้องไม่ได้
-        # ถ้า Target_Room_Type เป็น NaN แสดงว่าเลขห้องนั้นไม่อยู่ในสารบบ -> Drop ทิ้ง
         df = df.dropna(subset=['Target_Room_Type'])
         
         df['Reservation'] = df['Reservation'].fillna('Unknown')
@@ -151,28 +146,23 @@ def load_system_models():
         
     return xgb, lr, le_room, le_res, metrics
 
-# --- SAVE DATA with OUTLIER DETECTION ---
 def save_uploaded_data_with_cleaning(uploaded_file):
     try:
         uploaded_file.seek(0)
         new_data = pd.read_csv(uploaded_file)
         
-        # Standardize Columns
         if 'Room' in new_data.columns: new_data['Room'] = new_data['Room'].astype(str)
         
-        # 1. โหลด Master Room Type เพื่อตรวจสอบ
         valid_rooms = set()
         if os.path.exists(ROOM_FILE):
             room_master = pd.read_csv(ROOM_FILE)
             if 'Room' in room_master.columns:
                 valid_rooms = set(room_master['Room'].astype(str))
         
-        # 2. ตรวจสอบ Outlier (ห้องที่ไม่รู้จัก)
         if len(valid_rooms) > 0:
             good_rows = new_data[new_data['Room'].isin(valid_rooms)]
             bad_rows = new_data[~new_data['Room'].isin(valid_rooms)]
             
-            # แจ้งเตือนถ้ามีของเสีย
             if len(bad_rows) > 0:
                 st.warning(f"⚠️ ตรวจพบข้อมูลห้องที่ไม่รู้จัก (Outlier) จำนวน {len(bad_rows)} รายการ")
                 st.error(f"รายการที่ถูกตัดทิ้ง (Drop): {bad_rows['Room'].unique()}")
@@ -182,11 +172,9 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                 
             data_to_save = good_rows
         else:
-            # กรณีไม่มีไฟล์ Master ให้บันทึกหมด (แต่เตือน)
             st.warning("⚠️ ไม่พบไฟล์ room_type.csv ระบบจะบันทึกข้อมูลทั้งหมดโดยไม่กรอง")
             data_to_save = new_data
 
-        # 3. บันทึกเฉพาะข้อมูลดี
         if not data_to_save.empty:
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
@@ -206,25 +194,20 @@ def save_uploaded_data_with_cleaning(uploaded_file):
         st.error(f"Save failed: {e}")
         return False
 
-# --- RETRAIN FUNCTION (CLEANING INCLUDED) ---
 def retrain_system():
     status_text = st.empty()
     progress_bar = st.progress(0)
     
     try:
         status_text.text("⏳ Reading & Cleaning data...")
-        # ใช้ logic เดียวกับ load_data เพื่อกรอง Outlier ก่อนเทรน
         df = load_data() 
         
         if df.empty:
             st.error("ไม่พบข้อมูลสำหรับเทรนโมเดล")
             return False, 0
             
-        # --- CLEANING FOR LINEAR REGRESSION ---
-        # 1. ตัดแถวที่ข้อมูลสำคัญหาย
         df = df.dropna(subset=['Price', 'Night'])
         
-        # 2. อุดรูรั่วข้อมูลตัวเลข (ป้องกัน Linear Regression Error)
         df['Night'] = df['Night'].fillna(1)
         df['Adults'] = df['Adults'].fillna(2)
         df['Children'] = df['Children'].fillna(0)
@@ -245,7 +228,6 @@ def retrain_system():
         df['month'] = df['Date'].dt.month
         df['weekday'] = df['Date'].dt.weekday
         
-        # Encoders
         le_room_new = LabelEncoder()
         df['RoomType_encoded'] = le_room_new.fit_transform(df['Target_Room_Type'].astype(str))
         le_res_new = LabelEncoder()
@@ -255,7 +237,6 @@ def retrain_system():
         X = df[feature_cols]
         y = df['Price']
         
-        # 3. Final Check: เติม 0 ใน X ถ้ายังมีอะไรว่าง
         X = X.fillna(0)
         
         progress_bar.progress(40)
@@ -263,7 +244,6 @@ def retrain_system():
         
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
-        # XGBoost
         xgb_new = XGBRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
         xgb_new.fit(X_train, y_train)
         pred_xgb = xgb_new.predict(X_test)
@@ -274,7 +254,6 @@ def retrain_system():
         col_mapping = {'Night': 'Night', 'total_guests': 'Guests', 'is_holiday': 'Is Holiday', 'is_weekend': 'Is Weekend', 'month': 'Month', 'weekday': 'Weekday', 'RoomType_encoded': 'Room Type', 'Reservation_encoded': 'Reservation'}
         new_importance = {col_mapping.get(col, col): float(val) for col, val in zip(feature_cols, fi_raw)}
 
-        # Linear Regression (จะไม่ Error แล้ว)
         lr_new = LinearRegression()
         lr_new.fit(X_train, y_train)
         pred_lr = lr_new.predict(X_test)
@@ -331,14 +310,13 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    df = load_data() # <--- Load + Clean Outlier
+    df = load_data() 
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     if not os.path.exists("thai_holidays.csv"):
         try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
         except: pass
 
     def show_home_page():
-        # [ปรับ] ใช้ cover.jpg เป็นหลัก ตามที่คุณต้องการ
         if os.path.exists("cover.jpg"): 
             st.image("cover.jpg", use_container_width=True)
         else: 
@@ -353,101 +331,109 @@ else:
         """)
 
     def show_dashboard_page():
-        # [ปรับ] ใช้ Dashboard ใหม่ที่คุณออกแบบ (Combo Chart + Booking Value)
-        st.title("📊 แดชบอร์ดสรุปผลการดำเนินงาน")
+        st.title("📊 Financial Executive Dashboard (9-Chart Edition)")
         if df.empty: st.warning("No Data"); return
         
         st.divider()
         
-        # --- ROW 1: Executive Summary ---
+        # --- METRICS ---
         k1, k2, k3 = st.columns(3)
-        with k1: 
-            st.metric("💰 Total Revenue (รายได้รวม)", f"{df['Price'].sum()/1e6:.2f} M THB")
-        with k2: 
-            st.metric("📦 Total Bookings (จำนวนการจอง)", f"{len(df):,} รายการ")
-        with k3: 
-            # [ปรับ] ใช้ Avg. Booking Value แทน ADR ตามที่ขอ
-            avg_val = df['Price'].mean()
-            st.metric("🏷️ Avg. Booking Value (ยอดจองเฉลี่ย)", f"{avg_val:,.0f} THB")
-            
-        st.divider()
+        with k1: st.metric("💰 Total Revenue", f"{df['Price'].sum()/1e6:.2f} M THB")
+        with k2: st.metric("📦 Total Bookings", f"{len(df):,} รายการ")
+        with k3: st.metric("🏷️ Avg. Booking Value", f"{df['Price'].mean():,.0f} THB")
         
-        # --- ROW 2: Room Efficiency Analysis ---
-        c1, c2 = st.columns([3, 2])
+        st.divider()
+        st.markdown("### 1. Financial Overview (ภาพรวมการเงิน)")
+        
+        # ROW 1.1: Financial Trends
+        c1, c2 = st.columns(2)
         
         with c1:
-            st.subheader("🏆 Revenue vs. Nights by Room Type")
-            st.caption("เปรียบเทียบ รายได้ (แท่ง) และ จำนวนคืน (เส้น) เพื่อดูประสิทธิภาพห้องพัก")
-            
+            st.subheader("1. Revenue vs Nights (Performance)")
             group_col = 'Target_Room_Type' if 'Target_Room_Type' in df.columns else 'Room'
-            room_perf = df.groupby(group_col).agg({
-                'Price': 'sum',
-                'Night': 'sum'
-            }).reset_index().sort_values('Price', ascending=False)
-            
-            room_perf['Calculated_ADR'] = room_perf['Price'] / room_perf['Night']
-
+            room_perf = df.groupby(group_col).agg({'Price': 'sum', 'Night': 'sum'}).reset_index().sort_values('Price', ascending=False)
             fig = make_subplots(specs=[[{"secondary_y": True}]])
-            
-            fig.add_trace(
-                go.Bar(
-                    x=room_perf[group_col], 
-                    y=room_perf['Price'], 
-                    name="Total Revenue",
-                    marker_color='#1f77b4',
-                    hovertemplate='<b>%{x}</b><br>Revenue: %{y:,.0f} THB<br>ADR: %{customdata:,.0f} THB<extra></extra>',
-                    customdata=room_perf['Calculated_ADR']
-                ),
-                secondary_y=False
-            )
-            
-            fig.add_trace(
-                go.Scatter(
-                    x=room_perf[group_col], 
-                    y=room_perf['Night'], 
-                    name="Total Nights",
-                    mode='lines+markers',
-                    marker_color='#ff7f0e',
-                    line=dict(width=3)
-                ),
-                secondary_y=True
-            )
-            
-            fig.update_layout(
-                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
-                margin=dict(l=20, r=20, t=20, b=20),
-                hovermode="x unified"
-            )
-            fig.update_yaxes(title_text="Revenue (THB)", secondary_y=False)
-            fig.update_yaxes(title_text="Nights Sold", secondary_y=True)
-            
+            fig.add_trace(go.Bar(x=room_perf[group_col], y=room_perf['Price'], name="Revenue", marker_color='#1f77b4'), secondary_y=False)
+            fig.add_trace(go.Scatter(x=room_perf[group_col], y=room_perf['Night'], name="Nights", mode='lines+markers', marker_color='#ff7f0e'), secondary_y=True)
+            fig.update_layout(legend=dict(orientation="h", y=1.1))
             st.plotly_chart(fig, use_container_width=True)
             
         with c2:
-            st.subheader("🌐 Revenue Share by Channel")
-            st.caption("สัดส่วนรายได้แยกตามช่องทางการจอง")
-            res_rev = df.groupby('Reservation')['Price'].sum().reset_index()
-            st.plotly_chart(px.pie(res_rev, values='Price', names='Reservation', hole=0.4, color_discrete_sequence=px.colors.sequential.Magma), use_container_width=True)
+            st.subheader("2. Revenue vs Booking Trend (Growth)")
+            # Group by Month
+            monthly = df.groupby('month').agg({'Price': 'sum', 'Room': 'count'}).reset_index().sort_values('month')
+            monthly['M_Name'] = monthly['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+            
+            fig2 = make_subplots(specs=[[{"secondary_y": True}]])
+            fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
+            fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", line=dict(color='blue', dash='dot')), secondary_y=True)
+            fig2.update_layout(legend=dict(orientation="h", y=1.1))
+            st.plotly_chart(fig2, use_container_width=True)
+            
+        # ROW 1.2: ADR Trend
+        st.subheader("3. ADR Trend Analysis (แนวโน้มราคาเฉลี่ยต่อคืน)")
+        monthly_adr = df.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
+        monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+        fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True, title="Average Daily Rate (ADR) per Month")
+        st.plotly_chart(fig_adr, use_container_width=True)
         
         st.divider()
+        st.markdown("### 2. Channel Strategy (เจาะลึกช่องทางการขาย)")
         
-        # --- ROW 3: Monthly Trends ---
-        st.subheader("📈 Monthly Revenue Breakdown")
-        st.caption("เจาะลึกที่มาของรายได้รายเดือน แยกตามประเภทห้อง")
+        # ROW 2.1
+        c3, c4 = st.columns(2)
+        with c3:
+            st.subheader("4. Revenue Share by Channel")
+            res_rev = df.groupby('Reservation')['Price'].sum().reset_index()
+            st.plotly_chart(px.pie(res_rev, values='Price', names='Reservation', hole=0.4), use_container_width=True)
+        with c4:
+            st.subheader("5. Monthly Booking by Channel")
+            # Stacked Bar: Month x Count, Color=Channel
+            m_res = df.groupby(['month', 'Reservation']).size().reset_index(name='Count')
+            m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+            st.plotly_chart(px.bar(m_res, x='M_Name', y='Count', color='Reservation'), use_container_width=True)
+            
+        # ROW 2.2: ADR by Channel
+        st.subheader("6. High-Value Customer Channel (ADR by Channel)")
+        # Calculate ADR per channel: Total Price / Total Nights
+        chan_adr = df.groupby('Reservation').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR').sort_values('ADR', ascending=False)
+        st.plotly_chart(px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Greens'), use_container_width=True)
         
-        mt_room = df.groupby(['month', group_col])['Price'].sum().reset_index()
-        mt_room['M_Name'] = mt_room['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-        mt_room = mt_room.sort_values('month')
+        st.divider()
+        st.markdown("### 3. Product & Behavior (พฤติกรรมลูกค้า)")
         
-        fig_stack = px.bar(
-            mt_room, 
-            x='M_Name', 
-            y='Price', 
-            color=group_col, 
-            text_auto='.2s',
-            labels={'Price': 'Revenue', 'M_Name': 'Month', group_col: 'Room Type'}
-        )
-        st.plotly_chart(fig_stack, use_container_width=True)
+        # ROW 3.1
+        c5, c6 = st.columns(2)
+        with c5:
+            st.subheader("7. Monthly Revenue by Room Type")
+            mt_room = df.groupby(['month', group_col])['Price'].sum().reset_index()
+            mt_room['M_Name'] = mt_room['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+            st.plotly_chart(px.bar(mt_room, x='M_Name', y='Price', color=group_col), use_container_width=True)
+        with c6:
+            st.subheader("8. Channel Preference by Room (Heatmap)")
+            # Matrix: Room Type vs Channel
+            heatmap_data = df.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
+            fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues')
+            st.plotly_chart(fig_heat, use_container_width=True)
+            
+        # ROW 3.2: Weekend vs Weekday
+        st.subheader("9. Weekday vs Weekend Revenue")
+        df['DayType'] = df['is_weekend'].map({1: 'Weekend', 0: 'Weekday'})
+        day_rev = df.groupby('DayType')['Price'].sum().reset_index()
+        c7, c8 = st.columns(2)
+        with c7:
+            st.plotly_chart(px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Revenue Share"), use_container_width=True)
+        with c8:
+            # Avg Booking Value Weekday vs Weekend
+            day_avg = df.groupby('DayType')['Price'].mean().reset_index()
+            st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Booking Value", color='DayType'), use_container_width=True)
+            
+        st.divider()
+        # --- RAW DATA TABLE ---
+        st.subheader("📋 Raw Data Explorer")
+        with st.expander("คลิกเพื่อดูตารางข้อมูลดิบ (Raw Data)"):
+            st.dataframe(df)
+
 
     def show_manage_data_page():
         st.title("📥 จัดการข้อมูล & อัปเดตโมเดล")
@@ -460,7 +446,7 @@ else:
                 if save_uploaded_data_with_cleaning(up_file):
                     st.success("✅ บันทึกข้อมูลเรียบร้อย! ข้อมูลถูกบันทึกลงระบบแล้ว")
                     st.balloons()
-                    time.sleep(5) # แจ้งเตือน 5 วินาที
+                    time.sleep(5) 
                     st.rerun()
         
         st.divider()
@@ -475,7 +461,7 @@ else:
             success, count = retrain_system()
             if success:
                 st.success(f"🎉 โมเดลเรียนรู้ครบ {count:,} รายการ! ระบบพร้อมใช้งานข้อมูลใหม่แล้ว")
-                time.sleep(5) # แจ้งเตือน 5 วินาที
+                time.sleep(5)
                 st.rerun()
 
     def show_pricing_page():
@@ -519,11 +505,11 @@ else:
                     st.info("### 🏷️ Base Price")
                     st.metric("ราคาตั้งต้น", f"{base_price:,.0f} THB")
                 with c_xgb:
-                    st.success("### ⚡ XGBoost") # ลบ (AI) ออก
+                    st.success("### ⚡ XGBoost") 
                     st.metric("ราคาแนะนำ", f"{p_xgb:,.0f} THB", delta=f"{p_xgb - base_price:,.0f} THB")
                     st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']:.4f}")
                 with c_lr:
-                    st.warning("### 📉 Linear Regression") # ชื่อเต็ม
+                    st.warning("### 📉 Linear Regression") 
                     st.metric("ราคาประเมิน", f"{p_lr:,.0f} THB", delta=f"{p_lr - base_price:,.0f} THB")
                     st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']:.4f}")
 
@@ -545,7 +531,6 @@ else:
         st.divider()
         c1, c2 = st.columns([1, 2])
         with c1: 
-            # [ปรับ] ใช้ my_profile.jpg ตามที่ขอ
             if os.path.exists("my_profile.jpg"):
                 st.image("my_profile.jpg", width=250)
             else:
