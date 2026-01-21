@@ -143,39 +143,40 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
 
-        # --- 🛠️ แก้ไข: ลบคอลัมน์ที่เกิดจากการคำนวณเก่าทิ้ง เพื่อป้องกันการซ้ำ ---
-        cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'Target_Room_Type', 'Room_Type', 'Target_Room_Type_x', 'Target_Room_Type_y']
+        # --- 🛠️ 1. ล้างคอลัมน์ขยะที่อาจติดมาจากไฟล์เก่า ---
+        cols_to_drop = [
+            'Year', 'month', 'is_weekend', 'weekday', 'is_holiday', 
+            'Target_Room_Type', 'Room_Type', 'Target_Room_Type_x', 'Target_Room_Type_y',
+            'Unnamed: 0'
+        ]
         df = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors='ignore')
-        # -------------------------------------------------------------------
+        # ----------------------------------------------------
         
-        # 1. Date Processing
+        # 2. Date Processing
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             df = df.dropna(subset=['Date'])
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
             df['Year'] = df['Date'].dt.year.astype(int)
             df['month'] = df['Date'].dt.month
-            df['weekday'] = df['Date'].dt.weekday # เพิ่มบรรทัดนี้ให้ครบ
+            df['weekday'] = df['Date'].dt.weekday
             
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        # 2. Room Type Mapping (เชื่อมกับ Master Data)
+        # 3. Room Type Mapping
         if os.path.exists(ROOM_FILE):
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
             
-            # ลบคอลัมน์ซ้ำใน Master Data ก่อน Merge
-            if 'Target_Room_Type' in room_type.columns:
-                # ถ้า Master มี Target_Room_Type อยู่แล้ว
-                pass
-            elif 'Room_Type' in room_type.columns:
+            # แก้ชื่อคอลัมน์ให้ตรงกันก่อน Merge
+            if 'Room_Type' in room_type.columns and 'Target_Room_Type' not in room_type.columns:
                  room_type = room_type.rename(columns={'Room_Type': 'Target_Room_Type'})
 
             if 'Target_Room_Type' in room_type.columns:
                 df = df.merge(room_type[['Room', 'Target_Room_Type']], on='Room', how='left')
         
-        # 3. Filter Outlier
+        # 4. Filter Outlier
         if 'Target_Room_Type' in df.columns:
             df = df.dropna(subset=['Target_Room_Type'])
         else:
@@ -183,12 +184,12 @@ def load_data():
         
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         
-        # ป้องกันคอลัมน์ซ้ำจากการ Merge ผิดพลาดในอดีต
+        # ลบคอลัมน์ซ้ำ (Safety Net)
         df = df.loc[:, ~df.columns.duplicated()]
         
         return df
     except Exception as e:
-        print(f"Error loading data: {e}")
+        st.error(f"Error loading data: {e}")
         return pd.DataFrame()
 
 def calculate_historical_avg(df):
@@ -495,117 +496,103 @@ else:
     # ==========================================================
     # 🌟 NEW: MANAGE DATA PAGE (CRUD & MASTER DATA)
     # ==========================================================
-    def show_manage_data_page():
+def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 แก้ไขข้อมูลการจอง", "⚙️ ตั้งค่าห้องพัก/ราคาฐาน", "🚀 อัปเดตโมเดล"])
 
         # ---------------------------------------------------------
-        # TAB 1: EDIT TRANSACTIONS (CRUD ข้อมูลการจอง)
+        # TAB 1: EDIT TRANSACTIONS
         # ---------------------------------------------------------
         with tab_trans:
-            st.subheader("จัดการประวัติการจอง (Booking History)")
-            st.info("💡 สามารถแก้ไขข้อมูลในตารางได้โดยตรง, กดถังขยะเพื่อลบ, หรือกด + เพื่อเพิ่มแถว")
+            st.subheader("1. นำเข้าข้อมูลใหม่ (Import Data)")
+            with st.expander("📤 คลิกเพื่ออัปโหลดไฟล์ CSV (Bulk Upload)", expanded=False):
+                up_file = st.file_uploader("เลือกไฟล์ CSV", type=['csv'])
+                if up_file is not None:
+                    if st.button("รวมไฟล์เข้าระบบ (Merge)", type="secondary"):
+                        if save_uploaded_data_with_cleaning(up_file):
+                            st.success("บันทึกเรียบร้อย"); time.sleep(1); st.rerun()
+
+            st.divider()
+            st.subheader("2. ตรวจสอบและแก้ไขข้อมูล (Edit/Delete)")
+            st.info("💡 แก้ไขในตารางได้เลย | กดถังขยะเพื่อลบ | กด + ล่างสุดเพื่อเพิ่มแถว")
             
-            # โหลดข้อมูลดิบ
             df_current = load_data()
             
             if not df_current.empty:
-                # ใช้ st.data_editor เพื่อทำ CRUD
+                # ใช้ st.data_editor
                 edited_df = st.data_editor(
                     df_current,
-                    num_rows="dynamic", # อนุญาตให้เพิ่ม/ลบแถว
+                    num_rows="dynamic",
                     use_container_width=True,
-                    key="booking_editor" # key สำคัญเพื่อไม่ให้ refresh แล้วหาย
+                    key="booking_editor",
+                    column_config={
+                        "Date": st.column_config.DateColumn("Check-in Date", format="DD/MM/YYYY"),
+                        "Price": st.column_config.NumberColumn("Price (THB)", format="%d"),
+                    }
                 )
                 
-                # ปุ่มบันทึก
-                if st.button("💾 บันทึกการเปลี่ยนแปลง (Save Changes)", type="primary"):
-                    try:
-                        # แปลง Date กลับเป็น format ที่ถูกต้อง
-                        if 'Date' in edited_df.columns:
-                            edited_df['Date'] = pd.to_datetime(edited_df['Date'])
-                        
-                        # --- 🛠️ แก้ไข: เลือกบันทึกเฉพาะคอลัมน์ข้อมูลดิบที่จำเป็น ---
-                        # (เอาคอลัมน์ที่คำนวณอัตโนมัติออก เพื่อไม่ให้ไฟล์ CSV บวมและซ้ำซ้อน)
-                        cols_to_save = ['Date', 'Room', 'Price', 'Reservation', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
-                        # เช็คว่าคอลัมน์ไหนมีอยู่จริงในตารางบ้าง
-                        final_save_cols = [c for c in cols_to_save if c in edited_df.columns]
-                        
-                        df_to_save = edited_df[final_save_cols].copy()
-                        # -------------------------------------------------------
+                # ปุ่มบันทึก (ย้ายมาให้เห็นชัดๆ)
+                col_save, col_dummy = st.columns([1, 4])
+                with col_save:
+                    if st.button("💾 บันทึกการเปลี่ยนแปลง", type="primary"):
+                        try:
+                            # แปลง Date กลับ
+                            if 'Date' in edited_df.columns:
+                                edited_df['Date'] = pd.to_datetime(edited_df['Date'])
+                            
+                            # --- 🛠️ 2. เลือกบันทึกเฉพาะคอลัมน์ข้อมูลดิบ (ไม่เอาที่คำนวณ) ---
+                            cols_to_save = [
+                                'Date', 'Room', 'Price', 'Reservation', 'Name', 
+                                'Night', 'Adults', 'Children', 'Infants', 'Extra Person'
+                            ]
+                            final_save_cols = [c for c in cols_to_save if c in edited_df.columns]
+                            df_to_save = edited_df[final_save_cols].copy()
+                            # -------------------------------------------------------
 
-                        # บันทึกทับไฟล์เดิม
-                        df_to_save.to_csv(DATA_FILE, index=False)
-                        st.cache_data.clear() 
-                        st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
+                            df_to_save.to_csv(DATA_FILE, index=False)
+                            st.cache_data.clear() 
+                            st.success("✅ บันทึกเสร็จสิ้น!")
+                            time.sleep(1)
+                            st.rerun()
+                        except Exception as e:
+                            st.error(f"Save Error: {e}")
+            else:
+                st.warning("ยังไม่มีข้อมูลในระบบ")
+
         # ---------------------------------------------------------
-        # TAB 2: MASTER DATA (จัดการห้องและราคาฐาน)
+        # TAB 2 & 3 เหมือนเดิม (Copy จากโค้ดก่อนหน้าได้เลย หรือใช้ชุดนี้ถ้าต้องการความชัวร์)
         # ---------------------------------------------------------
         with tab_master:
-            st.subheader("⚙️ กำหนดราคาฐานของห้องพัก (Base Prices)")
-            st.caption("กำหนดราคาต่ำสุดที่ยอมรับได้สำหรับห้องแต่ละประเภท (ใช้เป็น Price Floor)")
-            
-            # แปลง Dict เป็น DataFrame เพื่อให้แก้ได้ง่าย
+            st.subheader("⚙️ กำหนดราคาฐาน (Base Prices)")
             current_prices = load_base_prices()
             df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
             
-            # Editor สำหรับราคาฐาน
             edited_prices_df = st.data_editor(
-                df_prices,
-                num_rows="dynamic", # เพิ่มห้องใหม่ตรงนี้ได้เลย
-                use_container_width=True,
-                column_config={
-                    "Base Price": st.column_config.NumberColumn(
-                        "Base Price (THB)",
-                        min_value=0,
-                        step=100,
-                        format="%d THB"
-                    )
-                },
+                df_prices, num_rows="dynamic", use_container_width=True,
+                column_config={"Base Price": st.column_config.NumberColumn("Base Price (THB)", format="%d THB")},
                 key="price_editor"
             )
             
-            if st.button("💾 บันทึกราคาฐาน (Update Master Data)"):
-                # แปลงกลับเป็น Dict
+            if st.button("💾 บันทึกราคาฐาน"):
                 new_prices_dict = {}
                 for index, row in edited_prices_df.iterrows():
                     if row['Room Type'] and str(row['Room Type']).strip() != "":
                         new_prices_dict[row['Room Type']] = row['Base Price']
-                
-                # บันทึกลง JSON
                 save_base_prices(new_prices_dict)
-                
-                # อัปเดต Master Data ไฟล์ room_type.csv ด้วย (เผื่อใช้กรอง)
-                # สร้าง room_type.csv ใหม่จากรายชื่อห้องที่มีใน Base Price
+                # อัปเดต room_type.csv
                 df_room_master = pd.DataFrame({'Room': list(new_prices_dict.keys()), 'Target_Room_Type': list(new_prices_dict.keys())})
                 df_room_master.to_csv(ROOM_FILE, index=False)
-                
-                st.success("✅ อัปเดตข้อมูลห้องพักและราคาฐานเรียบร้อย!")
-                st.info("⚠️ หากมีการเพิ่มห้องพักประเภทใหม่ อย่าลืมไปกด 'Retrain Model' ใน Tab ถัดไป")
+                st.success("✅ อัปเดตเรียบร้อย!"); st.cache_data.clear()
 
-        # ---------------------------------------------------------
-        # TAB 3: RETRAIN (ของเดิม ย้ายมาใส่ Tab)
-        # ---------------------------------------------------------
         with tab_train:
-            st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
-            st.markdown("""
-            **กดปุ่มนี้เมื่อใด?**
-            1. เมื่อมีการเพิ่มข้อมูลการจองใหม่จำนวนมาก
-            2. เมื่อมีการ **เพิ่มประเภทห้องใหม่** หรือ **ช่องทางใหม่** (สำคัญมาก!)
-            3. เมื่อรู้สึกว่าความแม่นยำลดลง
-            """)
-            
+            st.subheader("🧠 Retrain Model")
+            st.caption("กดปุ่มนี้เมื่อมีการเพิ่มข้อมูลหรือเพิ่มห้องใหม่")
             col_m1, col_m2 = st.columns(2)
             with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
-            
-            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
+            if st.button("🚀 Start Retraining", type="primary"):
                 success, count = retrain_system()
-                if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(5); st.rerun()
+                if success: st.success(f"🎉 สำเร็จ! ({count:,} รายการ)"); time.sleep(2); st.rerun()
 
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
@@ -908,4 +895,5 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
