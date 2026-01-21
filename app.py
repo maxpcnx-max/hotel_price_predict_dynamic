@@ -43,8 +43,6 @@ MODEL_FILES = {
 
 # --- ส่วนจัดการ Base Price แบบ Dynamic (ใช้ JSON แทน Hardcode) ---
 BASE_PRICE_FILE = "base_prices.json"
-
-# ค่า Default หากยังไม่มีไฟล์ JSON
 DEFAULT_BASE_PRICES = {
     'Grand Suite Room': 2700,
     'Villa Suite (Garden)': 2700,
@@ -61,7 +59,6 @@ def load_base_prices():
         with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
             json.dump(DEFAULT_BASE_PRICES, f, ensure_ascii=False, indent=4)
         return DEFAULT_BASE_PRICES
-    
     try:
         with open(BASE_PRICE_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
@@ -73,12 +70,10 @@ def save_base_prices(price_dict):
     with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
         json.dump(price_dict, f, ensure_ascii=False, indent=4)
 
-# ฟังก์ชันดึงราคาฐาน (ใช้ได้ทั่วทั้งแอป)
 def get_base_price(room_text):
+    """ดึงราคาฐาน (ใช้ได้ทั่วทั้งแอป)"""
     if not isinstance(room_text, str): return 0
-    # โหลดค่าล่าสุดทุกครั้งที่เรียกใช้ เพื่อให้ได้ค่า Real-time
     prices = load_base_prices()
-    # พยายามหา key ที่ตรงกัน
     for key in prices:
         if key in room_text: return prices[key]
     return 0
@@ -189,7 +184,8 @@ def load_data():
         
         return df
     except Exception as e:
-        st.error(f"Error loading data: {e}")
+        # st.error(f"Error loading data: {e}") # ปิด Error ชั่วคราวเพื่อให้ UI ไม่รก
+        print(f"Error loading data: {e}")
         return pd.DataFrame()
 
 def calculate_historical_avg(df):
@@ -253,6 +249,10 @@ def save_uploaded_data_with_cleaning(uploaded_file):
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
                 if 'Room' in current_df.columns: current_df['Room'] = current_df['Room'].astype(str)
+                # ลบคอลัมน์คำนวณก่อนรวม
+                cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'is_holiday', 'Target_Room_Type']
+                current_df = current_df.drop(columns=[c for c in cols_to_drop if c in current_df.columns], errors='ignore')
+                
                 updated_df = pd.concat([current_df, data_to_save], ignore_index=True)
             else:
                 updated_df = data_to_save
@@ -386,6 +386,9 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
+    # -----------------------------------------------------
+    # 🔥 ส่วนที่ทำงานเมื่อ Login สำเร็จ (Indentation สำคัญมาก!)
+    # -----------------------------------------------------
     df_raw = load_data() 
     
     if not df_raw.empty and not st.session_state['historical_avg']:
@@ -493,10 +496,7 @@ else:
         st.subheader("📋 Raw Data Explorer")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
-    # ==========================================================
-    # 🌟 NEW: MANAGE DATA PAGE (CRUD & MASTER DATA)
-    # ==========================================================
-def show_manage_data_page():
+    def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 แก้ไขข้อมูลการจอง", "⚙️ ตั้งค่าห้องพัก/ราคาฐาน", "🚀 อัปเดตโมเดล"])
@@ -561,7 +561,7 @@ def show_manage_data_page():
                 st.warning("ยังไม่มีข้อมูลในระบบ")
 
         # ---------------------------------------------------------
-        # TAB 2 & 3 เหมือนเดิม (Copy จากโค้ดก่อนหน้าได้เลย หรือใช้ชุดนี้ถ้าต้องการความชัวร์)
+        # TAB 2 & 3
         # ---------------------------------------------------------
         with tab_master:
             st.subheader("⚙️ กำหนดราคาฐาน (Base Prices)")
@@ -895,5 +895,3 @@ def show_manage_data_page():
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
-
