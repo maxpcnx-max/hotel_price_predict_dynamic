@@ -563,10 +563,12 @@ else:
         with st.container(border=True):
             st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
             
-            c1, c2 = st.columns(2)
+            c1, c2 = st.columns([3, 1]) # ปรับสัดส่วน 3:1 ให้ฝั่งวันที่กว้างกว่า
+            
             with c1:
                 date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
             
+            # --- Logic คำนวณวันเหมือนเดิม ---
             nights = 1
             checkin_date = datetime.now()
             auto_holiday = False
@@ -584,11 +586,15 @@ else:
                     curr += timedelta(days=1)
             elif len(date_range) == 1:
                 checkin_date = date_range[0]
-            
-            with c2:
+
+            # --- ย้าย Checkbox มาต่อท้ายใน c1 (ฝั่งซ้าย) ---
+            with c1:
                 col_chk1, col_chk2 = st.columns(2)
                 with col_chk1: use_holiday = st.checkbox("รวมวันหยุดนักขัตฤกษ์", value=auto_holiday, disabled=True)
                 with col_chk2: use_weekend = st.checkbox("รวมวันหยุดเสาร์-อาทิตย์", value=auto_weekend, disabled=True)
+
+            # --- c2 (ฝั่งขวา) เหลือแค่ Nights ---
+            with c2:
                 st.number_input("Nights", value=nights, disabled=True)
 
             c3, c4, c5 = st.columns(3)
@@ -738,3 +744,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
