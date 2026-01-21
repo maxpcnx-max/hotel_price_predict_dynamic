@@ -31,7 +31,7 @@ st.set_page_config(
 
 DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
-ROOM_FILE = "room_type.csv" # ไฟล์ Master Data (Mapping เลขห้อง <-> ชื่อห้อง)
+ROOM_FILE = "room_type.csv" # ไฟล์ Master Data
 METRICS_FILE = "model_metrics.json"
 
 MODEL_FILES = {
@@ -43,6 +43,8 @@ MODEL_FILES = {
 
 # --- ส่วนจัดการ Base Price แบบ Dynamic (ใช้ JSON แทน Hardcode) ---
 BASE_PRICE_FILE = "base_prices.json"
+
+# ค่า Default หากยังไม่มีไฟล์ JSON
 DEFAULT_BASE_PRICES = {
     'Grand Suite Room': 2700,
     'Villa Suite (Garden)': 2700,
@@ -59,6 +61,7 @@ def load_base_prices():
         with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
             json.dump(DEFAULT_BASE_PRICES, f, ensure_ascii=False, indent=4)
         return DEFAULT_BASE_PRICES
+    
     try:
         with open(BASE_PRICE_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
@@ -70,10 +73,12 @@ def save_base_prices(price_dict):
     with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
         json.dump(price_dict, f, ensure_ascii=False, indent=4)
 
+# ฟังก์ชันดึงราคาฐาน (ใช้ได้ทั่วทั้งแอป)
 def get_base_price(room_text):
-    """ดึงราคาฐาน (ใช้ได้ทั่วทั้งแอป)"""
     if not isinstance(room_text, str): return 0
+    # โหลดค่าล่าสุดทุกครั้งที่เรียกใช้ เพื่อให้ได้ค่า Real-time
     prices = load_base_prices()
+    # พยายามหา key ที่ตรงกัน
     for key in prices:
         if key in room_text: return prices[key]
     return 0
@@ -138,63 +143,52 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
 
-        # --- 🛠️ 1. ล้างคอลัมน์ขยะที่อาจติดมาจากไฟล์เก่า ---
-        cols_to_drop = [
-            'Year', 'month', 'is_weekend', 'weekday', 'is_holiday', 
-            'Target_Room_Type', 'Room_Type', 'Target_Room_Type_x', 'Target_Room_Type_y',
-            'Unnamed: 0'
-        ]
+        # --- 🛠️ แก้ไข: ลบคอลัมน์ที่เกิดจากการคำนวณเก่าทิ้ง เพื่อป้องกันการซ้ำ ---
+        cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'Target_Room_Type', 'Room_Type', 'Target_Room_Type_x', 'Target_Room_Type_y']
         df = df.drop(columns=[c for c in cols_to_drop if c in df.columns], errors='ignore')
-        # ----------------------------------------------------
+        # -------------------------------------------------------------------
         
-        # 2. Date Processing
+        # 1. Date Processing
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             df = df.dropna(subset=['Date'])
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
             df['Year'] = df['Date'].dt.year.astype(int)
             df['month'] = df['Date'].dt.month
-            df['weekday'] = df['Date'].dt.weekday
+            df['weekday'] = df['Date'].dt.weekday # เพิ่มบรรทัดนี้ให้ครบ
             
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        # 3. Room Type Mapping (Smart Loading)
-        # ถ้ามี room_type.csv ให้ลอง map เลขห้องเป็นชื่อห้อง
+        # 2. Room Type Mapping (เชื่อมกับ Master Data)
         if os.path.exists(ROOM_FILE):
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
             
-            # เตรียมชื่อคอลัมน์เป้าหมาย
-            target_col = 'Target_Room_Type'
-            if target_col not in room_type.columns and 'Room_Type' in room_type.columns:
-                target_col = 'Room_Type'
-                room_type = room_type.rename(columns={'Room_Type': target_col})
+            # ลบคอลัมน์ซ้ำใน Master Data ก่อน Merge
+            if 'Target_Room_Type' in room_type.columns:
+                # ถ้า Master มี Target_Room_Type อยู่แล้ว
+                pass
+            elif 'Room_Type' in room_type.columns:
+                 room_type = room_type.rename(columns={'Room_Type': 'Target_Room_Type'})
 
-            if target_col in room_type.columns:
-                df = df.merge(room_type[['Room', target_col]], on='Room', how='left')
+            if 'Target_Room_Type' in room_type.columns:
+                df = df.merge(room_type[['Room', 'Target_Room_Type']], on='Room', how='left')
         
-        # 4. Filter Outlier & Fill Missing Names
+        # 3. Filter Outlier
         if 'Target_Room_Type' in df.columns:
-            # ถ้ามี Target_Room_Type จากการ Merge ให้ใช้ค่านี้
-            df['Target_Room_Type'] = df['Target_Room_Type'].fillna(df['Room'])
+            df = df.dropna(subset=['Target_Room_Type'])
         else:
-            # ถ้าไม่มี ให้ใช้ค่า Room เดิม
             df['Target_Room_Type'] = df['Room']
-            
-        # กรองเอาเฉพาะห้องที่มีใน Base Price (เพื่อความชัวร์ว่าเป็นข้อมูล Valid)
-        valid_rooms = set(load_base_prices().keys())
-        if len(valid_rooms) > 0:
-            df = df[df['Target_Room_Type'].isin(valid_rooms)]
-
+        
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         
-        # ลบคอลัมน์ซ้ำ (Safety Net)
+        # ป้องกันคอลัมน์ซ้ำจากการ Merge ผิดพลาดในอดีต
         df = df.loc[:, ~df.columns.duplicated()]
         
         return df
     except Exception as e:
-        # print(f"Error loading data: {e}") # Debug log
+        print(f"Error loading data: {e}")
         return pd.DataFrame()
 
 def calculate_historical_avg(df):
@@ -231,47 +225,23 @@ def save_uploaded_data_with_cleaning(uploaded_file):
         uploaded_file.seek(0)
         new_data = pd.read_csv(uploaded_file)
         
-        # แปลงเลขห้องเป็น string
         if 'Room' in new_data.columns: new_data['Room'] = new_data['Room'].astype(str)
-
-        # -------------------------------------------------------------------
-        # 🛠️ ส่วนที่แก้: แปลง "เลขห้อง" เป็น "ชื่อห้อง" (Merge with Master Data)
-        # -------------------------------------------------------------------
-        if os.path.exists(ROOM_FILE):
-            try:
-                room_master = pd.read_csv(ROOM_FILE)
-                if 'Room' in room_master.columns: 
-                    room_master['Room'] = room_master['Room'].astype(str)
-                
-                # หาชื่อคอลัมน์ที่เป็น "ชื่อห้อง"
-                target_col = 'Target_Room_Type'
-                if target_col not in room_master.columns and 'Room_Type' in room_master.columns:
-                    target_col = 'Room_Type'
-
-                if target_col in room_master.columns:
-                    # Merge เพื่อเทียบเลขห้อง
-                    merged = new_data.merge(room_master[['Room', target_col]], on='Room', how='left')
-                    # ถ้า Merge เจอชื่อห้อง ให้เอาชื่อห้องมาทับเลขห้องเดิมเลย
-                    new_data['Room'] = merged[target_col].fillna(new_data['Room'])
-            except Exception as e:
-                print(f"Warning: Could not map room types: {e}")
-        # -------------------------------------------------------------------
         
-        # ตรวจสอบกับ Base Prices (Master List)
+        # ตรวจสอบกับ Base Prices (ถือว่าเป็น Master List)
         current_base_prices = load_base_prices()
         valid_rooms = set(current_base_prices.keys())
         
         if len(valid_rooms) > 0:
-            # กรองเฉพาะห้องที่มีชื่อตรงกับใน Base Price
+            # กรองเฉพาะห้องที่มีในระบบ
             good_rows = new_data[new_data['Room'].isin(valid_rooms)]
             bad_rows = new_data[~new_data['Room'].isin(valid_rooms)]
             
             if len(bad_rows) > 0:
                 st.warning(f"⚠️ ตรวจพบข้อมูลห้องที่ไม่รู้จัก (Outlier) จำนวน {len(bad_rows)} รายการ")
-                st.error(f"ตัวอย่างรายการที่ถูกตัดทิ้ง: {bad_rows['Room'].unique()[:10]}")
-                st.info("ระบบจะบันทึกเฉพาะข้อมูลที่ชื่อห้องตรงกับ Master Data เท่านั้น")
+                st.error(f"รายการที่ถูกตัดทิ้ง (Drop): {bad_rows['Room'].unique()}")
+                st.info("ระบบจะบันทึกเฉพาะข้อมูลที่ถูกต้องตาม Master Data เท่านั้น")
             else:
-                st.success("✅ ข้อมูลถูกต้องสมบูรณ์ 100% (แปลงเลขห้องเป็นชื่อห้องเรียบร้อย)")
+                st.success("✅ ข้อมูลถูกต้องสมบูรณ์ 100%")
                 
             data_to_save = good_rows
         else:
@@ -282,11 +252,6 @@ def save_uploaded_data_with_cleaning(uploaded_file):
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
                 if 'Room' in current_df.columns: current_df['Room'] = current_df['Room'].astype(str)
-                
-                # ล้างคอลัมน์ขยะก่อนรวม
-                cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'is_holiday', 'Target_Room_Type']
-                current_df = current_df.drop(columns=[c for c in cols_to_drop if c in current_df.columns], errors='ignore')
-                
                 updated_df = pd.concat([current_df, data_to_save], ignore_index=True)
             else:
                 updated_df = data_to_save
@@ -420,9 +385,6 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    # -----------------------------------------------------
-    # 🔥 ส่วนที่ทำงานเมื่อ Login สำเร็จ
-    # -----------------------------------------------------
     df_raw = load_data() 
     
     if not df_raw.empty and not st.session_state['historical_avg']:
@@ -530,6 +492,9 @@ else:
         st.subheader("📋 Raw Data Explorer")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
+    # ==========================================================
+    # 🌟 NEW: MANAGE DATA PAGE (CRUD & MASTER DATA)
+    # ==========================================================
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
         
@@ -539,18 +504,10 @@ else:
         # TAB 1: EDIT TRANSACTIONS (CRUD ข้อมูลการจอง)
         # ---------------------------------------------------------
         with tab_trans:
-            st.subheader("1. นำเข้าข้อมูลใหม่ (Import Data)")
-            with st.expander("📤 คลิกเพื่ออัปโหลดไฟล์ CSV (Bulk Upload)", expanded=True):
-                up_file = st.file_uploader("เลือกไฟล์ CSV", type=['csv'])
-                if up_file is not None:
-                    if st.button("รวมไฟล์เข้าระบบ (Merge)", type="secondary"):
-                        if save_uploaded_data_with_cleaning(up_file):
-                            st.success("บันทึกเรียบร้อย"); time.sleep(1); st.rerun()
-
-            st.divider()
-            st.subheader("2. ตรวจสอบและแก้ไขข้อมูล (Edit/Delete)")
-            st.info("💡 แก้ไขในตารางได้เลย | กดถังขยะเพื่อลบ | กด + ล่างสุดเพื่อเพิ่มแถว")
+            st.subheader("จัดการประวัติการจอง (Booking History)")
+            st.info("💡 สามารถแก้ไขข้อมูลในตารางได้โดยตรง, กดถังขยะเพื่อลบ, หรือกด + เพื่อเพิ่มแถว")
             
+            # โหลดข้อมูลดิบ
             df_current = load_data()
             
             if not df_current.empty:
@@ -559,42 +516,33 @@ else:
                     df_current,
                     num_rows="dynamic", # อนุญาตให้เพิ่ม/ลบแถว
                     use_container_width=True,
-                    key="booking_editor",
-                    column_config={
-                        "Date": st.column_config.DateColumn("Check-in Date", format="DD/MM/YYYY"),
-                        "Price": st.column_config.NumberColumn("Price (THB)", format="%d"),
-                    }
+                    key="booking_editor" # key สำคัญเพื่อไม่ให้ refresh แล้วหาย
                 )
                 
                 # ปุ่มบันทึก
-                col_save, col_dummy = st.columns([1, 4])
-                with col_save:
-                    if st.button("💾 บันทึกการเปลี่ยนแปลง (Save)", type="primary"):
-                        try:
-                            # แปลง Date กลับเป็น format ที่ถูกต้องก่อนบันทึก
-                            if 'Date' in edited_df.columns:
-                                edited_df['Date'] = pd.to_datetime(edited_df['Date'])
-                            
-                            # --- 🛠️ 2. เลือกบันทึกเฉพาะคอลัมน์ข้อมูลดิบ (ไม่เอาที่คำนวณ) ---
-                            cols_to_save = [
-                                'Date', 'Room', 'Price', 'Reservation', 'Name', 
-                                'Night', 'Adults', 'Children', 'Infants', 'Extra Person'
-                            ]
-                            final_save_cols = [c for c in cols_to_save if c in edited_df.columns]
-                            df_to_save = edited_df[final_save_cols].copy()
-                            # -------------------------------------------------------
+                if st.button("💾 บันทึกการเปลี่ยนแปลง (Save Changes)", type="primary"):
+                    try:
+                        # แปลง Date กลับเป็น format ที่ถูกต้อง
+                        if 'Date' in edited_df.columns:
+                            edited_df['Date'] = pd.to_datetime(edited_df['Date'])
+                        
+                        # --- 🛠️ แก้ไข: เลือกบันทึกเฉพาะคอลัมน์ข้อมูลดิบที่จำเป็น ---
+                        # (เอาคอลัมน์ที่คำนวณอัตโนมัติออก เพื่อไม่ให้ไฟล์ CSV บวมและซ้ำซ้อน)
+                        cols_to_save = ['Date', 'Room', 'Price', 'Reservation', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
+                        # เช็คว่าคอลัมน์ไหนมีอยู่จริงในตารางบ้าง
+                        final_save_cols = [c for c in cols_to_save if c in edited_df.columns]
+                        
+                        df_to_save = edited_df[final_save_cols].copy()
+                        # -------------------------------------------------------
 
-                            # บันทึกทับไฟล์เดิม
-                            df_to_save.to_csv(DATA_FILE, index=False)
-                            st.cache_data.clear() # เคลียร์แคช
-                            st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
-                            time.sleep(1)
-                            st.rerun()
-                        except Exception as e:
-                            st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
-            else:
-                st.warning("ยังไม่มีข้อมูลในระบบ กรุณาอัปโหลดไฟล์ CSV หรือเพิ่มข้อมูลใหม่")
-
+                        # บันทึกทับไฟล์เดิม
+                        df_to_save.to_csv(DATA_FILE, index=False)
+                        st.cache_data.clear() 
+                        st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
+                        time.sleep(1)
+                        st.rerun()
+                    except Exception as e:
+                        st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
         # ---------------------------------------------------------
         # TAB 2: MASTER DATA (จัดการห้องและราคาฐาน)
         # ---------------------------------------------------------
@@ -641,7 +589,7 @@ else:
                 st.info("⚠️ หากมีการเพิ่มห้องพักประเภทใหม่ อย่าลืมไปกด 'Retrain Model' ใน Tab ถัดไป")
 
         # ---------------------------------------------------------
-        # TAB 3: RETRAIN
+        # TAB 3: RETRAIN (ของเดิม ย้ายมาใส่ Tab)
         # ---------------------------------------------------------
         with tab_train:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
@@ -960,3 +908,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
