@@ -586,10 +586,10 @@ else:
                 checkin_date = date_range[0]
             
             with c2:
-                st.number_input("Nights", value=nights, disabled=True)
                 col_chk1, col_chk2 = st.columns(2)
-                with col_chk1: use_holiday = st.checkbox("รวมวันหยุดนักขัตฤกษ์", value=auto_holiday)
-                with col_chk2: use_weekend = st.checkbox("รวมวันหยุดเสาร์-อาทิตย์", value=auto_weekend)
+                with col_chk1: use_holiday = st.checkbox("รวมวันหยุดนักขัตฤกษ์", value=auto_holiday, disabled=True)
+                with col_chk2: use_weekend = st.checkbox("รวมวันหยุดเสาร์-อาทิตย์", value=auto_weekend, disabled=True)
+                st.number_input("Nights", value=nights, disabled=True)
 
             c3, c4, c5 = st.columns(3)
             with c3:
