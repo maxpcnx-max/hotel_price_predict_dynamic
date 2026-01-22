@@ -814,14 +814,15 @@ def show_model_insight_page():
             st.dataframe(display_df, use_container_width=True)
 
         # คำอธิบายเพิ่มเติม (หาตัวมากสุดมาโชว์อัตโนมัติ)
-        top_1 = display_df.iloc[0]
-        top_2 = display_df.iloc[1]
-        
-        st.info(f"""
-        **💡 ข้อสังเกตจาก AI:**
-        * **{top_1['Feature']}:** มีผลต่อราคามากที่สุด ({top_1['Percentage']})
-        * **{top_2['Feature']}:** มีผลรองลงมา ({top_2['Percentage']})
-        """)
+        if not display_df.empty:
+            top_1 = display_df.iloc[0]
+            top_2 = display_df.iloc[1] if len(display_df) > 1 else display_df.iloc[0]
+            
+            st.info(f"""
+            **💡 ข้อสังเกตจาก AI:**
+            * **{top_1['Feature']}:** มีผลต่อราคามากที่สุด ({top_1['Percentage']})
+            * **{top_2['Feature']}:** มีผลรองลงมา ({top_2['Percentage']})
+            """)
 
     def show_about_page():
         st.title("ℹ️ เกี่ยวกับระบบ / ผู้จัดทำ")
