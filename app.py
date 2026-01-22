@@ -454,8 +454,8 @@ else:
         st.subheader("📋 Raw Data Explorer")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
-    # ==========================================================
-    # 🌟 MANAGE DATA PAGE (รวมระบบ Add/Edit/Delete แบบ Safe Mode)
+# ==========================================================
+    # 🌟 MANAGE DATA PAGE (แก้ไขปุ่ม Save ให้ไม่พัง)
     # ==========================================================
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
@@ -495,23 +495,33 @@ else:
                 
                 col_save, col_del = st.columns([1, 4])
                 with col_save:
+                    # 🔥 แก้ไขปุ่ม Save ตรงนี้
                     if st.button("💾 บันทึกการเปลี่ยนแปลง (Save)", type="primary"):
                         try:
+                            # 1. แปลง Date อย่างระมัดระวัง (ถ้าแปลงไม่ได้ให้เป็น NaT แล้วลบทิ้ง)
                             if 'Date' in edited_df.columns:
-                                edited_df['Date'] = pd.to_datetime(edited_df['Date'])
+                                edited_df['Date'] = pd.to_datetime(edited_df['Date'], dayfirst=True, errors='coerce')
+                                edited_df = edited_df.dropna(subset=['Date']) # ลบแถวที่วันที่พังทิ้งไปเลย
                             
-                            # เลือก Save เฉพาะคอลัมน์สำคัญ (ป้องกันคอลัมน์ขยะงอก)
-                            cols_to_save = ['Date', 'Room', 'Price', 'Reservation', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
+                            # 2. เลือก Save เฉพาะคอลัมน์สำคัญ (ป้องกันคอลัมน์ขยะงอก)
+                            cols_to_save = ['Date', 'Room', 'Price', 'Reservation', 'Name', 
+                                            'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
                             final_save_cols = [c for c in cols_to_save if c in edited_df.columns]
                             
-                            df_to_save = edited_df[final_save_cols].copy()
-                            
-                            df_to_save.to_csv(DATA_FILE, index=False)
-                            st.cache_data.clear()
-                            st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
-                            time.sleep(1); st.rerun()
+                            if not final_save_cols:
+                                st.error("❌ ไม่พบคอลัมน์ข้อมูลที่ถูกต้อง (ตรวจสอบชื่อคอลัมน์ในไฟล์ CSV)")
+                            else:
+                                df_to_save = edited_df[final_save_cols].copy()
+                                
+                                # 3. บันทึก
+                                df_to_save.to_csv(DATA_FILE, index=False)
+                                st.cache_data.clear()
+                                st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
+                                time.sleep(1); st.rerun()
+                                
                         except Exception as e:
-                            st.error(f"เกิดข้อผิดพลาดในการบันทึก: {e}")
+                            st.error(f"❌ เกิดข้อผิดพลาด: {e}")
+                            st.write(e) # แสดง Error จริงออกมาให้เห็น จะได้รู้ว่าพังตรงไหน
                 
                 with col_del:
                     if st.button("🧨 ล้างข้อมูลทั้งหมด (Hard Reset)"):
@@ -787,3 +797,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
