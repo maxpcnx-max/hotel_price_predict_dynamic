@@ -93,16 +93,14 @@ def get_base_price(room_text):
         if key in room_text: return prices[key]
     return 0
 
-# --- Helper Functions สำหรับจัดการ Data (New) ---
+# --- Helper Functions สำหรับจัดการ Data (แก้ไขใหม่ให้ปลอดภัย) ---
 def save_merge_data(new_df):
     """บันทึกข้อมูลแบบต่อท้าย (Append)"""
     try:
         if os.path.exists(DATA_FILE):
             current_df = pd.read_csv(DATA_FILE)
-            # แปลง Date ให้ format ตรงกันก่อนบันทึก
             if 'Date' in current_df.columns: current_df['Date'] = pd.to_datetime(current_df['Date']).dt.strftime('%Y-%m-%d')
             if 'Date' in new_df.columns: new_df['Date'] = pd.to_datetime(new_df['Date']).dt.strftime('%Y-%m-%d')
-            
             updated_df = pd.concat([current_df, new_df], ignore_index=True)
         else:
             updated_df = new_df
@@ -115,13 +113,16 @@ def save_merge_data(new_df):
         return False
 
 def save_overwrite_data(new_df):
-    """บันทึกข้อมูลแบบทับทั้งหมด (Overwrite) - ใช้สำหรับ Edit/Delete"""
+    """บันทึกข้อมูลแบบทับทั้งหมด (Overwrite)"""
     try:
-        # จัด Format วันที่ให้เป็นมาตรฐาน
         if 'Date' in new_df.columns: 
             new_df['Date'] = pd.to_datetime(new_df['Date']).dt.strftime('%Y-%m-%d')
-            
-        new_df.to_csv(DATA_FILE, index=False)
+        
+        # เลือกเก็บเฉพาะ Column สำคัญเพื่อไม่ให้ไฟล์รก
+        cols_to_save = [c for c in new_df.columns if c in ['Date', 'Room', 'Price', 'Reservation', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']]
+        if not cols_to_save: cols_to_save = new_df.columns # fallback
+        
+        new_df[cols_to_save].to_csv(DATA_FILE, index=False)
         st.cache_data.clear()
         return True
     except Exception as e:
@@ -157,6 +158,7 @@ init_db()
 
 @st.cache_data
 def load_data():
+    """โหลดข้อมูลสำหรับ Model/Dashboard (กรองข้อมูลเสียทิ้ง)"""
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
@@ -164,7 +166,6 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # 1. Date Processing
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             df = df.dropna(subset=['Date'])
@@ -175,7 +176,6 @@ def load_data():
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        # 2. Room Type Mapping
         if os.path.exists(ROOM_FILE):
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
@@ -185,7 +185,6 @@ def load_data():
                 if 'Room_Type' in df.columns: df = df.rename(columns={'Room_Type': 'Target_Room_Type'})
                 elif 'Room_Type_y' in df.columns: df = df.rename(columns={'Room_Type_y': 'Target_Room_Type'})
         
-        # 3. Filter Outlier (เฉพาะที่มี Room Type)
         if 'Target_Room_Type' in df.columns:
             df = df.dropna(subset=['Target_Room_Type'])
         
@@ -194,8 +193,20 @@ def load_data():
         return df
     except: return pd.DataFrame()
 
+def load_raw_data_for_editor():
+    """โหลดข้อมูลดิบสำหรับ Editor (ไม่กรองข้อมูลเสีย เพื่อป้องกันข้อมูลหาย)"""
+    if not os.path.exists(DATA_FILE): return pd.DataFrame()
+    try:
+        df = pd.read_csv(DATA_FILE)
+        # แปลงแค่ Date และ Room string พอ ไม่ต้องตัด row ทิ้ง
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+        if 'Room' in df.columns:
+            df['Room'] = df['Room'].astype(str)
+        return df
+    except: return pd.DataFrame()
+
 def calculate_historical_avg(df):
-    """คำนวณราคาเฉลี่ยต่อคืนในอดีตของแต่ละห้อง"""
     if df.empty: return {}
     if 'Night' not in df.columns: df['Night'] = 1
     df_clean = df[df['Night'] > 0].copy()
@@ -450,32 +461,21 @@ else:
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
         
-        # Initialize Session State สำหรับ Error Tracking
         if 'edit_error_confirmed' not in st.session_state: st.session_state['edit_error_confirmed'] = False
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ราคาฐาน (Base Price)", "🚀 อัปเดตโมเดล (Retrain)"])
 
-        # ==========================================
-        # TAB 1: Transactions (Merge & Edit/Delete)
-        # ==========================================
         with tab_trans:
-            # -------------------------------------------------------
-            # PART A: นำเข้าข้อมูลใหม่ (Merge)
-            # -------------------------------------------------------
+            # PART A: Import
             st.subheader("1. นำเข้าข้อมูลใหม่ (Import & Merge)")
             st.caption("นำข้อมูลจากไฟล์ CSV มาต่อท้ายข้อมูลเดิม")
-            
             up_file = st.file_uploader("เลือกไฟล์ Booking CSV", type=['csv'])
-            
             if up_file is not None:
                 try:
                     up_file.seek(0)
                     new_data = pd.read_csv(up_file)
-                    
-                    # Pre-process columns
                     if 'Room' in new_data.columns: new_data['Room'] = new_data['Room'].astype(str)
                     
-                    # Validation Logic
                     valid_rooms = set()
                     if os.path.exists(ROOM_FILE):
                         rm = pd.read_csv(ROOM_FILE)
@@ -489,53 +489,40 @@ else:
                         good_rows = new_data
                         bad_rows = pd.DataFrame()
 
-                    # Show Status
                     col_res1, col_res2 = st.columns(2)
                     col_res1.success(f"✅ ข้อมูลที่ใช้ได้: {len(good_rows)} รายการ")
                     
-                    # --- กรณีมี ERROR (ต้องกดยืนยัน) ---
                     if len(bad_rows) > 0:
                         col_res2.error(f"❌ ข้อมูลผิดพลาด (Outlier): {len(bad_rows)} รายการ")
-                        with st.expander("🔍 ดูรายการที่ผิดพลาด"):
-                            st.dataframe(bad_rows)
-                        
-                        st.warning("⚠️ พบข้อมูลที่ไม่ถูกต้อง! หากยืนยัน ระบบจะบันทึกเฉพาะ 'ข้อมูลที่ถูกต้อง' เท่านั้น (ข้อมูลที่ผิดพลาดจะถูกตัดออก)")
-                        
+                        with st.expander("🔍 ดูรายการที่ผิดพลาด"): st.dataframe(bad_rows)
+                        st.warning("⚠️ พบข้อมูลที่ไม่ถูกต้อง! หากยืนยัน ระบบจะบันทึกเฉพาะ 'ข้อมูลที่ถูกต้อง' เท่านั้น")
                         if st.button("ยืนยันการบันทึก (Confirm Import)", type="primary"):
                             if save_merge_data(good_rows):
-                                st.toast("✅ บันทึกข้อมูลเรียบร้อย!", icon="💾")
-                                time.sleep(1)
-                                st.rerun()
-                    
-                    # --- กรณีปกติ (ไม่มี ERROR) ---
+                                st.toast("✅ บันทึกข้อมูลเรียบร้อย!", icon="💾"); time.sleep(1); st.rerun()
                     else:
                         if st.button("💾 บันทึกข้อมูลเข้าระบบ"):
                             if save_merge_data(good_rows):
-                                st.toast("✅ บันทึกข้อมูลเรียบร้อย!", icon="💾")
-                                time.sleep(1)
-                                st.rerun()
-                                
-                except Exception as e:
-                    st.error(f"อ่านไฟล์ล้มเหลว: {e}")
+                                st.toast("✅ บันทึกข้อมูลเรียบร้อย!", icon="💾"); time.sleep(1); st.rerun()
+                except Exception as e: st.error(f"อ่านไฟล์ล้มเหลว: {e}")
 
             st.divider()
 
-            # -------------------------------------------------------
-            # PART B: แก้ไข/ลบ ข้อมูล (Edit & Delete)
-            # -------------------------------------------------------
+            # PART B: Edit/Delete
             st.subheader("2. แก้ไขหรือลบข้อมูล (Edit & Delete)")
             st.caption("แก้ไขข้อมูลในตารางโดยตรง หรือเลือกแถวแล้วกด Delete บนคีย์บอร์ดเพื่อลบ")
 
-            # Load Data
-            df_current = load_data()
+            # 🔥 FIX: โหลดข้อมูลดิบไม่ผ่านการกรอง (ป้องกันข้อมูลหาย)
+            df_current = load_raw_data_for_editor()
             
             if df_current.empty:
                 st.info("📭 ยังไม่มีข้อมูลในระบบ")
             else:
-                # Data Editor
+                # 🔥 FIX: บังคับชื่อ Column เป็น String เพื่อป้องกัน StreamlitAPIException
+                df_current.columns = df_current.columns.astype(str)
+
                 edited_df = st.data_editor(
                     df_current,
-                    num_rows="dynamic", # อนุญาตให้เพิ่ม/ลบแถวได้
+                    num_rows="dynamic",
                     use_container_width=True,
                     key="trans_editor",
                     column_config={
@@ -544,19 +531,13 @@ else:
                     }
                 )
 
-                # ปุ่ม Save Changes
                 save_col, _ = st.columns([1, 4])
                 with save_col:
                     save_clicked = st.button("💾 บันทึกการเปลี่ยนแปลง (Save Changes)")
 
-                # Logic การตรวจสอบเมื่อกด Save
-                if save_clicked:
-                    # Reset Confirm State ทุกครั้งที่กด Save ใหม่
-                    st.session_state['edit_error_confirmed'] = True 
+                if save_clicked: st.session_state['edit_error_confirmed'] = True 
 
-                # ตรวจสอบ Error ถ้ามีการกด Save
                 if st.session_state.get('edit_error_confirmed'):
-                    # Validation Logic
                     valid_rooms = set()
                     if os.path.exists(ROOM_FILE):
                         rm = pd.read_csv(ROOM_FILE)
@@ -566,34 +547,22 @@ else:
                     if valid_rooms and 'Room' in edited_df.columns:
                         err_rows = edited_df[~edited_df['Room'].astype(str).isin(valid_rooms)]
                     
-                    # --- กรณีมี ERROR ---
                     if len(err_rows) > 0:
                         st.error(f"❌ พบข้อมูลห้องที่ไม่ถูกต้องจำนวน {len(err_rows)} รายการ")
-                        with st.expander("ตรวจสอบรายการที่ผิดพลาด"):
-                            st.dataframe(err_rows)
-                            
+                        with st.expander("ตรวจสอบรายการที่ผิดพลาด"): st.dataframe(err_rows)
                         st.warning("⚠️ หากยืนยัน ระบบจะลบรายการที่ผิดพลาดออกและบันทึกเฉพาะข้อมูลที่ถูกต้อง")
-                        
-                        # ปุ่มยืนยันอีกครั้ง
                         if st.button("✅ ยืนยันการบันทึก (ลบข้อมูลที่ผิด)", type="primary"):
-                            # Filter เอาเฉพาะอันที่ถูก
                             clean_df = edited_df[edited_df['Room'].astype(str).isin(valid_rooms)]
                             if save_overwrite_data(clean_df):
-                                st.session_state['edit_error_confirmed'] = False # Reset
+                                st.session_state['edit_error_confirmed'] = False 
                                 st.success("✅ บันทึกและแก้ไขข้อมูลเรียบร้อย!")
-                                time.sleep(1)
-                                st.rerun()
-                    
-                    # --- กรณีปกติ (ไม่มี ERROR) ---
+                                time.sleep(1); st.rerun()
                     else:
-                        # บันทึกเลยถ้ารอบแรกไม่มี Error
                         if save_overwrite_data(edited_df):
-                            st.session_state['edit_error_confirmed'] = False # Reset
+                            st.session_state['edit_error_confirmed'] = False 
                             st.success("✅ บันทึกข้อมูลเรียบร้อย!")
-                            time.sleep(1)
-                            st.rerun()
+                            time.sleep(1); st.rerun()
 
-            # ปุ่ม Hard Reset (ล้างข้อมูล) ย้ายมาไว้ล่างสุด
             st.divider()
             with st.expander("🧨 พื้นที่อันตราย (Danger Zone)"):
                 if st.button("ล้างข้อมูลทั้งหมด (Hard Reset)", type="secondary"):
@@ -602,9 +571,6 @@ else:
                         st.cache_data.clear()
                         st.rerun()
 
-        # ==========================================
-        # TAB 2 & 3: (คงเดิม)
-        # ==========================================
         with tab_master:
             st.subheader("⚙️ กำหนดราคาฐานของห้องพัก")
             current_prices = load_base_prices()
@@ -638,7 +604,7 @@ else:
             if room_text in hist_map: return hist_map[room_text]
             return 0
 
-        # Helper: Segmented Prediction (Rolling Window)
+        # Helper: Segmented Prediction
         def predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code):
             MAX_CHUNK = 7 
             total_predicted = 0
@@ -701,16 +667,11 @@ else:
                 current_date += timedelta(days=1)
             return total_price
 
-        # Helper: Main Calculation with Offset Logic
         def calculate_clamped_price(model, start_date, n_nights, guests, r_code, res_code, room_name_selected, use_h, use_w):
-            # 1. AI Raw Prediction (Using Segmentation)
             raw_predicted = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
-            
-            # 2. Rule-Based Price (The Anchor)
-            base_per_night = get_base_price(room_name_selected) # เรียกใช้ Dynamic Base Price
+            base_per_night = get_base_price(room_name_selected) 
             rule_price = calculate_rule_based_price(base_per_night, start_date, n_nights, use_h, use_w)
             
-            # 3. Apply Offset: Rule_Price + (Raw_Predicted - Historical_Avg_Total)
             hist_avg = get_historical_avg_price(room_name_selected)
             if hist_avg > 0:
                 hist_total = hist_avg * n_nights
@@ -719,29 +680,20 @@ else:
             else:
                 final_price = rule_price
 
-            # 4. Final Safety: Never go below Base Price
             total_base = base_per_night * n_nights
             final_price = max(final_price, total_base)
             
             return final_price, raw_predicted, rule_price
 
         with st.container(border=True):
-            # --- Layout: Header + Status ---
-            # ใช้ Placeholder เพื่อให้เรามาเติม Checkbox ทีหลัง (หลังจากคำนวณวันเสร็จ)
             col_head, col_status_placeholder = st.columns([1.5, 1]) 
-            with col_head:
-                st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
-            
-            # สร้างพื้นที่ว่างรอไว้ก่อน
+            with col_head: st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
             status_container = col_status_placeholder.container()
 
-            # --- Inputs: Date & Calculation ---
             c1, c2 = st.columns([2, 1])
-            
             with c1:
                 date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
             
-            # --- Logic คำนวณวัน (คำนวณทันทีเมื่อมีการเปลี่ยนวันที่) ---
             nights = 1
             checkin_date = datetime.now()
             auto_holiday = False
@@ -760,20 +712,14 @@ else:
             elif len(date_range) == 1:
                 checkin_date = date_range[0]
             
-            with c2:
-                st.number_input("Nights", value=nights, disabled=True)
+            with c2: st.number_input("Nights", value=nights, disabled=True)
 
-            # --- ย้อนกลับไปวาด Checkbox ข้างบน (Fill Placeholder) ---
             with status_container:
-                st.write("") # ดันลงมานิดหน่อยให้ตรงกับ Text Header
+                st.write("") 
                 sc1, sc2 = st.columns(2)
-                with sc1:
-                    # เอา key ออก เพื่อให้ค่า value อัปเดตตามตัวแปร auto_holiday ทันที
-                    st.checkbox("หยุดนักขัตฤกษ์", value=auto_holiday, disabled=True)
-                with sc2:
-                    st.checkbox("เสาร์-อาทิตย์", value=auto_weekend, disabled=True)
+                with sc1: st.checkbox("หยุดนักขัตฤกษ์", value=auto_holiday, disabled=True)
+                with sc2: st.checkbox("เสาร์-อาทิตย์", value=auto_weekend, disabled=True)
 
-            # --- Inputs: Room & Guests & Channel ---
             c3, c4, c5 = st.columns(3)
             with c3:
                 prices = load_base_prices()
@@ -783,7 +729,6 @@ else:
                     bp = get_base_price(r) 
                     display_text = f"{r} (Base: {bp:,.0f})"
                     room_display_map[display_text] = r
-                
                 selected_room_display = st.selectbox("Room Type", list(room_display_map.keys()))
                 selected_room_val = room_display_map[selected_room_display]
 
@@ -799,7 +744,6 @@ else:
                 selected_res_val = "All" if "All" in selected_res else selected_res
 
             if st.button("🚀 คำนวณราคา (Predict)", type="primary", use_container_width=True):
-                # ใช้ค่าที่คำนวณได้ส่งไปเลย
                 use_holiday_val = auto_holiday
                 use_weekend_val = auto_weekend
 
@@ -887,14 +831,9 @@ else:
         st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Model Factor Analysis)")
         st.markdown("แสดงค่าความสำคัญของตัวแปร (Feature Importance Scores) จากการเรียนรู้ของ AI")
 
-        # 1. ดึงค่าจริงจากโมเดล
         imp_data = metrics.get('importance', {})
-        
-        # --- FIX: ป้องกันข้อมูลว่าง (Fallback to Default) ---
-        if not imp_data:
-            imp_data = DEFAULT_METRICS['importance']
+        if not imp_data: imp_data = DEFAULT_METRICS['importance']
 
-        # 2. สร้างตัวแปลงชื่อเป็นภาษาไทย (Mapping)
         name_mapping = {
             'Night': 'Night (จำนวนคืน)',
             'Reservation': 'Reservation (ช่องทางการจอง)',
@@ -906,45 +845,36 @@ else:
             'Is Holiday': 'Is Holiday (วันหยุดนักขัตฤกษ์)'
         }
 
-        # 3. แปลงข้อมูลให้เป็น DataFrame
         data_list = []
         for key, value in imp_data.items():
             th_name = name_mapping.get(key, key) 
             data_list.append({'Feature': th_name, 'Importance': value})
 
         fi_df = pd.DataFrame(data_list)
-
-        # --- FIX: เช็คว่ามีข้อมูลหรือไม่ ก่อน Sort ---
         if fi_df.empty or 'Importance' not in fi_df.columns:
             st.warning("⚠️ ยังไม่มีข้อมูลโมเดล (กรุณากด Retrain Model ที่เมนู 'จัดการข้อมูล' เพื่อเริ่มเรียนรู้)")
             return
 
-        # Sort ได้อย่างปลอดภัยแล้ว
         fi_df = fi_df.sort_values('Importance', ascending=True) 
 
         st.divider()
         st.subheader("กราฟแสดงน้ำหนักความสำคัญของตัวแปร (Dynamic)")
 
-        # Plotting
         fig = px.bar(fi_df, x='Importance', y='Feature', orientation='h', 
                      title='Feature Importance Score (อัปเดตล่าสุด)',
                      text_auto='.4f', 
                      color='Importance', 
                      color_continuous_scale='Blues')
-        
         st.plotly_chart(fig, use_container_width=True)
 
-        # แสดงตารางคู่กัน
         with st.expander("ดูข้อมูลแบบตาราง (Table View)", expanded=True):
             display_df = fi_df.sort_values('Importance', ascending=False)
             display_df['Percentage'] = (display_df['Importance'] * 100).map('{:.2f}%'.format)
             st.dataframe(display_df, use_container_width=True)
 
-        # คำอธิบายเพิ่มเติม
         if not display_df.empty:
             top_1 = display_df.iloc[0]
             top_2 = display_df.iloc[1] if len(display_df) > 1 else display_df.iloc[0]
-            
             st.info(f"""
             **💡 ข้อสังเกตจาก AI:**
             * **{top_1['Feature']}:** มีผลต่อราคามากที่สุด ({top_1['Percentage']})
