@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Day/Month/Year Fixed)",
+    page_title="Hotel Price Forecasting System (Date Fixed)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -115,12 +115,12 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 4. DATA HANDLING (FIXED DATE PARSING)
+# 4. DATA HANDLING (CORE FIXES HERE)
 # ==========================================================
 
 @st.cache_data
 def load_data():
-    """โหลดข้อมูลทั้งหมด (ไม่ตัด Outlier)"""
+    """โหลดข้อมูลทั้งหมด (ใช้ dayfirst=True เพื่ออ่านวัน/เดือน/ปี ได้ถูกต้อง)"""
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
@@ -128,9 +128,10 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # --- FIX 1: อ่านวันที่แบบ Day First (DD/MM/YYYY) ---
+        # --- FIX 1: อ่านวันที่แบบ Day First (25/6/2025 อ่านได้แล้ว) ---
         if 'Date' in df.columns:
-            # ใช้ dayfirst=True เพื่อบอกว่าเลขตัวหน้าคือ 'วัน'
+            # dayfirst=True: บอก Python ว่าเลขหน้าคือ "วัน" (แก้ปัญหาอ่านเป็นเดือน 25 แล้ว Error)
+            # errors='coerce': ถ้ามันมั่วจริงๆ ค่อยลบ (แต่ถ้าเป็น 25/6 จะอ่านออกแล้ว)
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             
             # สร้าง Feature พื้นฐานสำหรับกราฟ
@@ -161,18 +162,20 @@ def load_data():
         return df
     except: return pd.DataFrame()
 
-def save_data_lite(new_df, mode='append'):
-    """บันทึกข้อมูล พร้อมบังคับ Format วันที่"""
+def save_data_robust(new_df, mode='append'):
+    """บันทึกข้อมูล พร้อมบังคับ Format วันที่ให้เป็นสากล"""
     try:
-        # --- FIX 2: แปลงวันที่ก่อนบันทึก (Day First -> Standard YYYY-MM-DD) ---
+        # --- FIX 2: จัดระเบียบก่อนเซฟ (แปลงเป็น YYYY-MM-DD) ---
         if 'Date' in new_df.columns:
-            # ใช้ dayfirst=True ตอนแปลงเพื่อให้เข้าใจ input แบบ 25/6/2025 ถูกต้อง
-            new_df['Date'] = pd.to_datetime(new_df['Date'], dayfirst=True, errors='coerce').dt.strftime('%Y-%m-%d')
+            # แปลงเป็น datetime ให้ชัวร์ก่อน (เผื่อ User แก้ในตารางเป็น String)
+            new_df['Date'] = pd.to_datetime(new_df['Date'], dayfirst=True, errors='coerce')
+            # แปลงกลับเป็น String มาตรฐาน YYYY-MM-DD
+            new_df['Date'] = new_df['Date'].dt.strftime('%Y-%m-%d')
             
         if mode == 'append':
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
-                # แปลงวันที่ของไฟล์เก่าให้ตรงกันด้วย
+                # แปลงวันที่ของไฟล์เก่าให้เป็นมาตรฐานเดียวกันก่อนรวม
                 if 'Date' in current_df.columns:
                     current_df['Date'] = pd.to_datetime(current_df['Date'], dayfirst=True, errors='coerce').dt.strftime('%Y-%m-%d')
                 updated_df = pd.concat([current_df, new_df], ignore_index=True)
@@ -223,7 +226,7 @@ def load_system_models():
     return xgb, lr, le_room, le_res, metrics
 
 # ==========================================================
-# 5. RETRAIN SYSTEM (Cleaning Logic)
+# 5. RETRAIN SYSTEM
 # ==========================================================
 def retrain_system():
     status_text = st.empty()
@@ -239,7 +242,7 @@ def retrain_system():
             
         status_text.text("🧹 Cleaning Outliers & Invalid Data for Training...")
         
-        # Filter Data
+        # Filter Data (ทำเฉพาะตอนเทรน)
         df_clean = df.dropna(subset=['Price', 'Night', 'Date'])
         
         if 'Target_Room_Type' in df_clean.columns:
@@ -259,7 +262,7 @@ def retrain_system():
              except: pass
         if os.path.exists("thai_holidays.csv"):
             holidays_csv = pd.read_csv("thai_holidays.csv")
-            # --- FIX 3: อ่านวันหยุดแบบ Day First ---
+            # --- FIX: อ่านวันหยุดแบบ Day First ด้วย ---
             holidays_csv['Holiday_Date'] = pd.to_datetime(holidays_csv['Holiday_Date'], dayfirst=True, errors='coerce')
             df_clean['is_holiday'] = df_clean['Date'].isin(holidays_csv['Holiday_Date']).astype(int)
         else: df_clean['is_holiday'] = 0
@@ -477,7 +480,7 @@ else:
                     try:
                         up_file.seek(0)
                         new_data = pd.read_csv(up_file)
-                        if save_data_lite(new_data, mode='append'):
+                        if save_data_robust(new_data, mode='append'):
                             st.success(f"✅ บันทึกเรียบร้อย! ({len(new_data)} รายการ)"); time.sleep(1); st.rerun()
                     except Exception as e: st.error(f"Error: {e}")
 
@@ -506,7 +509,7 @@ else:
                 )
 
                 if st.button("💾 บันทึกการเปลี่ยนแปลง (Save All)"):
-                    if save_data_lite(edited_df, mode='overwrite'):
+                    if save_data_robust(edited_df, mode='overwrite'):
                         st.success("✅ บันทึกข้อมูลทั้งหมดเรียบร้อย!"); time.sleep(1); st.rerun()
 
             st.divider()
