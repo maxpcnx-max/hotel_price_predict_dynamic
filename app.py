@@ -10,7 +10,7 @@ import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 import gdown
 import time
-from datetime import datetime, timedelta
+from datetime import datetime
 
 # Import Library สำหรับการ Retrain
 from sklearn.model_selection import train_test_split
@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System",
+    page_title="Hotel Price Forecasting DSS",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -113,9 +113,9 @@ def load_data():
         # 1. Date Processing
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
-            df = df.dropna(subset=['Date'])
+            df = df.dropna(subset=['Date']) # ลบแถวที่วันที่เป็น Null
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
-            df['Year'] = df['Date'].dt.year.astype(int)
+            df['Year'] = df['Date'].dt.year.astype(int) # สร้างคอลัมน์ Year แบบ Int
             df['month'] = df['Date'].dt.month
             
         if 'Room' in df.columns:
@@ -232,6 +232,7 @@ def retrain_system():
             df['is_holiday'] = df['Date'].isin(holidays_csv['Holiday_Date']).astype(int)
         else: df['is_holiday'] = 0
 
+        # is_weekend มีอยู่แล้วจาก load_data แต่คำนวณซ้ำเพื่อความชัวร์ใน training logic
         df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
         
         df['total_guests'] = df[['Adults', 'Children', 'Infants', 'Extra Person']].sum(axis=1)
@@ -320,43 +321,72 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    df_raw = load_data() 
+    df_raw = load_data() # Load ข้อมูลดิบก่อนกรอง
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
-    
+    if not os.path.exists("thai_holidays.csv"):
+        try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
+        except: pass
+
     def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
+        
         if df_raw.empty: st.warning("No Data Found"); return
 
+        # --- FILTER SECTION ---
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
+            
+            # 1. Year Filter
             all_years = sorted(df_raw['Year'].unique().tolist())
             year_opts = ['All'] + [str(y) for y in all_years]
-            with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
+            with f_col1:
+                sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
             
+            # 2. Month Filter
             all_months = sorted(df_raw['month'].unique().tolist())
             month_opts = ['All'] + [datetime(2024, m, 1).strftime('%B') for m in all_months]
-            with f_col2: sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
+            with f_col2:
+                sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
 
+            # Logic กรองข้อมูล
             df_filtered = df_raw.copy()
-            if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
+            
+            if sel_year != 'All':
+                df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
+            
             if sel_month_str != 'All':
+                # แปลงชื่อเดือนกลับเป็นตัวเลข
                 sel_month_num = datetime.strptime(sel_month_str, "%B").month
                 df_filtered = df_filtered[df_filtered['month'] == sel_month_num]
 
-        if df_filtered.empty: st.warning("⚠️ No data available for the selected filters."); return
+        if df_filtered.empty:
+            st.warning("⚠️ No data available for the selected filters.")
+            return
 
         st.divider()
+        
+        # --- TOP METRICS ---
         k1, k2, k3 = st.columns(3)
         with k1: st.metric("💰 Total Revenue", f"{df_filtered['Price'].sum()/1e6:.2f} M THB")
         with k2: st.metric("📦 Total Bookings", f"{len(df_filtered):,} รายการ")
         with k3: st.metric("🏷️ Avg. Booking Value", f"{df_filtered['Price'].mean():,.0f} THB")
         
         st.divider()
-        tab1, tab2, tab3 = st.tabs(["💰 Financial Overview", "📢 Channel Strategy", "🛌 Product & Behavior"])
+
+        # --- TABS FOR CHARTS ---
+        tab1, tab2, tab3 = st.tabs([
+            "💰 Financial Overview", 
+            "📢 Channel Strategy", 
+            "🛌 Product & Behavior"
+        ])
+
         group_col = 'Target_Room_Type' if 'Target_Room_Type' in df_filtered.columns else 'Room'
 
+        # === TAB 1: FINANCIAL ===
         with tab1:
             st.markdown("### 1. Financial Overview (ภาพรวมการเงิน)")
+            
+            # ROW 1.1
             c1, c2 = st.columns(2)
             with c1:
                 st.subheader("Revenue vs Nights")
@@ -366,23 +396,30 @@ else:
                 fig.add_trace(go.Scatter(x=room_perf[group_col], y=room_perf['Night'], name="Nights", mode='lines+markers', marker_color='#ff7f0e'), secondary_y=True)
                 fig.update_layout(legend=dict(orientation="h", y=1.1))
                 st.plotly_chart(fig, use_container_width=True)
+                
             with c2:
                 st.subheader("Revenue vs Booking Trend")
+                # Group by Month name for display
                 monthly = df_filtered.groupby('month').agg({'Price': 'sum', 'Room': 'count'}).reset_index().sort_values('month')
                 monthly['M_Name'] = monthly['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+                
                 fig2 = make_subplots(specs=[[{"secondary_y": True}]])
                 fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
                 fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", line=dict(color='blue', dash='dot')), secondary_y=True)
                 fig2.update_layout(legend=dict(orientation="h", y=1.1))
                 st.plotly_chart(fig2, use_container_width=True)
+            
+            # ROW 1.2: ADR
             st.subheader("ADR Trend Analysis (Average Daily Rate)")
             monthly_adr = df_filtered.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
             monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
             fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True, title="ADR per Month")
             st.plotly_chart(fig_adr, use_container_width=True)
 
+        # === TAB 2: CHANNEL ===
         with tab2:
             st.markdown("### 2. Channel Strategy (เจาะลึกช่องทางการขาย)")
+            
             c3, c4 = st.columns(2)
             with c3:
                 st.subheader("Revenue Share by Channel")
@@ -393,12 +430,15 @@ else:
                 m_res = df_filtered.groupby(['month', 'Reservation']).size().reset_index(name='Count')
                 m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
                 st.plotly_chart(px.bar(m_res, x='M_Name', y='Count', color='Reservation'), use_container_width=True)
+            
             st.subheader("High-Value Customer Channel (ADR)")
             chan_adr = df_filtered.groupby('Reservation').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR').sort_values('ADR', ascending=False)
             st.plotly_chart(px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Greens'), use_container_width=True)
 
+        # === TAB 3: PRODUCT & BEHAVIOR ===
         with tab3:
             st.markdown("### 3. Product & Behavior (พฤติกรรมลูกค้า)")
+            
             c5, c6 = st.columns(2)
             with c5:
                 st.subheader("Monthly Revenue by Room")
@@ -410,254 +450,99 @@ else:
                 heatmap_data = df_filtered.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
                 fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues')
                 st.plotly_chart(fig_heat, use_container_width=True)
+            
             st.subheader("Weekday vs Weekend Revenue")
             df_filtered['DayType'] = df_filtered['is_weekend'].map({1: 'Weekend', 0: 'Weekday'})
             day_rev = df_filtered.groupby('DayType')['Price'].sum().reset_index()
             c7, c8 = st.columns(2)
-            with c7: st.plotly_chart(px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Revenue Share"), use_container_width=True)
+            with c7:
+                st.plotly_chart(px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Revenue Share"), use_container_width=True)
             with c8:
                 day_avg = df_filtered.groupby('DayType')['Price'].mean().reset_index()
                 st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Booking Value", color='DayType'), use_container_width=True)
 
         st.divider()
         st.subheader("📋 Raw Data Explorer")
-        with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
+        with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"):
+            st.dataframe(df_filtered)
 
     def show_manage_data_page():
         st.title("📥 จัดการข้อมูล & อัปเดตโมเดล")
+        st.markdown("### 1. นำเข้าข้อมูล & ตรวจสอบความถูกต้อง")
         st.info("ระบบจะตรวจสอบเลขห้องกับไฟล์ Master Data หากพบข้อมูล Outlier จะทำการลบทิ้งอัตโนมัติ")
+        
         up_file = st.file_uploader("เลือกไฟล์ Booking CSV (เพื่อเพิ่มข้อมูล)", type=['csv'])
         if up_file is not None:
             if st.button("💾 บันทึกข้อมูลเข้าระบบ", type="primary"):
                 if save_uploaded_data_with_cleaning(up_file):
-                    st.success("✅ บันทึกข้อมูลเรียบร้อย!"); st.balloons(); time.sleep(5); st.rerun()
+                    st.success("✅ บันทึกข้อมูลเรียบร้อย! ข้อมูลถูกบันทึกลงระบบแล้ว")
+                    st.balloons()
+                    time.sleep(5) 
+                    st.rerun()
+        
         st.divider()
+        
         st.markdown("### 2. สั่งให้โมเดลเรียนรู้ (Retrain)")
+        st.warning("⚠️ กดปุ่มนี้เมื่อมีการเพิ่มข้อมูลใหม่ เพื่อให้ AI ฉลาดขึ้น")
+        
         col_m1, col_m2 = st.columns(2)
         with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
+        
         if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="secondary"):
             success, count = retrain_system()
-            if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(5); st.rerun()
+            if success:
+                st.success(f"🎉 โมเดลเรียนรู้ครบ {count:,} รายการ! ระบบพร้อมใช้งานข้อมูลใหม่แล้ว")
+                time.sleep(5)
+                st.rerun()
 
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         if xgb_model is None: st.error("❌ Model not found"); return
 
-        # Helper: Get Base Price
-        def get_base_price(room_text):
-            if not isinstance(room_text, str): return 0
-            for key in BASE_PRICES:
-                if key in room_text: return BASE_PRICES[key]
-            return 0
-
-        # Helper: Calculate Price Logic (Updated Safety Net)
-        def calculate_clamped_price(model, input_df, room_name_selected, n_nights):
-            predicted_price = model.predict(input_df)[0]
-            
-            # 1. หา Base Price ต่อคืน
-            base_per_night = get_base_price(room_name_selected)
-            
-            # 2. คำนวณ Floor Price (ราคาทุน * จำนวนคืน) <-- แก้ไขจุดนี้
-            floor_price = base_per_night * n_nights
-            
-            # 3. เลือกค่าที่มากกว่า (ห้ามต่ำกว่าทุน)
-            final_price = max(predicted_price, floor_price)
-            
-            return final_price, predicted_price, floor_price
-
         with st.container(border=True):
-            st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
-            
-            # --- ROW 1: Date & Nights ---
-            c1, c2 = st.columns(2)
+            st.subheader("🛠️ กำหนดตัวแปร")
+            c1, c2, c3 = st.columns(3)
             with c1:
-                date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
-            
-            # Logic: Nights & Holiday
-            nights = 1
-            is_h = False
-            checkin_date = datetime.now()
-            
-            if len(date_range) == 2:
-                checkin_date = date_range[0]
-                checkout_date = date_range[1]
-                nights = (checkout_date - checkin_date).days
-                if nights < 1: nights = 1
-                current_date = checkin_date
-                while current_date < checkout_date:
-                    if current_date in holidays.Thailand(): is_h = True; break
-                    current_date += timedelta(days=1)
-            elif len(date_range) == 1:
-                checkin_date = date_range[0]
-            
+                checkin = st.date_input("Check-in", datetime.now())
+                nights = st.number_input("Nights", 1, 30, 1)
             with c2:
-                col_night, col_hol = st.columns(2)
-                with col_night: st.number_input("Nights", value=nights, disabled=True)
-                with col_hol:
-                    manual_holiday = st.checkbox("Holiday (วันหยุด)", value=is_h)
-                    final_is_holiday = 1 if manual_holiday else 0
-
-            # --- ROW 2: Room, Guests, Channel ---
-            c3, c4, c5 = st.columns(3)
-            
-            # 2.1 Room Dropdown
+                room = st.selectbox("Room Type", le_room.classes_)
+                guests = st.number_input("Guests", 1, 10, 2)
             with c3:
-                room_display_map = {"All (เลือกทั้งหมด)": "All"}
-                for r in le_room.classes_:
-                    if str(r).lower() == 'nan' or r is None: continue
-                    bp = get_base_price(r)
-                    display_text = f"{r} (Base: {bp:,.0f})"
-                    room_display_map[display_text] = r
+                res = st.selectbox("Channel", le_res.classes_)
+                is_h = checkin in holidays.Thailand()
+                st.info(f"Holiday: {'✅ Yes' if is_h else '❌ No'}")
+
+            if st.button("🚀 คำนวณราคา", type="primary", use_container_width=True):
+                r_code = le_room.transform([room])[0]
+                res_code = le_res.transform([res])[0]
+                inp = pd.DataFrame([{
+                    'Night': nights, 'total_guests': guests, 
+                    'is_holiday': 1 if is_h else 0, 'is_weekend': 1 if checkin.weekday() in [5,6] else 0,
+                    'month': checkin.month, 'weekday': checkin.weekday(),
+                    'RoomType_encoded': r_code, 'Reservation_encoded': res_code
+                }])
                 
-                selected_room_display = st.selectbox("Room Type", list(room_display_map.keys()))
-                selected_room_val = room_display_map[selected_room_display]
-
-            # 2.2 Guest Input
-            with c4:
-                max_g = 4
-                if selected_room_val != "All":
-                    if "Standard" in str(selected_room_val) or "Deluxe" in str(selected_room_val):
-                        max_g = 2
-                guests = st.number_input(f"Guests (Max {max_g})", min_value=1, max_value=max_g, value=min(2, max_g))
-
-            # 2.3 Channel Dropdown
-            with c5:
-                res_options = ["All (เลือกทั้งหมด)"] + list(le_res.classes_)
-                selected_res = st.selectbox("Channel", res_options)
-                selected_res_val = "All" if "All" in selected_res else selected_res
-
-            # --- ACTION BUTTON ---
-            if st.button("🚀 คำนวณราคา (Predict)", type="primary", use_container_width=True):
+                p_xgb = xgb_model.predict(inp)[0]
+                p_lr = lr_model.predict(inp)[0]
                 
-                # Case A: Batch Prediction
-                if selected_room_val == "All" or selected_res_val == "All":
-                    st.info(f"📊 รายงานผลการพยากรณ์รวม (Batch Report)")
-                    
-                    target_rooms = le_room.classes_ if selected_room_val == "All" else [selected_room_val]
-                    target_res = le_res.classes_ if selected_res_val == "All" else [selected_res_val]
-                    
-                    results = []
-                    for r_type in target_rooms:
-                        if str(r_type).lower() == 'nan' or pd.isna(r_type): continue
-                        r_code = le_room.transform([r_type])[0]
-                        # คำนวณ Floor Price (Base * Night)
-                        base_per_night = get_base_price(r_type)
-                        total_base_price = base_per_night * nights
-                        
-                        for ch_type in target_res:
-                            res_code = le_res.transform([ch_type])[0]
-                            inp = pd.DataFrame([{
-                                'Night': nights, 'total_guests': guests, 
-                                'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
-                                'month': checkin_date.month, 'weekday': checkin_date.weekday(),
-                                'RoomType_encoded': r_code, 'Reservation_encoded': res_code
-                            }])
-                            
-                            # XGB Calculation
-                            raw_xgb = xgb_model.predict(inp)[0]
-                            final_xgb = max(raw_xgb, total_base_price) # Safety Net
-                            
-                            # LR Calculation
-                            raw_lr = lr_model.predict(inp)[0]
-                            final_lr = max(raw_lr, total_base_price) # Safety Net
-                            
-                            results.append({
-                                "Room": r_type, "Channel": ch_type, "Guests": guests,
-                                "Floor Price (Base*N)": total_base_price, 
-                                "XGB Price": final_xgb, "LR Price": final_lr
-                            })
-                    
-                    st.dataframe(pd.DataFrame(results).style.format("{:,.0f}", subset=["Floor Price (Base*N)", "XGB Price", "LR Price"]), use_container_width=True, height=500)
-
-                # Case B: Single Prediction
-                else:
-                    r_code = le_room.transform([selected_room_val])[0]
-                    res_code = le_res.transform([selected_res_val])[0]
-                    
-                    # 1. Normal Guests
-                    inp_norm = pd.DataFrame([{
-                        'Night': nights, 'total_guests': guests, 
-                        'is_holiday': final_is_holiday, 'is_weekend': 1 if checkin_date.weekday() in [5,6] else 0,
-                        'month': checkin_date.month, 'weekday': checkin_date.weekday(),
-                        'RoomType_encoded': r_code, 'Reservation_encoded': res_code
-                    }])
-                    
-                    # Call Helper with 'nights' parameter
-                    p_xgb_norm, raw_xgb, floor_p = calculate_clamped_price(xgb_model, inp_norm, selected_room_val, nights)
-                    p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, inp_norm, selected_room_val, nights)
-                    
-                    st.divider()
-                    st.markdown(f"### 🏨 ผลการวิเคราะห์ราคาห้อง: **{selected_room_val}**")
-                    st.caption(f"เงื่อนไข: {nights} คืน | {guests} ท่าน | ช่องทาง {selected_res_val} | Floor Price (Base x Night): {floor_p:,.0f} THB")
-                    
-                    # === ROW 1: Normal Guests ===
-                    r1c1, r1c2 = st.columns(2)
-                    
-                    # 1. XGBoost Normal
-                    with r1c1:
-                        # Diff เทียบกับ Floor Price
-                        diff_xgb = p_xgb_norm - floor_p
-                        
-                        # Logic แสดงสี: ถ้าค่าพยากรณ์จริงต่ำกว่า Floor ให้เตือน
-                        delta_color = "normal"
-                        note = ""
-                        if raw_xgb < floor_p:
-                            note = f"⚠️ Adjusted from {raw_xgb:,.0f}"
-                            delta_color = "off" # สีเทาๆ แสดงว่าไม่ได้มาจาก Model โดยตรง
-                            
-                        st.container(border=True).metric(
-                            label=f"⚡ XGBoost (ปกติ: {guests} ท่าน)",
-                            value=f"{p_xgb_norm:,.0f} THB",
-                            delta=f"{diff_xgb:+,.0f} THB (vs Floor)",
-                            delta_color=delta_color
-                        )
-                        st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}% {note}")
-                    
-                    # 2. Linear Normal
-                    with r1c2:
-                        diff_lr = p_lr_norm - floor_p
-                        note_lr = ""
-                        if raw_lr < floor_p: note_lr = f"⚠️ Adjusted from {raw_lr:,.0f}"
-                        
-                        st.container(border=True).metric(
-                            label=f"📉 Linear Regression (ปกติ: {guests} ท่าน)",
-                            value=f"{p_lr_norm:,.0f} THB",
-                            delta=f"{diff_lr:+,.0f} THB (vs Floor)"
-                        )
-                        st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}% {note_lr}")
-
-                    # === ROW 2: Extra Guests (+1) ===
-                    extra_guests = guests + 1
-                    r2c1, r2c2 = st.columns(2)
-                    
-                    if extra_guests <= max_g:
-                        # Logic ใหม่: บวกเพิ่ม 500 บาท/คน จากราคา Final ของ Normal
-                        # ตามคำสั่ง "ในกรณีมีแขกเพิ่มให้บวกจากของเดิมไป 500 บาทต่อคนดีกว่า"
-                        p_xgb_extra = p_xgb_norm + 500
-                        p_lr_extra = p_lr_norm + 500
-                        
-                        # 3. XGBoost Extra
-                        with r2c1:
-                            st.container(border=True).metric(
-                                label=f"👥 XGBoost (เพิ่มแขก: {extra_guests} ท่าน)",
-                                value=f"{p_xgb_extra:,.0f} THB",
-                                delta=f"+500 THB (Add-on)",
-                                delta_color="normal"
-                            )
-                            st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']*100:.2f}%")
-                        
-                        # 4. Linear Extra
-                        with r2c2:
-                            st.container(border=True).metric(
-                                label=f"👥 Linear (เพิ่มแขก: {extra_guests} ท่าน)",
-                                value=f"{p_lr_extra:,.0f} THB",
-                                delta=f"+500 THB (Add-on)",
-                                delta_color="normal"
-                            )
-                            st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']*100:.2f}%")
-                    else:
-                        with r2c1: st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
-                        with r2c2: st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
+                base_price = 0
+                for key in BASE_PRICES:
+                    if key in room: base_price = BASE_PRICES[key]; break
+                
+                st.divider()
+                c_base, c_xgb, c_lr = st.columns(3)
+                with c_base:
+                    st.info("### 🏷️ Base Price")
+                    st.metric("ราคาตั้งต้น", f"{base_price:,.0f} THB")
+                with c_xgb:
+                    st.success("### ⚡ XGBoost") 
+                    st.metric("ราคาแนะนำ", f"{p_xgb:,.0f} THB", delta=f"{p_xgb - base_price:,.0f} THB")
+                    st.caption(f"MAE: ±{metrics['xgb']['mae']:,.0f} | R²: {metrics['xgb']['r2']:.4f}")
+                with c_lr:
+                    st.warning("### 📉 Linear Regression") 
+                    st.metric("ราคาประเมิน", f"{p_lr:,.0f} THB", delta=f"{p_lr - base_price:,.0f} THB")
+                    st.caption(f"MAE: ±{metrics['lr']['mae']:,.0f} | R²: {metrics['lr']['r2']:.4f}")
 
     def show_model_insight_page():
         st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Dynamic Insight)")
