@@ -29,6 +29,7 @@ def load_data():
         df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
         return df
     except FileNotFoundError:
+        # Default Empty Structure
         return pd.DataFrame(columns=["Reservation", "Name", "Date", "Night", "Room", 
                                      "Adults", "Children", "Infants", "Extra Person", "Price"])
 
@@ -126,41 +127,48 @@ with tab_dash:
 with tab_data:
     st.header("Data Management")
     
-    # --- Import (Append) / Reset ---
-    with st.expander("🛠️ Tools (Import / Reset)", expanded=False):
-        col_imp, col_res = st.columns(2)
+    # --- Toolbar ---
+    with st.expander("🛠️ Tools (Import / Reset / Hard Reset)", expanded=False):
+        col_imp, col_res, col_hard = st.columns(3)
+        
+        # 1. Import Append
         with col_imp:
-            st.markdown("##### Import Data (Append)")
-            uploaded_file = st.file_uploader("Upload CSV to Add to existing data", type="csv")
-            
+            st.markdown("##### Import (Append)")
+            uploaded_file = st.file_uploader("Add CSV data", type="csv")
             if uploaded_file and st.button("➕ Confirm Append"):
                 try:
-                    # 1. Load New Data
                     new_df = pd.read_csv(uploaded_file)
-                    
-                    # 2. Load Existing Data (Directly from file to be safe)
-                    try:
-                        current_df = pd.read_csv(FILES["report"])
-                    except FileNotFoundError:
-                        current_df = pd.DataFrame()
-                    
-                    # 3. Concatenate (Append)
+                    current_df = pd.read_csv(FILES["report"]) if pd.io.common.file_exists(FILES["report"]) else pd.DataFrame()
                     combined_df = pd.concat([current_df, new_df], ignore_index=True)
-                    
-                    # 4. Save
                     combined_df.to_csv(FILES["report"], index=False)
-                    st.success(f"Added {len(new_df)} records! Total: {len(combined_df)}")
+                    
+                    st.success(f"Added {len(new_df)} rows!")
                     st.cache_data.clear()
-                    st.rerun()
-                    
+                    st.rerun() # <--- FORCE RELOAD
                 except Exception as e:
-                    st.error(f"Error appending data: {e}")
-                    
+                    st.error(f"Error: {e}")
+        
+        # 2. Reload
         with col_res:
-            st.markdown("##### Reload View")
-            if st.button("🔄 Reload Data"):
+            st.markdown("##### Reload")
+            if st.button("🔄 Refresh Page"):
                 st.cache_data.clear()
                 st.rerun()
+
+        # 3. Hard Reset
+        with col_hard:
+            st.markdown("##### Factory Reset")
+            if st.button("⚠️ Hard Reset Data", type="primary", help="Clear all data and reset to empty table"):
+                # Write empty CSV with headers only
+                empty_df = pd.DataFrame(columns=["Reservation", "Name", "Date", "Night", "Room", 
+                                                 "Adults", "Children", "Infants", "Extra Person", "Price"])
+                empty_df.to_csv(FILES["report"], index=False)
+                
+                st.warning("All data has been cleared!")
+                st.cache_data.clear()
+                st.rerun() # <--- FORCE RELOAD
+
+    st.divider()
 
     # Editor
     edited_df = st.data_editor(df_checkin, num_rows="dynamic", use_container_width=True)
@@ -170,8 +178,9 @@ with tab_data:
     with col_save:
         if st.button("💾 Save Changes"):
             edited_df.to_csv(FILES["report"], index=False)
-            st.toast("Saved!", icon="✅")
+            st.toast("Saved & Reloading...", icon="✅")
             st.cache_data.clear()
+            st.rerun() # <--- FORCE RELOAD TO UPDATE DASHBOARD
             
     with col_train:
         if st.button("🚀 Retrain Models"):
@@ -227,6 +236,8 @@ with tab_data:
                     joblib.dump(le_room_new, FILES["le_room"])
                     
                     st.success(f"Retrained! ({len(train_df)} rows)")
+                    # Reload models in session
+                    lr_model, xgb_model = new_lr, new_xgb
                     
                 except Exception as e:
                     st.error(f"Failed: {e}")
