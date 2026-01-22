@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Date Fixed)",
+    page_title="Hotel Price Forecasting System (Smart Date Fixed)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -115,12 +115,30 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 4. DATA HANDLING (CORE FIXES HERE)
+# 4. DATA HANDLING (SMART DATE PARSER)
 # ==========================================================
+
+def parse_dates_smart(date_series):
+    """ฟังก์ชันอัจฉริยะ: ตรวจสอบและแปลงวันที่ตามรูปแบบที่พบจริง"""
+    def convert_dt(val):
+        if pd.isna(val) or val == '': return pd.NaT
+        val_str = str(val).strip()
+        try:
+            # 1. ลองอ่านแบบ YYYY-MM-DD (มาตรฐาน ISO/System Export)
+            # สังเกตจากมีขีด '-' และปีขึ้นต้น (4 ตัว)
+            if '-' in val_str and val_str[0:4].isdigit():
+                return pd.to_datetime(val_str, yearfirst=True) # บังคับ Year First
+            
+            # 2. ลองอ่านแบบ User Input (DD/MM/YYYY)
+            return pd.to_datetime(val_str, dayfirst=True)
+        except:
+            return pd.NaT
+
+    return date_series.apply(convert_dt)
 
 @st.cache_data
 def load_data():
-    """โหลดข้อมูลทั้งหมด (ใช้ dayfirst=True เพื่ออ่านวัน/เดือน/ปี ได้ถูกต้อง)"""
+    """โหลดข้อมูลทั้งหมด (ใช้ Smart Parser)"""
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
@@ -128,11 +146,9 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # --- FIX 1: อ่านวันที่แบบ Day First (25/6/2025 อ่านได้แล้ว) ---
+        # --- FIX: ใช้ Smart Parser ---
         if 'Date' in df.columns:
-            # dayfirst=True: บอก Python ว่าเลขหน้าคือ "วัน" (แก้ปัญหาอ่านเป็นเดือน 25 แล้ว Error)
-            # errors='coerce': ถ้ามันมั่วจริงๆ ค่อยลบ (แต่ถ้าเป็น 25/6 จะอ่านออกแล้ว)
-            df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+            df['Date'] = parse_dates_smart(df['Date'])
             
             # สร้าง Feature พื้นฐานสำหรับกราฟ
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
@@ -165,10 +181,10 @@ def load_data():
 def save_data_robust(new_df, mode='append'):
     """บันทึกข้อมูล พร้อมบังคับ Format วันที่ให้เป็นสากล"""
     try:
-        # --- FIX 2: จัดระเบียบก่อนเซฟ (แปลงเป็น YYYY-MM-DD) ---
+        # --- FIX 2: ใช้ Smart Parser ก่อนเซฟ ---
         if 'Date' in new_df.columns:
             # แปลงเป็น datetime ให้ชัวร์ก่อน (เผื่อ User แก้ในตารางเป็น String)
-            new_df['Date'] = pd.to_datetime(new_df['Date'], dayfirst=True, errors='coerce')
+            new_df['Date'] = parse_dates_smart(new_df['Date'])
             # แปลงกลับเป็น String มาตรฐาน YYYY-MM-DD
             new_df['Date'] = new_df['Date'].dt.strftime('%Y-%m-%d')
             
@@ -177,7 +193,7 @@ def save_data_robust(new_df, mode='append'):
                 current_df = pd.read_csv(DATA_FILE)
                 # แปลงวันที่ของไฟล์เก่าให้เป็นมาตรฐานเดียวกันก่อนรวม
                 if 'Date' in current_df.columns:
-                    current_df['Date'] = pd.to_datetime(current_df['Date'], dayfirst=True, errors='coerce').dt.strftime('%Y-%m-%d')
+                    current_df['Date'] = parse_dates_smart(current_df['Date']).dt.strftime('%Y-%m-%d')
                 updated_df = pd.concat([current_df, new_df], ignore_index=True)
             else:
                 updated_df = new_df
@@ -262,8 +278,8 @@ def retrain_system():
              except: pass
         if os.path.exists("thai_holidays.csv"):
             holidays_csv = pd.read_csv("thai_holidays.csv")
-            # --- FIX: อ่านวันหยุดแบบ Day First ด้วย ---
-            holidays_csv['Holiday_Date'] = pd.to_datetime(holidays_csv['Holiday_Date'], dayfirst=True, errors='coerce')
+            # --- FIX: ใช้ Smart Parser ---
+            holidays_csv['Holiday_Date'] = parse_dates_smart(holidays_csv['Holiday_Date'])
             df_clean['is_holiday'] = df_clean['Date'].isin(holidays_csv['Holiday_Date']).astype(int)
         else: df_clean['is_holiday'] = 0
 
@@ -466,7 +482,7 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     def show_manage_data_page():
-        st.title("📥 ระบบจัดการฐานข้อมูล (Lite Logic + Date Fix)")
+        st.title("📥 ระบบจัดการฐานข้อมูล (Lite Logic + Smart Date Fix)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ราคาฐาน (Base Price)", "🚀 อัปเดตโมเดล (Retrain)"])
 
@@ -497,6 +513,10 @@ else:
                 # แปลง Column ให้เป็น String เพื่อป้องกัน Error จอแดง
                 df_current.columns = df_current.columns.astype(str)
 
+                # Ensure Date is datetime for editor (if valid) but display as is if needed
+                # Actually, load_data already parsed it to datetime or NaT. 
+                # For editor, we might want to keep it as Date object if possible for date picker
+                
                 edited_df = st.data_editor(
                     df_current,
                     num_rows="dynamic",
