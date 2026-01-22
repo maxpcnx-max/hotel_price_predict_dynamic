@@ -628,18 +628,25 @@ else:
             return final_price, raw_predicted, rule_price
 
         with st.container(border=True):
-            st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
+            # --- ส่วนหัว (Header) และ สถานะ (Status) อยู่บรรทัดเดียวกัน ---
+            # ใช้ Placeholder เพื่อรอรับค่าจากการคำนวณวันด้านล่าง
+            col_head, col_status_placeholder = st.columns([1, 1.2]) 
+            with col_head:
+                st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
             
-            c1, c2 = st.columns([2, 1]) # ปรับสัดส่วนคอลัมน์เล็กน้อยให้สวยงาม
+            status_container = col_status_placeholder.container()
+
+            # --- ส่วนเลือกวัน (Inputs) ---
+            c1, c2 = st.columns([2, 1])
             
-            # --- ส่วนคำนวณวัน (Logic) ---
+            with c1:
+                date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
+            
+            # --- Logic คำนวณวัน ---
             nights = 1
             checkin_date = datetime.now()
             auto_holiday = False
             auto_weekend = False
-            
-            with c1:
-                date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
             
             if len(date_range) == 2:
                 checkin_date = date_range[0]
@@ -654,25 +661,24 @@ else:
             elif len(date_range) == 1:
                 checkin_date = date_range[0]
             
-            # --- ส่วนแสดงผล Checkbox (ย้ายมาไว้ข้างบน และ Disabled) ---
             with c2:
-                st.write("Conditions Detected:") # Label หัวข้อเล็กน้อย
-                col_chk1, col_chk2 = st.columns(2)
-                with col_chk1: 
-                    # disabled=True คือห้ามแก้, value=auto... คือติ๊กตามจริง
-                    use_holiday = st.checkbox("หยุดนักขัตฤกษ์", value=auto_holiday, disabled=True) 
-                with col_chk2: 
-                    use_weekend = st.checkbox("เสาร์-อาทิตย์", value=auto_weekend, disabled=True)
-                
-                # Input Nights ย้ายมาอยู่ข้างล่าง Checkbox
                 st.number_input("Nights", value=nights, disabled=True)
 
+            # --- ย้อนกลับไปแสดงสถานะที่มุมขวาบน (ใน Placeholder) ---
+            with status_container:
+                # จัด layout ให้ checkbox อยู่บรรทัดเดียวกับ Header
+                st.write("") # ดันลงมานิดหน่อยให้ตรงกับ Text ของ Subheader
+                sc1, sc2 = st.columns(2)
+                with sc1:
+                    st.checkbox("หยุดนักขัตฤกษ์", value=auto_holiday, disabled=True, key="h_status")
+                with sc2:
+                    st.checkbox("เสาร์-อาทิตย์", value=auto_weekend, disabled=True, key="w_status")
+
+            # --- ส่วนเลือกห้องและแขก (Row ถัดไป) ---
             c3, c4, c5 = st.columns(3)
             with c3:
-                # โหลดราคาฐานล่าสุดมาแสดงใน Dropdown
                 prices = load_base_prices()
                 room_display_map = {"All (เลือกทั้งหมด)": "All"}
-                # ใช้ le_room.classes_ เพื่อให้ตรงกับโมเดล แต่เอาราคาจาก json มาโชว์
                 for r in le_room.classes_:
                     if str(r).lower() == 'nan' or r is None: continue
                     bp = get_base_price(r) 
@@ -694,6 +700,10 @@ else:
                 selected_res_val = "All" if "All" in selected_res else selected_res
 
             if st.button("🚀 คำนวณราคา (Predict)", type="primary", use_container_width=True):
+                # ใช้ตัวแปร auto_holiday/auto_weekend ส่งไปคำนวณโดยตรง (เพราะ user แก้ไม่ได้แล้ว)
+                use_holiday_val = auto_holiday
+                use_weekend_val = auto_weekend
+
                 if selected_room_val == "All" or selected_res_val == "All":
                     st.info(f"📊 รายงานผลการพยากรณ์รวม (Batch Report)")
                     target_rooms = le_room.classes_ if selected_room_val == "All" else [selected_room_val]
@@ -707,8 +717,8 @@ else:
                         
                         for ch_type in target_res:
                             res_code = le_res.transform([ch_type])[0]
-                            final_xgb, _, _ = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, r_type, use_holiday, use_weekend)
-                            final_lr, _, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, r_type, use_holiday, use_weekend)
+                            final_xgb, _, _ = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, r_type, use_holiday_val, use_weekend_val)
+                            final_lr, _, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, r_type, use_holiday_val, use_weekend_val)
                             
                             results.append({
                                 "Room": r_type, "Channel": ch_type, "Guests": guests,
@@ -721,8 +731,8 @@ else:
                     r_code = le_room.transform([selected_room_val])[0]
                     res_code = le_res.transform([selected_res_val])[0]
                     
-                    p_xgb_norm, raw_xgb, _ = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, selected_room_val, use_holiday, use_weekend)
-                    p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, selected_room_val, use_holiday, use_weekend)
+                    p_xgb_norm, raw_xgb, _ = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, selected_room_val, use_holiday_val, use_weekend_val)
+                    p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, selected_room_val, use_holiday_val, use_weekend_val)
                     std_base = get_base_price(selected_room_val) * nights
 
                     st.divider()
@@ -873,4 +883,5 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
