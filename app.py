@@ -531,7 +531,7 @@ else:
                 success, count = retrain_system()
                 if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(2); st.rerun()
 
-    def show_pricing_page():
+def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         if xgb_model is None: st.error("❌ Model not found"); return
 
@@ -628,21 +628,22 @@ else:
             return final_price, raw_predicted, rule_price
 
         with st.container(border=True):
-            # --- ส่วนหัว (Header) และ สถานะ (Status) อยู่บรรทัดเดียวกัน ---
-            # ใช้ Placeholder เพื่อรอรับค่าจากการคำนวณวันด้านล่าง
-            col_head, col_status_placeholder = st.columns([1, 1.2]) 
+            # --- Layout: Header + Status ---
+            # ใช้ Placeholder เพื่อให้เรามาเติม Checkbox ทีหลัง (หลังจากคำนวณวันเสร็จ)
+            col_head, col_status_placeholder = st.columns([1.5, 1]) 
             with col_head:
                 st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
             
+            # สร้างพื้นที่ว่างรอไว้ก่อน
             status_container = col_status_placeholder.container()
 
-            # --- ส่วนเลือกวัน (Inputs) ---
+            # --- Inputs: Date & Calculation ---
             c1, c2 = st.columns([2, 1])
             
             with c1:
                 date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
             
-            # --- Logic คำนวณวัน ---
+            # --- Logic คำนวณวัน (คำนวณทันทีเมื่อมีการเปลี่ยนวันที่) ---
             nights = 1
             checkin_date = datetime.now()
             auto_holiday = False
@@ -664,17 +665,17 @@ else:
             with c2:
                 st.number_input("Nights", value=nights, disabled=True)
 
-            # --- ย้อนกลับไปแสดงสถานะที่มุมขวาบน (ใน Placeholder) ---
+            # --- ย้อนกลับไปวาด Checkbox ข้างบน (Fill Placeholder) ---
             with status_container:
-                # จัด layout ให้ checkbox อยู่บรรทัดเดียวกับ Header
-                st.write("") # ดันลงมานิดหน่อยให้ตรงกับ Text ของ Subheader
+                st.write("") # ดันลงมานิดหน่อยให้ตรงกับ Text Header
                 sc1, sc2 = st.columns(2)
                 with sc1:
-                    st.checkbox("หยุดนักขัตฤกษ์", value=auto_holiday, disabled=True, key="h_status")
+                    # เอา key ออก เพื่อให้ค่า value อัปเดตตามตัวแปร auto_holiday ทันที
+                    st.checkbox("หยุดนักขัตฤกษ์", value=auto_holiday, disabled=True)
                 with sc2:
-                    st.checkbox("เสาร์-อาทิตย์", value=auto_weekend, disabled=True, key="w_status")
+                    st.checkbox("เสาร์-อาทิตย์", value=auto_weekend, disabled=True)
 
-            # --- ส่วนเลือกห้องและแขก (Row ถัดไป) ---
+            # --- Inputs: Room & Guests & Channel ---
             c3, c4, c5 = st.columns(3)
             with c3:
                 prices = load_base_prices()
@@ -700,7 +701,7 @@ else:
                 selected_res_val = "All" if "All" in selected_res else selected_res
 
             if st.button("🚀 คำนวณราคา (Predict)", type="primary", use_container_width=True):
-                # ใช้ตัวแปร auto_holiday/auto_weekend ส่งไปคำนวณโดยตรง (เพราะ user แก้ไม่ได้แล้ว)
+                # ใช้ค่าที่คำนวณได้ส่งไปเลย
                 use_holiday_val = auto_holiday
                 use_weekend_val = auto_weekend
 
@@ -883,5 +884,6 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
