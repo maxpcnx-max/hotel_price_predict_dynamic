@@ -33,7 +33,6 @@ DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
 ROOM_FILE = "room_type.csv" # ไฟล์ Master Data
 METRICS_FILE = "model_metrics.json"
-BASE_PRICE_FILE = "base_prices.json" # ไฟล์เก็บราคาฐาน
 
 MODEL_FILES = {
     'xgb': 'xgb_hotel_model.joblib',
@@ -42,8 +41,8 @@ MODEL_FILES = {
     'le_res': 'le_res.joblib'
 }
 
-# --- ค่า Default หากไม่มีไฟล์ JSON ---
-DEFAULT_BASE_PRICES = {
+# ราคา Base Price ใหม่ (Policy ปัจจุบัน)
+BASE_PRICES = {
     'Grand Suite Room': 2700,
     'Villa Suite (Garden)': 2700,
     'Executive Room': 2500,
@@ -68,32 +67,7 @@ if 'username' not in st.session_state: st.session_state['username'] = ""
 if 'historical_avg' not in st.session_state: st.session_state['historical_avg'] = {}
 
 # ==========================================================
-# 2. HELPER FUNCTIONS (Base Price)
-# ==========================================================
-def load_base_prices():
-    if not os.path.exists(BASE_PRICE_FILE):
-        with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_BASE_PRICES, f, ensure_ascii=False, indent=4)
-        return DEFAULT_BASE_PRICES
-    try:
-        with open(BASE_PRICE_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        return DEFAULT_BASE_PRICES
-
-def save_base_prices(price_dict):
-    with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
-        json.dump(price_dict, f, ensure_ascii=False, indent=4)
-
-def get_base_price(room_text):
-    if not isinstance(room_text, str): return 0
-    prices = load_base_prices()
-    for key in prices:
-        if key in room_text: return prices[key]
-    return 0
-
-# ==========================================================
-# 3. DATABASE
+# 2. DATABASE
 # ==========================================================
 def init_db():
     conn = sqlite3.connect(DB_FILE)
@@ -113,10 +87,20 @@ def login_user(username, password):
     conn.close()
     return data
 
+def register_user(username, password):
+    try:
+        conn = sqlite3.connect(DB_FILE)
+        c = conn.cursor()
+        c.execute('INSERT INTO users VALUES (?,?)', (username, password))
+        conn.commit()
+        conn.close()
+        return True
+    except sqlite3.IntegrityError: return False
+
 init_db()
 
 # ==========================================================
-# 4. BACKEND SYSTEM (Data Cleaning Logic)
+# 3. BACKEND SYSTEM (Data Cleaning Logic)
 # ==========================================================
 
 @st.cache_data
@@ -149,9 +133,8 @@ def load_data():
                 if 'Room_Type' in df.columns: df = df.rename(columns={'Room_Type': 'Target_Room_Type'})
                 elif 'Room_Type_y' in df.columns: df = df.rename(columns={'Room_Type_y': 'Target_Room_Type'})
         
-        # 3. Filter Outlier (เฉพาะที่มี Room Type)
-        if 'Target_Room_Type' in df.columns:
-            df = df.dropna(subset=['Target_Room_Type'])
+        # 3. Filter Outlier
+        df = df.dropna(subset=['Target_Room_Type'])
         
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         
@@ -165,10 +148,8 @@ def calculate_historical_avg(df):
     df_clean = df[df['Night'] > 0].copy()
     df_clean['ADR_Actual'] = df_clean['Price'] / df_clean['Night']
     
-    if 'Target_Room_Type' in df_clean.columns:
-        avg_map = df_clean.groupby('Target_Room_Type')['ADR_Actual'].mean().to_dict()
-        return avg_map
-    return {}
+    avg_map = df_clean.groupby('Target_Room_Type')['ADR_Actual'].mean().to_dict()
+    return avg_map
 
 @st.cache_resource
 def load_system_models():
@@ -205,6 +186,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
             
             if len(bad_rows) > 0:
                 st.warning(f"⚠️ ตรวจพบข้อมูลห้องที่ไม่รู้จัก (Outlier) จำนวน {len(bad_rows)} รายการ")
+                st.error(f"รายการที่ถูกตัดทิ้ง (Drop): {bad_rows['Room'].unique()}")
                 st.info("ระบบจะบันทึกเฉพาะข้อมูลที่ถูกต้องเท่านั้น")
             else:
                 st.success("✅ ข้อมูลถูกต้องสมบูรณ์ 100%")
@@ -226,7 +208,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
             st.cache_data.clear()
             return True
         else:
-            st.error("❌ ไม่มีข้อมูลที่ถูกต้องให้บันทึก")
+            st.error("❌ ไม่มีข้อมูลที่ถูกต้องให้บันทึก (Outlier ทั้งหมด)")
             return False
 
     except Exception as e:
@@ -326,7 +308,7 @@ def retrain_system():
         return False, 0
 
 # ==========================================================
-# 5. MAIN UI PAGES
+# 4. MAIN UI PAGES
 # ==========================================================
 
 def login_page():
@@ -336,17 +318,17 @@ def login_page():
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=120)
         st.title("🔒 Login System")
         st.markdown("ระบบการพยากรณ์ราคาห้องพัก (Hotel Price Forecasting System)")
-        st.divider()
-        u = st.text_input("Username")
-        p = st.text_input("Password", type="password")
-        
-        if st.button("Login", type="primary", use_container_width=True):
-            if login_user(u, p): 
-                st.session_state['logged_in'] = True
-                st.session_state['username'] = u
-                st.rerun()
-            else: 
-                st.error("Invalid Username or Password")
+        tab_log, tab_reg = st.tabs(["Login", "Register"])
+        with tab_log:
+            u = st.text_input("Username"); p = st.text_input("Password", type="password")
+            if st.button("Login", type="primary", use_container_width=True):
+                if login_user(u, p): st.session_state['logged_in'] = True; st.session_state['username'] = u; st.rerun()
+                else: st.error("Invalid Login")
+        with tab_reg:
+            nu = st.text_input("New User"); np = st.text_input("New Pass", type="password")
+            if st.button("Register", use_container_width=True):
+                if register_user(nu, np): st.success("Success!")
+                else: st.error("Exists")
 
 if not st.session_state['logged_in']:
     login_page()
@@ -459,82 +441,31 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     def show_manage_data_page():
-        st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
-        
-        tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ราคาฐาน (Base Price)", "🚀 อัปเดตโมเดล (Retrain)"])
-
-        # TAB 1: Transactions (View Only + Upload + Reset)
-        with tab_trans:
-            st.subheader("1. นำเข้าข้อมูลใหม่ (Import Data)")
-            up_file = st.file_uploader("เลือกไฟล์ Booking CSV", type=['csv'])
-            if up_file is not None:
-                if st.button("💾 บันทึกข้อมูลเข้าระบบ", type="primary"):
-                    if save_uploaded_data_with_cleaning(up_file):
-                        st.success("✅ บันทึกข้อมูลเรียบร้อย!"); time.sleep(1); st.rerun()
-            
-            st.divider()
-            st.subheader("2. ตรวจสอบข้อมูล (View Only)")
-            
-            # โหลดข้อมูลมาแสดงเฉยๆ
-            df_current = load_data()
-            if not df_current.empty:
-                # แสดงเป็น DataFrame ธรรมดา (แก้ไขไม่ได้ตามที่ขอ)
-                st.dataframe(df_current, use_container_width=True)
-            else:
-                st.info("ยังไม่มีข้อมูลในระบบ")
-
-            # ปุ่ม Hard Reset (ล้างข้อมูล)
-            st.divider()
-            col_reset, _ = st.columns([1, 4])
-            with col_reset:
-                if st.button("🧨 ล้างข้อมูลทั้งหมด (Hard Reset)"):
-                     if os.path.exists(DATA_FILE):
-                        os.remove(DATA_FILE)
-                        st.cache_data.clear()
-                        st.rerun()
-
-        # TAB 2: Base Prices (Edit ได้)
-        with tab_master:
-            st.subheader("⚙️ กำหนดราคาฐานของห้องพัก")
-            
-            current_prices = load_base_prices()
-            # แปลง Dict เป็น DataFrame เพื่อให้แก้ในตารางได้ง่ายๆ
-            df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
-            
-            edited_prices_df = st.data_editor(
-                df_prices,
-                num_rows="dynamic",
-                use_container_width=True,
-                column_config={
-                    "Base Price": st.column_config.NumberColumn("Base Price (THB)", min_value=0, step=100, format="%d THB")
-                },
-                key="base_price_editor"
-            )
-            
-            if st.button("💾 บันทึกราคาฐาน (Update Master Data)"):
-                new_prices_dict = {}
-                for index, row in edited_prices_df.iterrows():
-                    if row['Room Type'] and str(row['Room Type']).strip() != "":
-                        new_prices_dict[row['Room Type']] = row['Base Price']
-                save_base_prices(new_prices_dict)
-                st.success("✅ อัปเดตราคาฐานเรียบร้อย!")
-
-        # TAB 3: Retrain Model
-        with tab_train:
-            st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
-            st.markdown("เมื่อมีการเพิ่มข้อมูลใหม่ ควรทำการ Retrain เพื่อให้ AI ฉลาดขึ้น")
-            
-            col_m1, col_m2 = st.columns(2)
-            with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
-            
-            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
-                success, count = retrain_system()
-                if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(2); st.rerun()
+        st.title("📥 จัดการข้อมูล & อัปเดตโมเดล")
+        st.info("ระบบจะตรวจสอบเลขห้องกับไฟล์ Master Data หากพบข้อมูล Outlier จะทำการลบทิ้งอัตโนมัติ")
+        up_file = st.file_uploader("เลือกไฟล์ Booking CSV (เพื่อเพิ่มข้อมูล)", type=['csv'])
+        if up_file is not None:
+            if st.button("💾 บันทึกข้อมูลเข้าระบบ", type="primary"):
+                if save_uploaded_data_with_cleaning(up_file):
+                    st.success("✅ บันทึกข้อมูลเรียบร้อย!"); st.balloons(); time.sleep(5); st.rerun()
+        st.divider()
+        st.markdown("### 2. สั่งให้โมเดลเรียนรู้ (Retrain)")
+        col_m1, col_m2 = st.columns(2)
+        with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
+        if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="secondary"):
+            success, count = retrain_system()
+            if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(5); st.rerun()
 
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         if xgb_model is None: st.error("❌ Model not found"); return
 
+        def get_base_price(room_text):
+            if not isinstance(room_text, str): return 0
+            for key in BASE_PRICES:
+                if key in room_text: return BASE_PRICES[key]
+            return 0
+        
         def get_historical_avg_price(room_text):
             hist_map = st.session_state.get('historical_avg', {})
             if room_text in hist_map: return hist_map[room_text]
@@ -609,7 +540,7 @@ else:
             raw_predicted = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
             
             # 2. Rule-Based Price (The Anchor)
-            base_per_night = get_base_price(room_name_selected) # เรียกใช้ Dynamic Base Price
+            base_per_night = get_base_price(room_name_selected)
             rule_price = calculate_rule_based_price(base_per_night, start_date, n_nights, use_h, use_w)
             
             # 3. Apply Offset: Rule_Price + (Raw_Predicted - Historical_Avg_Total)
@@ -617,8 +548,10 @@ else:
             if hist_avg > 0:
                 hist_total = hist_avg * n_nights
                 offset = raw_predicted - hist_total
+                # Add the model's flavor (offset) to the rule price
                 final_price = rule_price + offset
             else:
+                # Fallback if no history
                 final_price = rule_price
 
             # 4. Final Safety: Never go below Base Price
@@ -660,16 +593,12 @@ else:
 
             c3, c4, c5 = st.columns(3)
             with c3:
-                # โหลดราคาฐานล่าสุดมาแสดงใน Dropdown
-                prices = load_base_prices()
                 room_display_map = {"All (เลือกทั้งหมด)": "All"}
-                # ใช้ le_room.classes_ เพื่อให้ตรงกับโมเดล แต่เอาราคาจาก json มาโชว์
                 for r in le_room.classes_:
                     if str(r).lower() == 'nan' or r is None: continue
-                    bp = get_base_price(r) 
+                    bp = get_base_price(r)
                     display_text = f"{r} (Base: {bp:,.0f})"
                     room_display_map[display_text] = r
-                
                 selected_room_display = st.selectbox("Room Type", list(room_display_map.keys()))
                 selected_room_val = room_display_map[selected_room_display]
 
