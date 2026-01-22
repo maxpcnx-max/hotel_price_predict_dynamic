@@ -456,7 +456,7 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
 # ==========================================================
-    # 🌟 MANAGE DATA PAGE (แก้ไขปุ่ม Save - FINAL VERSION)
+    # 🌟 MANAGE DATA PAGE (แก้ไขปุ่ม Save ให้ไม่พัง)
     # ==========================================================
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
@@ -495,47 +495,34 @@ else:
                 )
                 
                 col_save, col_del = st.columns([1, 4])
-                
-                # 🔥 BUTTON SAVE - LOGIC ที่ถูกต้อง (Save Raw Data ไม่มีการกรองทิ้ง)
                 with col_save:
+                    # 🔥 แก้ไขปุ่ม Save ตรงนี้
                     if st.button("💾 บันทึกการเปลี่ยนแปลง (Save)", type="primary"):
                         try:
-                            # 1. รับ Dataframe จาก Editor โดยตรง (นี่คือ "ความจริง" ที่ user เห็น)
-                            df_to_save = edited_df.copy()
-
-                            # 2. ❌ ลบ Logic การฆ่าตัดตอนทิ้งให้หมด
-                            # - ห้าม dropna(subset=['Date'])
-                            # - ห้าม filter valid_rooms
-                            # - ห้าม coerce วันที่ผิดให้เป็น NaT แล้วลบ
+                            # 1. แปลง Date อย่างระมัดระวัง (ถ้าแปลงไม่ได้ให้เป็น NaT แล้วลบทิ้ง)
+                            if 'Date' in edited_df.columns:
+                                edited_df['Date'] = pd.to_datetime(edited_df['Date'], dayfirst=True, errors='coerce')
+                                edited_df = edited_df.dropna(subset=['Date']) # ลบแถวที่วันที่พังทิ้งไปเลย
                             
-                            # 3. Handle Date Format แบบถนอมข้อมูล (Persistence Logic)
-                            if 'Date' in df_to_save.columns:
-                                # พยายามแปลง format เพื่อให้ CSV สวยงาม แต่ถ้าแปลงไม่ได้ (errors='ignore') 
-                                # ให้เก็บค่าเดิมที่เป็น String ไว้ ห้ามลบทิ้ง!
-                                df_to_save['Date'] = pd.to_datetime(df_to_save['Date'], dayfirst=True, errors='ignore')
-
-                            # 4. เลือกเฉพาะ Column ที่จำเป็น (เพื่อไม่ให้ไฟล์บวมขยะ)
+                            # 2. เลือก Save เฉพาะคอลัมน์สำคัญ (ป้องกันคอลัมน์ขยะงอก)
                             cols_to_save = ['Date', 'Room', 'Price', 'Reservation', 'Name', 
                                             'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
+                            final_save_cols = [c for c in cols_to_save if c in edited_df.columns]
                             
-                            # กรองเอาเฉพาะที่มีจริง
-                            final_cols = [c for c in cols_to_save if c in df_to_save.columns]
-                            
-                            if final_cols:
-                                df_to_save = df_to_save[final_cols]
-                                
-                                # 5. 💾 WRITE TO DISK (Save Raw)
-                                df_to_save.to_csv(DATA_FILE, index=False)
-                                
-                                st.cache_data.clear() # Clear cache เพื่อให้ load_data อ่านค่าใหม่
-                                st.success(f"✅ บันทึกข้อมูลดิบเรียบร้อย ({len(df_to_save)} แถว) - ไม่มีการตัดข้อมูลทิ้ง")
-                                time.sleep(1)
-                                st.rerun()
+                            if not final_save_cols:
+                                st.error("❌ ไม่พบคอลัมน์ข้อมูลที่ถูกต้อง (ตรวจสอบชื่อคอลัมน์ในไฟล์ CSV)")
                             else:
-                                st.error("ไม่พบคอลัมน์ที่ถูกต้อง")
+                                df_to_save = edited_df[final_save_cols].copy()
+                                
+                                # 3. บันทึก
+                                df_to_save.to_csv(DATA_FILE, index=False)
+                                st.cache_data.clear()
+                                st.success("✅ บันทึกข้อมูลเรียบร้อยแล้ว!")
+                                time.sleep(1); st.rerun()
                                 
                         except Exception as e:
-                            st.error(f"Save Error: {e}")
+                            st.error(f"❌ เกิดข้อผิดพลาด: {e}")
+                            st.write(e) # แสดง Error จริงออกมาให้เห็น จะได้รู้ว่าพังตรงไหน
                 
                 with col_del:
                     if st.button("🧨 ล้างข้อมูลทั้งหมด (Hard Reset)"):
@@ -543,47 +530,6 @@ else:
                             os.remove(DATA_FILE)
                             st.cache_data.clear()
                             st.rerun()
-                            
-        # ---------------------------------------------------------
-        # TAB 2: MASTER DATA
-        # ---------------------------------------------------------
-        with tab_master:
-            st.subheader("⚙️ กำหนดราคาฐานของห้องพัก (Base Prices)")
-            
-            current_prices = load_base_prices()
-            df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
-            
-            edited_prices_df = st.data_editor(
-                df_prices,
-                num_rows="dynamic",
-                use_container_width=True,
-                column_config={
-                    "Base Price": st.column_config.NumberColumn("Base Price (THB)", min_value=0, step=100, format="%d THB")
-                },
-                key="price_editor"
-            )
-            
-            if st.button("💾 บันทึกราคาฐาน (Update Master Data)"):
-                new_prices_dict = {}
-                for index, row in edited_prices_df.iterrows():
-                    if row['Room Type'] and str(row['Room Type']).strip() != "":
-                        new_prices_dict[row['Room Type']] = row['Base Price']
-                save_base_prices(new_prices_dict)
-                st.success("✅ อัปเดตราคาฐานเรียบร้อย!")
-
-        # ---------------------------------------------------------
-        # TAB 3: RETRAIN
-        # ---------------------------------------------------------
-        with tab_train:
-            st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
-            st.markdown("⚠️ **Note:** โมเดลจะเรียนรู้เฉพาะข้อมูลที่มีคุณภาพ (ตรงกับ Master Data) ข้อมูลที่พิมพ์ผิดจะถูกข้ามไปในขั้นตอนนี้")
-            
-            col_m1, col_m2 = st.columns(2)
-            with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
-            
-            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
-                success, count = retrain_system()
-                if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(2); st.rerun()
         # ---------------------------------------------------------
         # TAB 2: MASTER DATA
         # ---------------------------------------------------------
@@ -851,8 +797,6 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
-
 
 
 
