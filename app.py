@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Factory Reset)",
+    page_title="Hotel Price Forecasting System (Dashboard Filtered)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -72,8 +72,6 @@ if 'historical_avg' not in st.session_state: st.session_state['historical_avg'] 
 # ==========================================================
 def load_base_prices():
     if not os.path.exists(BASE_PRICE_FILE):
-        with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_BASE_PRICES, f, ensure_ascii=False, indent=4)
         return DEFAULT_BASE_PRICES
     try:
         with open(BASE_PRICE_FILE, 'r', encoding='utf-8') as f:
@@ -120,24 +118,20 @@ init_db()
 # ==========================================================
 
 def parse_dates_smart(date_series):
-    """ฟังก์ชันอัจฉริยะ: ตรวจสอบและแปลงวันที่ตามรูปแบบที่พบจริง"""
     def convert_dt(val):
         if pd.isna(val) or val == '': return pd.NaT
         val_str = str(val).strip()
         try:
-            # 1. ลองอ่านแบบ YYYY-MM-DD (มาตรฐาน ISO/System Export)
             if '-' in val_str and val_str[0:4].isdigit():
                 return pd.to_datetime(val_str, yearfirst=True) 
-            # 2. ลองอ่านแบบ User Input (DD/MM/YYYY)
             return pd.to_datetime(val_str, dayfirst=True)
         except:
             return pd.NaT
-
     return date_series.apply(convert_dt)
 
 @st.cache_data
 def load_data():
-    """โหลดข้อมูลทั้งหมด (ใช้ Smart Parser)"""
+    """โหลดข้อมูลดิบทั้งหมด (รวม Outlier)"""
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
@@ -173,12 +167,9 @@ def load_data():
     except: return pd.DataFrame()
 
 def save_data_robust(new_df, mode='append'):
-    """บันทึกข้อมูล พร้อมบังคับ Format วันที่ให้เป็นสากล"""
     try:
         if 'Date' in new_df.columns:
-            # แปลงเป็น datetime ให้ชัวร์ก่อน
             new_df['Date'] = parse_dates_smart(new_df['Date'])
-            # แปลงกลับเป็น String มาตรฐาน YYYY-MM-DD
             new_df['Date'] = new_df['Date'].dt.strftime('%Y-%m-%d')
             
         if mode == 'append':
@@ -189,7 +180,7 @@ def save_data_robust(new_df, mode='append'):
                 updated_df = pd.concat([current_df, new_df], ignore_index=True)
             else:
                 updated_df = new_df
-        else: # overwrite
+        else: 
             updated_df = new_df
 
         cols_to_keep = ['Date', 'Room', 'Price', 'Reservation', 'Name', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
@@ -217,19 +208,21 @@ def calculate_historical_avg(df):
 
 @st.cache_resource
 def load_system_models():
-    # ถ้าไม่มีไฟล์โมเดล ให้ return None (เพื่อให้ระบบแจ้งเตือนว่าต้อง Retrain)
-    for name, file in MODEL_FILES.items():
-        if not os.path.exists(file): return None, None, None, None, None
+    try:
+        xgb = joblib.load(MODEL_FILES['xgb'])
+        lr = joblib.load(MODEL_FILES['lr'])
+        le_room = joblib.load(MODEL_FILES['le_room'])
+        le_res = joblib.load(MODEL_FILES['le_res'])
+    except:
+        xgb, lr, le_room, le_res = None, None, None, None
 
-    xgb = joblib.load(MODEL_FILES['xgb'])
-    lr = joblib.load(MODEL_FILES['lr'])
-    le_room = joblib.load(MODEL_FILES['le_room'])
-    le_res = joblib.load(MODEL_FILES['le_res'])
-    
-    # Load Metrics (ถ้าไม่มีให้ใช้ Default)
     if os.path.exists(METRICS_FILE):
-        with open(METRICS_FILE, 'r') as f: metrics = json.load(f)
-    else: metrics = DEFAULT_METRICS
+        try:
+            with open(METRICS_FILE, 'r') as f: metrics = json.load(f)
+        except:
+            metrics = DEFAULT_METRICS
+    else:
+        metrics = DEFAULT_METRICS
         
     return xgb, lr, le_room, le_res, metrics
 
@@ -269,7 +262,6 @@ def retrain_system():
              except: pass
         if os.path.exists("thai_holidays.csv"):
             holidays_csv = pd.read_csv("thai_holidays.csv")
-            # --- FIX: ใช้ Smart Parser ---
             holidays_csv['Holiday_Date'] = parse_dates_smart(holidays_csv['Holiday_Date'])
             df_clean['is_holiday'] = df_clean['Date'].isin(holidays_csv['Holiday_Date']).astype(int)
         else: df_clean['is_holiday'] = 0
@@ -362,7 +354,7 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    df_raw = load_data() 
+    df_raw = load_data() # โหลดข้อมูลดิบทั้งหมดมาก่อน
     
     if not df_raw.empty and not st.session_state['historical_avg']:
         st.session_state['historical_avg'] = calculate_historical_avg(df_raw)
@@ -373,20 +365,32 @@ else:
         st.title("📊 Financial Executive Dashboard")
         if df_raw.empty: st.warning("No Data Found"); return
 
+        # --- Dashboard Filter Logic (กรอง Outlier ทิ้งที่นี่) ---
+        df_clean_dash = df_raw.copy()
+        # 1. Drop NaT dates
+        df_clean_dash = df_clean_dash.dropna(subset=['Date'])
+        # 2. Drop Unknown Room Type
+        if 'Target_Room_Type' in df_clean_dash.columns:
+            df_clean_dash = df_clean_dash[df_clean_dash['Target_Room_Type'] != 'Unknown']
+        
+        if df_clean_dash.empty:
+            st.warning("⚠️ ข้อมูลในระบบยังไม่สมบูรณ์ (มีแต่ Outlier หรือข้อมูลว่าง) กรุณาตรวจสอบที่หน้าจัดการข้อมูล")
+            return
+
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
-            # Handle NaN years for dashboard filter
-            valid_years = df_raw['Year'].dropna().unique()
+            
+            valid_years = df_clean_dash['Year'].unique() # ใช้ข้อมูลที่คลีนแล้วหาปี
             all_years = sorted(valid_years.tolist())
             year_opts = ['All'] + [str(int(y)) for y in all_years]
             with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
             
-            valid_months = df_raw['month'].dropna().unique()
+            valid_months = df_clean_dash['month'].unique()
             all_months = sorted(valid_months.tolist())
             month_opts = ['All'] + [datetime(2024, int(m), 1).strftime('%B') for m in all_months]
             with f_col2: sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
 
-            df_filtered = df_raw.copy()
+            df_filtered = df_clean_dash.copy() # เริ่มจากข้อมูลคลีน
             if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
             if sel_month_str != 'All':
                 sel_month_num = datetime.strptime(sel_month_str, "%B").month
@@ -469,11 +473,11 @@ else:
                 st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Booking Value", color='DayType'), use_container_width=True)
 
         st.divider()
-        st.subheader("📋 Raw Data Explorer")
+        st.subheader("📋 Raw Data Explorer (Cleaned for Dashboard)")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     def show_manage_data_page():
-        st.title("📥 ระบบจัดการฐานข้อมูล (Factory Reset Version)")
+        st.title("📥 ระบบจัดการฐานข้อมูล (Lite Logic + Smart Date Fix)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ราคาฐาน (Base Price)", "🚀 อัปเดตโมเดล (Retrain)"])
 
