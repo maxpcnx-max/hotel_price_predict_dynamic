@@ -456,7 +456,7 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
 # ==========================================================
-    # 🌟 MANAGE DATA PAGE (แก้ไขปุ่ม Save ให้ไม่พัง)
+    # 🌟 MANAGE DATA PAGE (แก้ไขปุ่ม Save - FINAL VERSION)
     # ==========================================================
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
@@ -495,8 +495,9 @@ else:
                 )
                 
                 col_save, col_del = st.columns([1, 4])
-with col_save:
-                    # ✅ FIXED ARCHITECTURE: Save Raw Data Only (No Filtering)
+                
+                # 🔥 BUTTON SAVE - LOGIC ที่ถูกต้อง (Save Raw Data ไม่มีการกรองทิ้ง)
+                with col_save:
                     if st.button("💾 บันทึกการเปลี่ยนแปลง (Save)", type="primary"):
                         try:
                             # 1. รับ Dataframe จาก Editor โดยตรง (นี่คือ "ความจริง" ที่ user เห็น)
@@ -535,6 +536,54 @@ with col_save:
                                 
                         except Exception as e:
                             st.error(f"Save Error: {e}")
+                
+                with col_del:
+                    if st.button("🧨 ล้างข้อมูลทั้งหมด (Hard Reset)"):
+                         if os.path.exists(DATA_FILE):
+                            os.remove(DATA_FILE)
+                            st.cache_data.clear()
+                            st.rerun()
+                            
+        # ---------------------------------------------------------
+        # TAB 2: MASTER DATA
+        # ---------------------------------------------------------
+        with tab_master:
+            st.subheader("⚙️ กำหนดราคาฐานของห้องพัก (Base Prices)")
+            
+            current_prices = load_base_prices()
+            df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
+            
+            edited_prices_df = st.data_editor(
+                df_prices,
+                num_rows="dynamic",
+                use_container_width=True,
+                column_config={
+                    "Base Price": st.column_config.NumberColumn("Base Price (THB)", min_value=0, step=100, format="%d THB")
+                },
+                key="price_editor"
+            )
+            
+            if st.button("💾 บันทึกราคาฐาน (Update Master Data)"):
+                new_prices_dict = {}
+                for index, row in edited_prices_df.iterrows():
+                    if row['Room Type'] and str(row['Room Type']).strip() != "":
+                        new_prices_dict[row['Room Type']] = row['Base Price']
+                save_base_prices(new_prices_dict)
+                st.success("✅ อัปเดตราคาฐานเรียบร้อย!")
+
+        # ---------------------------------------------------------
+        # TAB 3: RETRAIN
+        # ---------------------------------------------------------
+        with tab_train:
+            st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
+            st.markdown("⚠️ **Note:** โมเดลจะเรียนรู้เฉพาะข้อมูลที่มีคุณภาพ (ตรงกับ Master Data) ข้อมูลที่พิมพ์ผิดจะถูกข้ามไปในขั้นตอนนี้")
+            
+            col_m1, col_m2 = st.columns(2)
+            with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
+            
+            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
+                success, count = retrain_system()
+                if success: st.success(f"🎉 เรียนรู้ครบ {count:,} รายการ!"); time.sleep(2); st.rerun()
         # ---------------------------------------------------------
         # TAB 2: MASTER DATA
         # ---------------------------------------------------------
@@ -802,6 +851,7 @@ with col_save:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
