@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Diagnostic Mode)",
+    page_title="Hotel Price Forecasting System (Safe Save Mode)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -125,22 +125,27 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 4. BACKEND SYSTEM (Diagnostic Mode)
+# 4. BACKEND SYSTEM (Robust Load & Validate)
 # ==========================================================
 
 @st.cache_data
 def load_raw_data():
-    """โหลดข้อมูลดิบ (พยายามอ่าน Date เป็น String ก่อนเพื่อไม่ให้ข้อมูลเพี้ยน)"""
+    """โหลดข้อมูลดิบทั้งหมด (Raw String) ไม่ตัดทิ้ง"""
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
 
     try:
-        # อ่าน Date เป็น object (String) ไปเลย จะได้เห็นว่า User ใส่อะไรมา
         df = pd.read_csv(DATA_FILE)
         
-        if 'Room' in df.columns:
-            df['Room'] = df['Room'].astype(str)
+        # แปลงให้เป็น String ก่อน เพื่อความชัวร์ในการแก้ไข
+        if 'Room' in df.columns: df['Room'] = df['Room'].astype(str)
+        
+        # *Trick*: ถ้าอ่าน Date แล้วพัง ให้เก็บเป็น object ไปก่อน
+        # แต่ถ้าเราอยากให้ Editor เป็น DatePicker เราต้องยอมเสี่ยงแปลง
+        # ถ้าแปลงแล้ว NaT แสดงว่าข้อมูลผิดจริง -> User ต้องแก้
+        if 'Date' in df.columns:
+            df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             
         return df
     except Exception as e:
@@ -148,31 +153,27 @@ def load_raw_data():
         return pd.DataFrame()
 
 def process_data_for_dashboard(df_raw):
-    """เตรียมข้อมูลสำหรับ Dashboard"""
     if df_raw.empty: return df_raw
     df = df_raw.copy()
     
-    # พยายามแปลง Date เฉพาะตอนจะใช้ Dashboard
+    # Clone Date Column เพื่อใช้คำนวณ (เผื่อ Date หลักยังไม่แปลง)
     if 'Date' in df.columns:
-        df['Date_Obj'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+        if not pd.api.types.is_datetime64_any_dtype(df['Date']):
+             df['Date_Obj'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
+        else:
+             df['Date_Obj'] = df['Date']
     else:
         df['Date_Obj'] = pd.NaT
 
-    # 1. Feature Engineering
     mask = df['Date_Obj'].notna()
     df.loc[mask, 'is_weekend'] = df.loc[mask, 'Date_Obj'].dt.weekday.isin([5, 6]).astype(int)
     df.loc[mask, 'Year'] = df.loc[mask, 'Date_Obj'].dt.year.astype(int)
     df.loc[mask, 'month'] = df.loc[mask, 'Date_Obj'].dt.month
     
-    # คืนค่า Date เป็น Object เหมือนเดิม แต่เอา Date_Obj ไว้ใช้คำนวณ
-    # (หรือจะแทนที่ Date เลยก็ได้ แต่เพื่อความชัวร์ เก็บตัวแปรใหม่ไว้ filter)
-    
-    # 2. Merge Room Type
     if os.path.exists(ROOM_FILE):
         try:
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
-            
             if 'Target_Room_Type' in room_type.columns:
                 df = df.merge(room_type[['Room', 'Target_Room_Type']], on='Room', how='left')
             elif 'Room_Type' in room_type.columns:
@@ -201,8 +202,8 @@ def load_system_models():
     else: metrics = DEFAULT_METRICS
     return xgb, lr, le_room, le_res, metrics
 
-# 🔥 NEW: Diagnostic Validator (นักสืบ)
-def validate_and_save_data(df_to_check, save_to_file=True):
+# 🔥 VALIDATOR ที่ไม่ Save ทันที
+def validate_data_only(df_to_check):
     valid_rooms = set(load_base_prices().keys())
     valid_channels = set(load_channels())
     
@@ -214,26 +215,26 @@ def validate_and_save_data(df_to_check, save_to_file=True):
 
     df_clean = df_to_check.copy()
     
-    # แปลง Room/Res เป็น String เพื่อเทียบ
     if 'Room' in df_clean.columns: df_clean['Room'] = df_clean['Room'].astype(str)
     if 'Reservation' in df_clean.columns: df_clean['Reservation'] = df_clean['Reservation'].astype(str)
 
-    # 🕵️‍♂️ 1. ตรวจสอบวันที่ (ตัวปัญหา)
-    # เราจะลองแปลงดู ถ้าพัง -> invalid
+    # Date check
     if 'Date' in df_clean.columns:
-        # ใช้ errors='coerce' เพื่อหาตัวที่พัง
-        df_clean['Date_Parsed'] = pd.to_datetime(df_clean['Date'], dayfirst=True, errors='coerce')
+        # Check if already datetime
+        if not pd.api.types.is_datetime64_any_dtype(df_clean['Date']):
+             df_clean['Date_Parsed'] = pd.to_datetime(df_clean['Date'], dayfirst=True, errors='coerce')
+        else:
+             df_clean['Date_Parsed'] = df_clean['Date']
     else:
         df_clean['Date_Parsed'] = pd.NaT
 
-    # สร้าง Mask
     mask_date = df_clean['Date_Parsed'].notna()
     mask_room = df_clean['Room'].isin(valid_rooms)
     mask_channel = df_clean['Reservation'].isin(valid_channels)
 
-    # 🔥 สร้างรายงานสาเหตุการตัดทิ้ง
+    # ระบุสาเหตุ
     df_clean['Error_Reason'] = ""
-    df_clean.loc[~mask_date, 'Error_Reason'] += "Date Invalid/Empty; "
+    df_clean.loc[~mask_date, 'Error_Reason'] += "Date Invalid; "
     df_clean.loc[~mask_room, 'Error_Reason'] += "Room Unknown; "
     df_clean.loc[~mask_channel, 'Error_Reason'] += "Channel Unknown; "
 
@@ -242,22 +243,21 @@ def validate_and_save_data(df_to_check, save_to_file=True):
     df_good = df_clean[mask_valid].copy()
     df_bad = df_clean[~mask_valid].copy()
     
-    # ลบคอลัมน์ช่วยคำนวณออกก่อน Save
-    if save_to_file and not df_good.empty:
+    return df_good, df_bad
+
+def save_dataframe_to_file(df_good):
+    if not df_good.empty:
         save_cols = ['Date', 'Room', 'Price', 'Reservation', 'Name', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
         
-        # เอา Date ที่แปลงแล้ว (Date_Parsed) ไปเก็บ หรือเอา Date เดิม?
-        # เอา Date เดิมดีกว่า เพราะถ้าแปลงแล้วอาจเปลี่ยน Format ที่ User ไม่ชอบ
-        # แต่... ถ้า Date เดิมมันเป็น format มั่วๆ การแปลงแล้ว (Date_Parsed) จะ safe กว่า
-        # ตัดสินใจ: ใช้ Date เดิม (Raw) แต่ User ต้องรับผิดชอบ Format เอง
-        # หรือถ้าจะให้ดี ใช้ Date_Parsed ที่แปลงเป็น String ISO
-        df_good['Date'] = df_good['Date_Parsed'].dt.strftime('%Y-%m-%d') # บังคับ ISO Format ลงไฟล์เลย กันเหนียว
+        # จัดการ Date ให้เป็น Format มาตรฐานก่อนลงไฟล์
+        if 'Date_Parsed' in df_good.columns:
+             df_good['Date'] = df_good['Date_Parsed'].dt.strftime('%Y-%m-%d')
         
         final_cols = [c for c in save_cols if c in df_good.columns]
         df_good[final_cols].to_csv(DATA_FILE, index=False)
         st.cache_data.clear()
-        
-    return df_good, df_bad
+        return True
+    return False
 
 def retrain_system():
     status_text = st.empty()
@@ -265,12 +265,11 @@ def retrain_system():
     try:
         status_text.text("⏳ Reading & Cleaning data...")
         df_raw = load_raw_data()
-        df = process_data_for_dashboard(df_raw) # ใช้ฟังก์ชัน Process ที่มี Date_Obj
+        df = process_data_for_dashboard(df_raw)
         
-        # ใช้ Date_Obj แทน Date ปกติในการกรอง
         if df.empty: return False, 0
         df = df.dropna(subset=['Price', 'Night', 'Date_Obj'])
-        df['Date'] = df['Date_Obj'] # คืนค่าให้คอลัมน์ Date หลัก
+        df['Date'] = df['Date_Obj']
 
         df['Night'] = df['Night'].fillna(1)
         df['Adults'] = df['Adults'].fillna(2)
@@ -359,9 +358,7 @@ else:
     def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
         
-        # 🔥 SECTION: DATA HEALTH CHECK (โชว์ความจริง)
         total_rows = len(df_raw)
-        # เช็คจาก Date_Obj ที่ process แล้ว
         if 'Date_Obj' in df_dash.columns:
             valid_rows = len(df_dash.dropna(subset=['Date_Obj']))
         else:
@@ -369,12 +366,12 @@ else:
         bad_rows = total_rows - valid_rows
         
         c1, c2, c3 = st.columns(3)
-        c1.metric("📂 ข้อมูลทั้งหมดในไฟล์", f"{total_rows:,}")
-        c2.metric("✅ ข้อมูลที่สมบูรณ์ (มีวันที่)", f"{valid_rows:,}")
-        c3.metric("⚠️ ข้อมูลที่ไม่มีวันที่ (ถูกซ่อน)", f"{bad_rows:,}", delta_color="inverse")
+        c1.metric("📂 ข้อมูลทั้งหมด", f"{total_rows:,}")
+        c2.metric("✅ ข้อมูลที่สมบูรณ์", f"{valid_rows:,}")
+        c3.metric("⚠️ ข้อมูลที่มีปัญหา", f"{bad_rows:,}", delta_color="inverse")
         
         if bad_rows > 0:
-            with st.expander(f"🔎 ดูรายการข้อมูลที่ไม่มีวันที่ ({bad_rows} รายการ)"):
+            with st.expander(f"🔎 ดูรายการข้อมูลที่มีปัญหา ({bad_rows} รายการ)"):
                 st.warning("รายการเหล่านี้ Date เป็น NaN หรือ Parse ไม่ได้")
                 if 'Date_Obj' in df_dash.columns:
                     st.dataframe(df_raw[df_dash['Date_Obj'].isna()])
@@ -384,19 +381,18 @@ else:
         if valid_rows == 0: st.error("ไม่พบข้อมูลที่สมบูรณ์สำหรับแสดงกราฟ"); return
 
         df_filtered = df_dash.dropna(subset=['Date_Obj']).copy()
-        # คืนค่า Date สำหรับโชว์
         df_filtered['Date'] = df_filtered['Date_Obj']
 
-        with st.expander("🔎 Filter Data (ตัวกรองกราฟ)", expanded=True):
+        with st.expander("🔎 Filter Data", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
             if not df_filtered.empty:
                 years = sorted(df_filtered['Year'].dropna().unique())
                 year_opts = ['All'] + [str(int(y)) for y in years]
-                with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
+                with f_col1: sel_year = st.selectbox("📅 Select Year", year_opts)
                 
                 months = sorted(df_filtered['month'].dropna().unique())
                 month_opts = ['All'] + [datetime(2024, int(m), 1).strftime('%B') for m in months]
-                with f_col2: sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
+                with f_col2: sel_month_str = st.selectbox("🗓️ Select Month", month_opts)
 
                 if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
                 if sel_month_str != 'All':
@@ -443,7 +439,7 @@ else:
             st.plotly_chart(px.bar(mt_room, x='M_Name', y='Price', color=group_col), use_container_width=True)
 
         st.divider()
-        st.subheader("📋 Raw Data Explorer (Filtered)")
+        st.subheader("📋 Raw Data Explorer")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     def show_manage_data_page():
@@ -468,30 +464,31 @@ else:
                             merged_df = pd.concat([old_df, new_df], ignore_index=True)
                         else: merged_df = new_df
                         
-                        good_df, bad_df = validate_and_save_data(merged_df, save_to_file=True)
+                        # Validate but don't force save
+                        good_df, bad_df = validate_data_only(merged_df)
                         
                         if not bad_df.empty:
                             st.warning(f"⚠️ พบข้อมูลที่ไม่ถูกต้อง {len(bad_df)} รายการ")
-                            with st.expander("🔴 ดูรายการที่ถูกตัดออก (พร้อมสาเหตุ)"): 
+                            with st.expander("🔴 ดูรายการที่ถูกตัดออก"): 
                                 st.dataframe(bad_df[['Date', 'Room', 'Reservation', 'Error_Reason']])
-                        
-                        st.success(f"✅ บันทึกข้อมูลที่ถูกต้อง {len(good_df)} รายการ เรียบร้อย!")
-                        time.sleep(1); st.rerun()
+                            
+                            # Ask user what to do
+                            if st.button("🚨 ยืนยันบันทึกเฉพาะ 'ข้อมูลดี' (ข้อมูลเสียจะถูกทิ้ง)"):
+                                save_dataframe_to_file(good_df)
+                                st.success("บันทึกเรียบร้อย!")
+                                time.sleep(1); st.rerun()
+                        else:
+                            # If no bad data, save immediately
+                            save_dataframe_to_file(good_df)
+                            st.success(f"✅ บันทึกข้อมูลที่ถูกต้อง {len(good_df)} รายการ เรียบร้อย!")
+                            time.sleep(1); st.rerun()
                     except Exception as e: st.error(f"Error: {e}")
 
             st.divider()
-            st.subheader("2. แก้ไขข้อมูล (Gatekeeper Mode)")
-            st.info("💡 ระบบจะตรวจสอบวันที่, ห้อง, และช่องทางก่อนบันทึก")
+            st.subheader("2. แก้ไขข้อมูล (Safe Mode)")
+            st.info("💡 ระบบจะตรวจสอบความถูกต้องก่อนบันทึกจริง (ข้อมูลจะไม่หายจนกว่าจะยืนยัน)")
             
-            # โหลดแบบ Raw String
             df_current = load_raw_data() 
-            
-            # ไม่แปลง Date ที่นี่ ปล่อยให้ Editor จัดการแบบ String หรือถ้าจะให้ดีแปลงเป็น datetime ให้ editor
-            # แต่ถ้าแปลงแล้ว Error จะเป็น NaT -> User จะเห็นช่องว่าง
-            # ลองแปลงดู ถ้า NaT User ต้องกรอกใหม่
-            if 'Date' in df_current.columns:
-                df_current['Date'] = pd.to_datetime(df_current['Date'], dayfirst=True, errors='coerce')
-
             edited_df = st.data_editor(
                 df_current,
                 num_rows="dynamic",
@@ -506,22 +503,32 @@ else:
             col_save, col_reset = st.columns([1, 4])
             
             with col_save:
-                if st.button("💾 บันทึกการเปลี่ยนแปลง (Save & Filter)", type="primary"):
-                    try:
-                        good_df, bad_df = validate_and_save_data(edited_df, save_to_file=True)
+                # ปุ่ม "ตรวจสอบ" ก่อน Save
+                if st.button("🔍 ตรวจสอบและบันทึก (Check & Save)", type="primary"):
+                    good_df, bad_df = validate_data_only(edited_df)
+                    
+                    if not bad_df.empty:
+                        st.error(f"⛔ เจอข้อผิดพลาด {len(bad_df)} รายการ! (ยังไม่ได้บันทึก)")
+                        st.dataframe(bad_df[['Date', 'Room', 'Reservation', 'Error_Reason']])
+                        st.warning("⚠️ ถ้าคุณต้องการบันทึก คุณต้องกดปุ่มยืนยันด้านล่าง (ข้อมูลเสียจะหายไป)")
                         
-                        if not bad_df.empty:
-                            st.error(f"🚫 ระบบลบข้อมูลที่ไม่ถูกต้องออก {len(bad_df)} รายการ")
-                            with st.expander("🔴 ดูรายการที่ถูกลบ (พร้อมสาเหตุ)"): 
-                                # โชว์เฉพาะคอลัมน์สำคัญ + Error Reason
-                                show_cols = ['Date', 'Room', 'Reservation', 'Error_Reason']
-                                st.dataframe(bad_df[[c for c in show_cols if c in bad_df.columns]])
-                        
-                        st.success(f"✅ บันทึกข้อมูลที่ถูกต้อง {len(good_df)} รายการ สำเร็จ!")
+                        # เก็บ state ไว้รอปุ่ม confirm (หรือให้ user กดปุ่มแยก)
+                        # เพื่อความง่าย แสดงปุ่ม Confirm ตรงนี้เลย
+                        st.session_state['pending_save'] = True
+                        st.session_state['pending_good_df'] = good_df
+                    else:
+                        save_dataframe_to_file(good_df)
+                        st.success("✅ บันทึกสมบูรณ์ (ไม่มีข้อผิดพลาด)")
                         time.sleep(1); st.rerun()
-                        
-                    except Exception as e:
-                        st.error(f"Save Error: {e}")
+
+                # ปุ่ม Confirm Save (แสดงเฉพาะเมื่อมี Error รออยู่)
+                if st.session_state.get('pending_save'):
+                    if st.button("🚨 ยืนยันบันทึก (ยอมทิ้งข้อมูลเสีย)"):
+                        save_dataframe_to_file(st.session_state['pending_good_df'])
+                        del st.session_state['pending_save']
+                        del st.session_state['pending_good_df']
+                        st.success("บันทึกแล้ว (ลบข้อมูลเสียทิ้ง)")
+                        time.sleep(1); st.rerun()
             
             with col_reset:
                 if st.button("🧨 ล้างข้อมูลทั้งหมด (Hard Reset)"):
