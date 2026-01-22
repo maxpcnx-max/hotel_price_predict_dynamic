@@ -114,7 +114,7 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 3. BACKEND SYSTEM (FIXED LOGIC)
+# 3. BACKEND SYSTEM
 # ==========================================================
 
 @st.cache_data
@@ -126,15 +126,13 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # 1. Date Processing (Allow Invalid Dates in Raw Data)
+        # 1. Date Processing
         if 'Date' in df.columns:
-            # แปลงเป็น Datetime แต่ถ้าผิดพลาดให้เป็น NaT (แต่ไม่ Error)
+            # ใช้ errors='coerce' แต่ห้าม dropna ทันที
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             
-            # 🔥 CRITICAL FIX: ไม่ Dropna ทิ้ง! เก็บข้อมูลดิบไว้ทั้งหมด
-            # สร้าง Mask เพื่อคำนวณ Feature เฉพาะแถวที่มีวันที่ถูกต้อง
+            # คำนวณ Feature เฉพาะแถวที่มีวันที่ถูกต้อง (ไม่ลบแถวที่ผิดทิ้ง)
             mask_valid = df['Date'].notna()
-            
             df.loc[mask_valid, 'is_weekend'] = df.loc[mask_valid, 'Date'].dt.weekday.isin([5, 6]).astype(int)
             df.loc[mask_valid, 'Year'] = df.loc[mask_valid, 'Date'].dt.year.astype(int)
             df.loc[mask_valid, 'month'] = df.loc[mask_valid, 'Date'].dt.month
@@ -164,8 +162,6 @@ def load_data():
             df['Target_Room_Type'] = df['Room']
         
         df['Reservation'] = df['Reservation'].fillna('Unknown')
-        
-        # ลบคอลัมน์ที่ซ้ำ
         df = df.loc[:, ~df.columns.duplicated()]
         
         return df
@@ -204,7 +200,6 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                 current_df = pd.read_csv(DATA_FILE)
                 if 'Room' in current_df.columns: current_df['Room'] = current_df['Room'].astype(str)
                 
-                # ลบคอลัมน์คำนวณก่อน Merge เพื่อไม่ให้ซ้ำ
                 cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'Target_Room_Type']
                 current_df = current_df.drop(columns=[c for c in cols_to_drop if c in current_df.columns], errors='ignore')
                 
@@ -235,8 +230,7 @@ def retrain_system():
             st.error("ไม่พบข้อมูลสำหรับเทรนโมเดล")
             return False, 0
         
-        # กรองเฉพาะข้อมูลที่พร้อมสำหรับ Train (ตรงนี้กรองได้ เพราะ Train ต้องใช้ข้อมูลดี)
-        # แต่ load_data หลักจะไม่กรอง
+        # กรองเฉพาะข้อมูลที่พร้อมสำหรับ Train
         df = df.dropna(subset=['Price', 'Night', 'Date'])
         
         df['Night'] = df['Night'].fillna(1)
@@ -343,27 +337,27 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    # โหลด Data มาก่อน (แบบไม่ตัดข้อมูล)
+    # โหลด Data มาก่อน
     df_raw = load_data() 
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
-def show_dashboard_page():
+    def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
         if df_raw.empty: st.warning("No Data Found"); return
 
-        # 🔥 Fix 1: กรองเฉพาะข้อมูลที่มีวันที่สมบูรณ์
+        # 🔥 Fix: กรองเฉพาะข้อมูลที่มีวันที่สมบูรณ์สำหรับแสดงกราฟ
         df_filtered = df_raw.dropna(subset=['Date']).copy()
 
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
             
-            # 🔥 Fix 2: บังคับแปลงเป็น Int เพื่อแก้ปัญหาทศนิยม (เช่น 2024.0 -> 2024)
+            # 🔥 Fix: แปลงเป็น Int เพื่อแก้ปัญหาทศนิยม
             unique_years = df_filtered['Year'].dropna().unique()
             all_years = sorted([int(y) for y in unique_years])
             year_opts = ['All'] + [str(y) for y in all_years]
             with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
             
-            # 🔥 Fix 3: บังคับแปลงเป็น Int ก่อนเข้า datetime (เช่น 1.0 -> 1)
+            # 🔥 Fix: แปลงเป็น Int ก่อนเข้า datetime
             unique_months = df_filtered['month'].dropna().unique()
             all_months = sorted([int(m) for m in unique_months if 1 <= m <= 12])
             month_opts = ['All'] + [datetime(2024, m, 1).strftime('%B') for m in all_months]
@@ -402,7 +396,6 @@ def show_dashboard_page():
             with c2:
                 st.subheader("Revenue vs Booking Trend")
                 monthly = df_filtered.groupby('month').agg({'Price': 'sum', 'Room': 'count'}).reset_index().sort_values('month')
-                # แปลงเดือนเป็นชื่อเดือน (ต้องแปลงเป็น int ก่อน)
                 monthly['M_Name'] = monthly['month'].astype(int).apply(lambda x: datetime(2024, x, 1).strftime('%b'))
                 fig2 = make_subplots(specs=[[{"secondary_y": True}]])
                 fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
@@ -458,7 +451,7 @@ def show_dashboard_page():
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     # ==========================================================
-    # 🌟 MANAGE DATA PAGE (FIXED: Save Raw Data Only)
+    # 🌟 MANAGE DATA PAGE (FIXED INDENTATION)
     # ==========================================================
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
@@ -480,7 +473,7 @@ def show_dashboard_page():
             st.subheader("2. ตรวจสอบและแก้ไขข้อมูล")
             st.info("💡 ข้อมูลทุกแถวจะแสดงที่นี่ (รวมถึงแถวที่วันที่ไม่สมบูรณ์) เพื่อให้คุณแก้ไขได้")
             
-            # โหลดข้อมูล (load_data ตัวใหม่ที่แก้แล้ว)
+            # โหลดข้อมูล
             df_current = load_data()
             
             if not df_current.empty:
@@ -488,7 +481,7 @@ def show_dashboard_page():
                     df_current,
                     num_rows="dynamic",
                     use_container_width=True,
-                    key="booking_editor_unique", # 🔥 Unique Key แก้บั๊ก Duplicate
+                    key="booking_editor_unique",
                     column_config={
                         "Date": st.column_config.DateColumn("Check-in Date", format="DD/MM/YYYY"),
                         "Price": st.column_config.NumberColumn("Price (THB)", format="%d"),
@@ -504,7 +497,7 @@ def show_dashboard_page():
                             # 1. รับค่าจากตารางตรงๆ (Raw)
                             df_to_save = edited_df.copy()
 
-                            # 2. Handle Date Format (จัด Format แต่ห้าม Dropna)
+                            # 2. Handle Date Format
                             if 'Date' in df_to_save.columns:
                                 df_to_save['Date'] = pd.to_datetime(df_to_save['Date'], dayfirst=True, errors='ignore')
 
@@ -543,7 +536,7 @@ def show_dashboard_page():
                 df_prices,
                 num_rows="dynamic",
                 use_container_width=True,
-                key="price_editor_unique", # 🔥 Unique Key
+                key="price_editor_unique", 
                 column_config={
                     "Base Price": st.column_config.NumberColumn("Price", format="%d THB")
                 }
