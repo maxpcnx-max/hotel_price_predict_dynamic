@@ -92,10 +92,14 @@ if 'username' not in st.session_state: st.session_state['username'] = ""
 # ==========================================================
 # 2. DATABASE
 # ==========================================================
+# ==========================================================
+# 2. DATABASE
+# ==========================================================
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)')
+    # เช็คว่ามี admin หรือยัง ถ้าไม่มีให้สร้าง
     c.execute('SELECT * FROM users WHERE username = "admin"')
     if not c.fetchone():
         c.execute('INSERT INTO users VALUES (?,?)', ("admin", "1234"))
@@ -110,15 +114,7 @@ def login_user(username, password):
     conn.close()
     return data
 
-def register_user(username, password):
-    try:
-        conn = sqlite3.connect(DB_FILE)
-        c = conn.cursor()
-        c.execute('INSERT INTO users VALUES (?,?)', (username, password))
-        conn.commit()
-        conn.close()
-        return True
-    except sqlite3.IntegrityError: return False
+# --- ลบ function register_user ทิ้งไปได้เลยครับ ---
 
 init_db()
 
@@ -330,23 +326,28 @@ def retrain_system():
 # ==========================================================
 
 def login_page():
+    # CSS จัดกลางเหมือนเดิม
     st.markdown("""<style>.stTextInput > div > div > input {text-align: center;}</style>""", unsafe_allow_html=True)
+    
     col1, col2, col3 = st.columns([1,2,1])
     with col2:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=120)
         st.title("🔒 Login System")
         st.markdown("ระบบการพยากรณ์ราคาห้องพัก (Hotel Price Forecasting System)")
-        tab_log, tab_reg = st.tabs(["Login", "Register"])
-        with tab_log:
-            u = st.text_input("Username"); p = st.text_input("Password", type="password")
-            if st.button("Login", type="primary", use_container_width=True):
-                if login_user(u, p): st.session_state['logged_in'] = True; st.session_state['username'] = u; st.rerun()
-                else: st.error("Invalid Login")
-        with tab_reg:
-            nu = st.text_input("New User"); np = st.text_input("New Pass", type="password")
-            if st.button("Register", use_container_width=True):
-                if register_user(nu, np): st.success("Success!")
-                else: st.error("Exists")
+        
+        st.divider() # ขีดเส้นคั่นเล็กน้อยเพื่อความสวยงาม
+        
+        # ส่วน Login เพียวๆ ไม่ต้องมี Tab
+        u = st.text_input("Username")
+        p = st.text_input("Password", type="password")
+        
+        if st.button("Login", type="primary", use_container_width=True):
+            if login_user(u, p): 
+                st.session_state['logged_in'] = True
+                st.session_state['username'] = u
+                st.rerun()
+            else: 
+                st.error("Invalid Username or Password")
 
 if not st.session_state['logged_in']:
     login_page()
@@ -797,4 +798,5 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
