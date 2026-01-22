@@ -766,63 +766,17 @@ else:
                         st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
 
     def show_model_insight_page():
-        st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Model Factor Analysis)")
-        st.markdown("แสดงค่าความสำคัญของตัวแปร (Feature Importance Scores) จากการเรียนรู้ของ AI")
-
-        # 1. ดึงค่าจริงจากโมเดล (Dynamic Data)
-        # ถ้ายังไม่มีการ Retrain จะใช้ค่า Default ที่เราตั้งไว้ตอนแรก
+        st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Dynamic Insight)")
         imp_data = metrics.get('importance', DEFAULT_METRICS['importance'])
-
-        # 2. สร้างตัวแปลงชื่อเป็นภาษาไทย (Mapping)
-        name_mapping = {
-            'Night': 'Night (จำนวนคืน)',
-            'Reservation': 'Reservation (ช่องทางการจอง)',
-            'Month': 'Month (เดือนที่เข้าพัก)',
-            'Is Weekend': 'Is Weekend (วันหยุดสุดสัปดาห์)',
-            'Room Type': 'Room Type (ประเภทห้องพัก)',
-            'Weekday': 'Weekday (วันในสัปดาห์)',
-            'Guests': 'Total Guests (ผู้เข้าพักรวม)',
-            'Is Holiday': 'Is Holiday (วันหยุดนักขัตฤกษ์)'
-        }
-
-        # 3. แปลงข้อมูลให้เป็น DataFrame และเปลี่ยนชื่อ
-        data_list = []
-        for key, value in imp_data.items():
-            # ใช้ชื่อไทย ถ้าหาไม่เจอใช้ชื่อเดิมภาษาอังกฤษ
-            th_name = name_mapping.get(key, key) 
-            data_list.append({'Feature': th_name, 'Importance': value})
-
-        fi_df = pd.DataFrame(data_list)
-        fi_df = fi_df.sort_values('Importance', ascending=True) # Sort เพื่อให้กราฟสวย
-
+        fi_df = pd.DataFrame(list(imp_data.items()), columns=['Feature', 'Importance']).sort_values('Importance', ascending=True)
         st.divider()
-        st.subheader("กราฟแสดงน้ำหนักความสำคัญของตัวแปร (Dynamic)")
-
-        # Plotting
-        fig = px.bar(fi_df, x='Importance', y='Feature', orientation='h', 
-                     title='Feature Importance Score (อัปเดตล่าสุด)',
-                     text_auto='.4f', 
-                     color='Importance', 
-                     color_continuous_scale='Blues')
-        
-        st.plotly_chart(fig, use_container_width=True)
-
-        # แสดงตารางคู่กัน
-        with st.expander("ดูข้อมูลแบบตาราง (Table View)", expanded=True):
-            display_df = fi_df.sort_values('Importance', ascending=False)
-            display_df['Percentage'] = (display_df['Importance'] * 100).map('{:.2f}%'.format)
-            st.dataframe(display_df, use_container_width=True)
-
-        # คำอธิบายเพิ่มเติม (หาตัวมากสุดมาโชว์อัตโนมัติ)
-        if not display_df.empty:
-            top_1 = display_df.iloc[0]
-            top_2 = display_df.iloc[1] if len(display_df) > 1 else display_df.iloc[0]
-            
-            st.info(f"""
-            **💡 ข้อสังเกตจาก AI:**
-            * **{top_1['Feature']}:** มีผลต่อราคามากที่สุด ({top_1['Percentage']})
-            * **{top_2['Feature']}:** มีผลรองลงมา ({top_2['Percentage']})
-            """)
+        c1, c2 = st.columns([2, 1])
+        with c1:
+            st.subheader("📊 กราฟความสำคัญ")
+            st.plotly_chart(px.bar(fi_df, x='Importance', y='Feature', orientation='h', text_auto='.4f', color='Importance', color_continuous_scale='Blues'), use_container_width=True)
+        with c2:
+            st.subheader("📋 ตารางข้อมูล")
+            st.dataframe(fi_df.sort_values('Importance', ascending=False), use_container_width=True, height=400)
 
     def show_about_page():
         st.title("ℹ️ เกี่ยวกับระบบ / ผู้จัดทำ")
@@ -855,4 +809,3 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
