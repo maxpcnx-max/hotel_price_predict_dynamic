@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Architect Fix)",
+    page_title="Hotel Price Forecasting System (Final Fix)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -52,35 +52,12 @@ DEFAULT_BASE_PRICES = {
     'Standard Room': 1000
 }
 
-# 🔥 CONSTANT: รายชื่อคอลัมน์ที่เป็น RAW DATA จริงๆ (Schema หลัก)
-# ห้ามมี Year, Month, is_weekend, Target_Room_Type ในนี้เด็ดขาด!
+# 🔥 กำหนดโครงสร้างคอลัมน์มาตรฐานของไฟล์ CSV (Schema)
+# เพื่อป้องกันคอลัมน์ขยะ (เช่น Year, month, Target_Room_Type) ปนเปื้อนลงไฟล์
 RAW_COLS = [
     'Date', 'Room', 'Price', 'Reservation', 'Name', 
     'Night', 'Adults', 'Children', 'Infants', 'Extra Person'
 ]
-
-# --- Helper Functions ---
-def load_base_prices():
-    if not os.path.exists(BASE_PRICE_FILE):
-        with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
-            json.dump(DEFAULT_BASE_PRICES, f, ensure_ascii=False, indent=4)
-        return DEFAULT_BASE_PRICES
-    try:
-        with open(BASE_PRICE_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
-    except:
-        return DEFAULT_BASE_PRICES
-
-def save_base_prices(price_dict):
-    with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
-        json.dump(price_dict, f, ensure_ascii=False, indent=4)
-
-def get_base_price(room_text):
-    if not isinstance(room_text, str): return 0
-    prices = load_base_prices()
-    for key in prices:
-        if key in room_text: return prices[key]
-    return 0
 
 DEFAULT_METRICS = {'xgb': {'mae': 0, 'r2': 0}, 'lr': {'mae': 0, 'r2': 0}, 'importance': {}}
 
@@ -111,13 +88,38 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 3. BACKEND SYSTEM (Separation of Concerns)
+# 3. HELPER FUNCTIONS (แยกส่วน Load, Save, Process ชัดเจน)
 # ==========================================================
 
+def load_base_prices():
+    if not os.path.exists(BASE_PRICE_FILE):
+        with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
+            json.dump(DEFAULT_BASE_PRICES, f, ensure_ascii=False, indent=4)
+        return DEFAULT_BASE_PRICES
+    try:
+        with open(BASE_PRICE_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return DEFAULT_BASE_PRICES
+
+def save_base_prices(price_dict):
+    with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
+        json.dump(price_dict, f, ensure_ascii=False, indent=4)
+
+def get_base_price(room_text):
+    if not isinstance(room_text, str): return 0
+    prices = load_base_prices()
+    for key in prices:
+        if key in room_text: return prices[key]
+    return 0
+
 @st.cache_data
-def load_raw_data():
+def load_raw_data_for_edit():
     """
-    ✅ FIX 1: โหลดเฉพาะข้อมูลดิบ ห้าม Merge ห้ามสร้าง Feature
+    ✅ ฟังก์ชันนี้: อ่าน CSV ดิบๆ เพื่อเอาไปใส่ใน Editor
+    - ห้าม Merge
+    - ห้ามคำนวณ Year/Month
+    - ห้าม Dropna (เดี๋ยว User แก้เอง)
     """
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
@@ -126,48 +128,48 @@ def load_raw_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # กรองเอาเฉพาะคอลัมน์ Raw ที่ระบบรู้จัก (ตัดคอลัมน์ขยะทิ้งตั้งแต่ตอนอ่าน)
-        existing_cols = [c for c in RAW_COLS if c in df.columns]
-        df = df[existing_cols]
-        
-        # แปลง Date เพื่อให้ Editor แสดง DatePicker ได้ (แต่ห้าม dropna)
+        # กรองเอาเฉพาะคอลัมน์มาตรฐาน (กันไฟล์บวม)
+        cols_exist = [c for c in RAW_COLS if c in df.columns]
+        df = df[cols_exist]
+
+        # แปลง Date เป็น datetime เพื่อให้ Editor แสดง DatePicker ได้
+        # ใช้ errors='coerce' เพื่อให้ค่าผิดกลายเป็น NaT (ว่างๆ) แต่อย่าเพิ่งลบทิ้ง ให้ User เห็นและแก้
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
         
-        # แปลง Room เป็น String
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
-
+            
         return df
     except Exception as e:
-        st.error(f"Load Error: {e}")
+        # st.error(f"Error loading raw data: {e}")
         return pd.DataFrame(columns=RAW_COLS)
 
 def process_data_for_analytics(df_raw):
     """
-    ✅ NEW FUNCTION: สร้าง Feature + Merge ตรงนี้เท่านั้น
-    ใช้สำหรับ Dashboard และ Retrain
+    ✅ ฟังก์ชันนี้: รับข้อมูลดิบ -> ปรุงรส (Merge, สร้าง Feature)
+    - ใช้สำหรับ Dashboard และ Retrain เท่านั้น
+    - ไม่กระทบไฟล์จริง
     """
     if df_raw.empty: return df_raw
-    
     df = df_raw.copy()
     
-    # 1. Date Features
+    # 1. จัดการ Date
     if 'Date' in df.columns:
-        # สำหรับ Analytics เราต้องการวันที่สมบูรณ์
-        mask_valid = df['Date'].notna()
-        df.loc[mask_valid, 'is_weekend'] = df.loc[mask_valid, 'Date'].dt.weekday.isin([5, 6]).astype(int)
-        df.loc[mask_valid, 'Year'] = df.loc[mask_valid, 'Date'].dt.year.astype(int)
-        df.loc[mask_valid, 'month'] = df.loc[mask_valid, 'Date'].dt.month
-        df.loc[mask_valid, 'weekday'] = df.loc[mask_valid, 'Date'].dt.weekday
+        # สำหรับการคำนวณ เราต้องตัดแถวที่วันที่เสียทิ้ง
+        df = df.dropna(subset=['Date'])
+        df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
+        df['Year'] = df['Date'].dt.year.astype(int)
+        df['month'] = df['Date'].dt.month
+        df['weekday'] = df['Date'].dt.weekday
     
-    # 2. Merge Master Data
+    # 2. Merge Master Data (Room Type)
     if os.path.exists(ROOM_FILE):
         try:
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
             
-            # Map Room Type
+            # Merge
             if 'Target_Room_Type' in room_type.columns:
                 df = df.merge(room_type[['Room', 'Target_Room_Type']], on='Room', how='left')
             elif 'Room_Type' in room_type.columns:
@@ -175,7 +177,7 @@ def process_data_for_analytics(df_raw):
                 df = df.merge(room_type[['Room', 'Target_Room_Type']], on='Room', how='left')
         except: pass
     
-    # 3. Fill Missing Logic
+    # 3. Fill Missing Target Room
     if 'Target_Room_Type' in df.columns:
         df['Target_Room_Type'] = df['Target_Room_Type'].fillna(df['Room'])
     else:
@@ -187,41 +189,45 @@ def process_data_for_analytics(df_raw):
 def load_system_models():
     for name, file in MODEL_FILES.items():
         if not os.path.exists(file): return None, None, None, None, None
-
     xgb = joblib.load(MODEL_FILES['xgb'])
     lr = joblib.load(MODEL_FILES['lr'])
     le_room = joblib.load(MODEL_FILES['le_room'])
     le_res = joblib.load(MODEL_FILES['le_res'])
-    
     if os.path.exists(METRICS_FILE):
         with open(METRICS_FILE, 'r') as f: metrics = json.load(f)
     else: metrics = DEFAULT_METRICS
-        
     return xgb, lr, le_room, le_res, metrics
 
-# ฟังก์ชัน Merge แบบโง่ๆ (Dumb Merge) - Save เฉพาะ Raw Columns
-def dumb_merge_save(uploaded_file):
+# ฟังก์ชัน Save แบบ "Dumb Save" (เหมือน Base Price)
+def dumb_save_csv(df_to_save):
+    try:
+        # ตัดคอลัมน์ส่วนเกินออก (พวก Year, Month ที่อาจติดมา) ให้เหลือแค่ RAW_COLS
+        final_cols = [c for c in RAW_COLS if c in df_to_save.columns]
+        df_clean = df_to_save[final_cols]
+        
+        # บันทึกทับไฟล์เดิม
+        df_clean.to_csv(DATA_FILE, index=False)
+        st.cache_data.clear()
+        return True
+    except Exception as e:
+        st.error(f"Save Error: {e}")
+        return False
+
+# ฟังก์ชัน Merge แบบ "Dumb Merge" (ต่อตูดไฟล์)
+def dumb_merge_csv(uploaded_file):
     try:
         new_df = pd.read_csv(uploaded_file)
-        
-        # Clean ให้เหลือแค่ Raw Columns ก่อน Merge
+        # Clean colums ก่อน
         valid_cols = [c for c in RAW_COLS if c in new_df.columns]
         new_df = new_df[valid_cols]
         
         if os.path.exists(DATA_FILE):
             old_df = pd.read_csv(DATA_FILE)
-            # เอามาต่อกันเลย
             merged_df = pd.concat([old_df, new_df], ignore_index=True)
         else:
             merged_df = new_df
             
-        # ✅ FIX 2: Save เฉพาะ Raw Columns เท่านั้น
-        final_cols = [c for c in RAW_COLS if c in merged_df.columns]
-        merged_df = merged_df[final_cols]
-        
-        merged_df.to_csv(DATA_FILE, index=False)
-        st.cache_data.clear()
-        return True
+        return dumb_save_csv(merged_df)
     except Exception as e:
         st.error(f"Merge Error: {e}")
         return False
@@ -231,22 +237,17 @@ def retrain_system():
     progress_bar = st.progress(0)
     
     try:
-        status_text.text("⏳ Reading Data...")
-        # 1. โหลด Raw
-        df_raw = load_raw_data()
+        status_text.text("⏳ Reading & Preparing Data...")
+        # 1. อ่าน Raw -> Process
+        df_raw = load_raw_data_for_edit()
+        if df_raw.empty: return False, 0
         
-        if df_raw.empty:
-            st.error("ไม่พบข้อมูล")
-            return False, 0
-
-        status_text.text("⚙️ Processing Features...")
-        # 2. ปรุงรสด้วย Feature Engineering (ทำสดใหม่ทุกครั้ง)
-        df = process_data_for_analytics(df_raw)
+        df = process_data_for_analytics(df_raw) # ได้ Year, Month, Target_Room_Type มาแล้ว
         
-        # 3. Filter Clean Data
+        # 2. Filter Clean Data for Training
         df = df.dropna(subset=['Price', 'Night', 'Date'])
         
-        # ... (Logic การ Train เหมือนเดิม) ...
+        # ... (Feature Engineering Logic เดิม) ...
         df['Night'] = df['Night'].fillna(1)
         df['Adults'] = df['Adults'].fillna(2)
         df['Children'] = df['Children'].fillna(0)
@@ -259,12 +260,13 @@ def retrain_system():
             holidays_csv['Holiday_Date'] = pd.to_datetime(holidays_csv['Holiday_Date'], dayfirst=True, errors='coerce')
             df['is_holiday'] = df['Date'].isin(holidays_csv['Holiday_Date']).astype(int)
         else: df['is_holiday'] = 0
-
+        
         df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
         df['total_guests'] = df[['Adults', 'Children']].sum(axis=1)
         df['month'] = df['Date'].dt.month
         df['weekday'] = df['Date'].dt.weekday
         
+        # Encoders
         le_room_new = LabelEncoder()
         df['Target_Room_Type'] = df['Target_Room_Type'].astype(str)
         df['RoomType_encoded'] = le_room_new.fit_transform(df['Target_Room_Type'])
@@ -274,7 +276,6 @@ def retrain_system():
         df['Reservation_encoded'] = le_res_new.fit_transform(df['Reservation'])
         
         feature_cols = ['Night', 'total_guests', 'is_holiday', 'is_weekend', 'month', 'weekday', 'RoomType_encoded', 'Reservation_encoded']
-        
         X = df[feature_cols].fillna(0)
         y = df['Price']
         
@@ -286,13 +287,12 @@ def retrain_system():
         xgb_new = XGBRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
         xgb_new.fit(X_train, y_train)
         pred_xgb = xgb_new.predict(X_test)
-        new_xgb_mae = mean_absolute_error(y_test, pred_xgb)
         new_xgb_r2 = r2_score(y_test, pred_xgb)
         
         fi_raw = xgb_new.feature_importances_
         col_mapping = {'Night': 'Night', 'total_guests': 'Guests', 'is_holiday': 'Is Holiday', 'is_weekend': 'Is Weekend', 'month': 'Month', 'weekday': 'Weekday', 'RoomType_encoded': 'Room Type', 'Reservation_encoded': 'Reservation'}
         new_importance = {col_mapping.get(col, col): float(val) for col, val in zip(feature_cols, fi_raw)}
-
+        
         lr_new = LinearRegression()
         lr_new.fit(X_train, y_train)
         
@@ -304,18 +304,13 @@ def retrain_system():
         joblib.dump(le_room_new, MODEL_FILES['le_room'])
         joblib.dump(le_res_new, MODEL_FILES['le_res'])
         
-        new_metrics = {
-            'xgb': {'mae': new_xgb_mae, 'r2': new_xgb_r2},
-            'lr':  {'mae': 0, 'r2': 0},
-            'importance': new_importance
-        }
-        with open(METRICS_FILE, 'w') as f: json.dump(new_metrics, f)
+        with open(METRICS_FILE, 'w') as f:
+            json.dump({'xgb': {'mae': 0, 'r2': new_xgb_r2}, 'lr': {'mae': 0, 'r2': 0}, 'importance': new_importance}, f)
             
         st.cache_resource.clear()
         progress_bar.progress(100)
         status_text.success(f"✅ Training Done! R²: {new_xgb_r2:.4f}")
         return True, len(df)
-        
     except Exception as e:
         st.error(f"Retrain Error: {e}")
         return False, 0
@@ -330,7 +325,6 @@ def login_page():
     with col2:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=120)
         st.title("🔒 Login System")
-        st.markdown("ระบบการพยากรณ์ราคาห้องพัก (Hotel Price Forecasting System)")
         st.divider()
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
@@ -345,37 +339,33 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    # โหลด Raw Data
-    df_raw = load_raw_data() 
-    
-    # ถ้าจะใช้ใน Dashboard หรือ Predict ต้อง Process ก่อน
-    # แต่เราทำแยกกันในแต่ละหน้าได้ หรือทำ Global ก็ได้
-    # เพื่อความชัวร์ ให้ process ตอนจะใช้
-    
+    # โหลดโมเดล
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
+    # ----------------------------------------
+    # PAGE 1: DASHBOARD
+    # ----------------------------------------
     def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
+        
+        # 1. โหลดข้อมูลดิบ
+        df_raw = load_raw_data_for_edit()
         if df_raw.empty: st.warning("No Data Found"); return
-
-        # 🔥 Process Data for Dashboard (On-the-fly)
-        # ข้อมูลดิบไม่ถูกแตะต้อง แต่เราสร้างตัวแปรใหม่เพื่อแสดงผล
+        
+        # 2. ปรุงรสข้อมูล (Process) เพื่อใช้กราฟ
         df_dash = process_data_for_analytics(df_raw)
         
-        # กรอง Date ที่เสียทิ้งเฉพาะตอนแสดงกราฟ
+        # 3. กรองข้อมูลแสดงผล (เฉพาะที่มี Date)
         df_filtered = df_dash.dropna(subset=['Date']).copy()
 
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
-            
-            years = df_filtered['Year'].dropna().unique()
-            all_years = sorted([int(y) for y in years])
-            year_opts = ['All'] + [str(y) for y in all_years]
+            years = sorted(df_filtered['Year'].unique().tolist())
+            year_opts = ['All'] + [str(int(y)) for y in years]
             with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
             
-            months = df_filtered['month'].dropna().unique()
-            all_months = sorted([int(m) for m in months if 1<=m<=12])
-            month_opts = ['All'] + [datetime(2024, m, 1).strftime('%B') for m in all_months]
+            months = sorted(df_filtered['month'].unique().tolist())
+            month_opts = ['All'] + [datetime(2024, int(m), 1).strftime('%B') for m in months]
             with f_col2: sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
 
             if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
@@ -424,73 +414,60 @@ else:
             mt_room = df_filtered.groupby(['month', group_col])['Price'].sum().reset_index()
             mt_room['M_Name'] = mt_room['month'].astype(int).apply(lambda x: datetime(2024, x, 1).strftime('%b'))
             st.plotly_chart(px.bar(mt_room, x='M_Name', y='Price', color=group_col), use_container_width=True)
-
+        
         st.divider()
         st.subheader("📋 Raw Data Explorer")
-        with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
+        st.dataframe(df_filtered)
 
-    # ==========================================================
-    # 🌟 MANAGE DATA PAGE (Schema Drift Fixed)
-    # ==========================================================
+    # ----------------------------------------
+    # PAGE 2: MANAGE DATA (แก้ไขจุดนี้ตามสั่ง)
+    # ----------------------------------------
     def show_manage_data_page():
-        st.title("📥 จัดการข้อมูลแบบละเอียด (Raw Data Access)")
-        st.caption("โหมดแก้ไขข้อมูลดิบ: ข้อมูลที่เห็นคือข้อมูลจริงในไฟล์ CSV (ยังไม่ผ่านการ Merge หรือคำนวณ)")
+        st.title("📥 จัดการข้อมูล (Raw Data Editor)")
+        st.caption("โหมดแก้ไขข้อมูลดิบ: Add, Edit, Delete ได้อิสระ แล้วกด Save")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Booking)", "⚙️ ราคาฐาน (Master Data)", "🚀 เทรนโมเดล (Retrain)"])
 
-        # ---------------------------------------------------------
-        # TAB 1: EDIT TRANSACTIONS
-        # ---------------------------------------------------------
+        # TAB 1: BOOKING EDITOR
         with tab_trans:
-            st.markdown("#### 1. นำเข้าไฟล์ (Merge File)")
+            st.markdown("#### 1. นำเข้าไฟล์ (Merge)")
             up_file = st.file_uploader("เลือกไฟล์ CSV ที่จะนำเข้า", type=['csv'])
             if up_file is not None:
-                if st.button("➕ Merge File (ต่อท้ายข้อมูลเดิม)", type="secondary"):
-                    if dumb_merge_save(up_file):
+                if st.button("➕ Merge File (ต่อท้าย)", type="secondary"):
+                    if dumb_merge_csv(up_file):
                         st.success("Merge สำเร็จ! รีโหลดหน้าใหม่...")
-                        time.sleep(1)
-                        st.rerun()
+                        time.sleep(1); st.rerun()
 
             st.divider()
-            st.markdown("#### 2. แก้ไขข้อมูลในตาราง (Add / Edit / Delete)")
-            st.info("แก้ไขข้อมูลได้อิสระ แล้วกดปุ่ม Save ด้านล่างเพื่อบันทึก (บันทึกเฉพาะคอลัมน์มาตรฐาน)")
+            st.markdown("#### 2. แก้ไขตาราง (CRUD)")
             
-            # โหลด Raw Data (ไม่มี Target_Room_Type, ไม่มี Year, ไม่มี Month)
-            df_current = load_raw_data()
+            # 🔥 1. โหลดข้อมูลดิบ (ไม่ปรุงแต่ง) มาใส่ Editor
+            df_current = load_raw_data_for_edit()
             
-            if not df_current.empty:
-                edited_df = st.data_editor(
-                    df_current,
-                    num_rows="dynamic",
-                    use_container_width=True,
-                    key="main_editor",
-                    column_config={
-                        "Date": st.column_config.DateColumn("Check-in Date", format="DD/MM/YYYY"),
-                        "Price": st.column_config.NumberColumn("Price (THB)", format="%d"),
-                    }
-                )
+            # 🔥 2. แสดง Data Editor ให้ User แก้ไขได้เต็มที่
+            edited_df = st.data_editor(
+                df_current,
+                num_rows="dynamic", # อนุญาตให้ Add/Delete Row ได้
+                use_container_width=True,
+                key="booking_editor_crud",
+                column_config={
+                    "Date": st.column_config.DateColumn("Check-in Date", format="DD/MM/YYYY"),
+                    "Price": st.column_config.NumberColumn("Price (THB)", format="%d"),
+                }
+            )
 
-                if st.button("💾 บันทึกข้อมูลทั้งหมด (Save All)", type="primary"):
-                    try:
-                        # ✅ FIX 2: ตัด Column ขยะออกก่อนเซฟ
-                        # ให้เหลือแค่ RAW_COLS ที่เรากำหนดไว้ตอนต้น
-                        cols_to_save = [c for c in RAW_COLS if c in edited_df.columns]
-                        df_to_save = edited_df[cols_to_save]
-                        
-                        df_to_save.to_csv(DATA_FILE, index=False)
-                        st.cache_data.clear()
-                        st.success(f"✅ บันทึกข้อมูลดิบเรียบร้อย (Saved {len(df_to_save)} rows)")
-                        time.sleep(1)
-                        st.rerun()
-                    except Exception as e:
-                        st.error(f"Save Error: {e}")
+            # 🔥 3. ปุ่ม Save แบบ Dumb Save (รับค่าจาก Editor -> เขียนลงไฟล์เลย)
+            if st.button("💾 บันทึกข้อมูลทั้งหมด (Save All)", type="primary"):
+                try:
+                    if dumb_save_csv(edited_df):
+                        st.success(f"✅ บันทึกข้อมูลเรียบร้อย ({len(edited_df)} รายการ)")
+                        time.sleep(1); st.rerun()
+                except Exception as e:
+                    st.error(f"Save Error: {e}")
 
-        # ---------------------------------------------------------
-        # TAB 2: MASTER DATA
-        # ---------------------------------------------------------
+        # TAB 2: MASTER DATA EDITOR (Logic เดิมที่ดีอยู่แล้ว)
         with tab_master:
             st.subheader("⚙️ กำหนดราคาฐาน (Base Prices)")
-            
             current_prices = load_base_prices()
             df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
             
@@ -499,9 +476,7 @@ else:
                 num_rows="dynamic",
                 use_container_width=True,
                 key="price_editor_tab",
-                column_config={
-                    "Base Price": st.column_config.NumberColumn("Price", format="%d THB")
-                }
+                column_config={"Base Price": st.column_config.NumberColumn("Price", format="%d THB")}
             )
             
             if st.button("💾 บันทึกราคาฐาน"):
@@ -512,17 +487,17 @@ else:
                 save_base_prices(new_prices_dict)
                 st.success("✅ อัปเดตราคาฐานเรียบร้อย!")
 
-        # ---------------------------------------------------------
         # TAB 3: RETRAIN
-        # ---------------------------------------------------------
         with tab_train:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain)")
             st.write(f"Current Accuracy (R²): {metrics['xgb']['r2']:.4f}")
-            
             if st.button("🚀 Start Retraining", type="primary"):
                 success, count = retrain_system()
-                if success: st.success(f"Done! Trained on {count} valid rows."); time.sleep(1); st.rerun()
+                if success: st.success(f"Done! Trained on {count} rows."); time.sleep(1); st.rerun()
 
+    # ----------------------------------------
+    # PAGE 3: PREDICTION
+    # ----------------------------------------
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         if xgb_model is None: st.error("❌ Model not found (Please Retrain first)"); return
@@ -587,7 +562,6 @@ else:
             if st.button("🚀 คำนวณราคา (Predict)", type="primary", use_container_width=True):
                 if selected_room_val == "All" or selected_res_val == "All":
                     st.info(f"📊 รายงานผลการพยากรณ์รวม")
-                    # (Logic Batch แบบย่อ)
                     st.warning("Batch Predict Mode available in full version")
                 else:
                     try:
@@ -609,6 +583,14 @@ else:
                         c_res1, c_res2 = st.columns(2)
                         with c_res1: st.metric("XGBoost Price", f"{p_xgb:,.0f} THB", f"Floor: {floor_p:,.0f}")
                         with c_res2: st.metric("Linear Price", f"{p_lr:,.0f} THB")
+                        
+                        extra_guests = guests + 1
+                        r2c1, r2c2 = st.columns(2)
+                        if extra_guests <= max_g:
+                            p_xgb_ex = p_xgb + 500
+                            p_lr_ex = p_lr + 500
+                            with r2c1: st.metric(f"XGBoost (+1 Guest: {extra_guests})", f"{p_xgb_ex:,.0f} THB", "+500")
+                            with r2c2: st.metric(f"Linear (+1 Guest: {extra_guests})", f"{p_lr_ex:,.0f} THB", "+500")
 
                     except Exception as e:
                         st.error(f"Prediction Error: {e} (Try Retraining)")
