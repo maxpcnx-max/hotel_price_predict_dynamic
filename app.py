@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Lite Logic)",
+    page_title="Hotel Price Forecasting System (Day/Month/Year Fixed)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -115,12 +115,12 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 4. DATA HANDLING (LITE PRINCIPLE: Keep All Data)
+# 4. DATA HANDLING (FIXED DATE PARSING)
 # ==========================================================
 
 @st.cache_data
 def load_data():
-    """โหลดข้อมูลทั้งหมดเพื่อแสดงผล (ไม่ตัด Outlier ทิ้ง)"""
+    """โหลดข้อมูลทั้งหมด (ไม่ตัด Outlier)"""
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
@@ -128,8 +128,9 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # 1. Date Processing (จำเป็นต้องทำเพื่อให้กราฟ Time Series ไม่พัง)
+        # --- FIX 1: อ่านวันที่แบบ Day First (DD/MM/YYYY) ---
         if 'Date' in df.columns:
+            # ใช้ dayfirst=True เพื่อบอกว่าเลขตัวหน้าคือ 'วัน'
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             
             # สร้าง Feature พื้นฐานสำหรับกราฟ
@@ -140,7 +141,7 @@ def load_data():
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        # 2. Map Room Type (ถ้ามี) แต่ถ้าหาไม่เจอให้เป็น Unknown (ไม่ตัดแถวทิ้ง)
+        # Map Room Type (ถ้ามี)
         if os.path.exists(ROOM_FILE):
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
@@ -150,11 +151,10 @@ def load_data():
                 if 'Room_Type' in df.columns: df = df.rename(columns={'Room_Type': 'Target_Room_Type'})
                 elif 'Room_Type_y' in df.columns: df = df.rename(columns={'Room_Type_y': 'Target_Room_Type'})
         
-        # Fill missing values for display purposes
         if 'Target_Room_Type' in df.columns:
             df['Target_Room_Type'] = df['Target_Room_Type'].fillna('Unknown')
         else:
-            df['Target_Room_Type'] = df['Room'] # Fallback
+            df['Target_Room_Type'] = df['Room']
             
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         
@@ -162,16 +162,17 @@ def load_data():
     except: return pd.DataFrame()
 
 def save_data_lite(new_df, mode='append'):
-    """บันทึกข้อมูลแบบ Lite (เก็บหมด ไม่สนถูกผิด)"""
+    """บันทึกข้อมูล พร้อมบังคับ Format วันที่"""
     try:
-        # Standardize Date Format
+        # --- FIX 2: แปลงวันที่ก่อนบันทึก (Day First -> Standard YYYY-MM-DD) ---
         if 'Date' in new_df.columns:
+            # ใช้ dayfirst=True ตอนแปลงเพื่อให้เข้าใจ input แบบ 25/6/2025 ถูกต้อง
             new_df['Date'] = pd.to_datetime(new_df['Date'], dayfirst=True, errors='coerce').dt.strftime('%Y-%m-%d')
             
         if mode == 'append':
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
-                # Ensure date format matches
+                # แปลงวันที่ของไฟล์เก่าให้ตรงกันด้วย
                 if 'Date' in current_df.columns:
                     current_df['Date'] = pd.to_datetime(current_df['Date'], dayfirst=True, errors='coerce').dt.strftime('%Y-%m-%d')
                 updated_df = pd.concat([current_df, new_df], ignore_index=True)
@@ -180,7 +181,7 @@ def save_data_lite(new_df, mode='append'):
         else: # overwrite
             updated_df = new_df
 
-        # เลือกเก็บเฉพาะ Column ที่จำเป็นเพื่อความสะอาดของไฟล์
+        # เลือกเก็บเฉพาะ Column ที่จำเป็น
         cols_to_keep = ['Date', 'Room', 'Price', 'Reservation', 'Name', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
         existing_cols = [c for c in cols_to_keep if c in updated_df.columns]
         
@@ -195,7 +196,6 @@ def calculate_historical_avg(df):
     if df.empty: return {}
     df_clean = df.copy()
     if 'Night' not in df_clean.columns: df_clean['Night'] = 1
-    # คำนวณเฉพาะที่มีราคาและจำนวนคืนถูกต้อง
     df_clean = df_clean.dropna(subset=['Price', 'Night'])
     df_clean = df_clean[df_clean['Night'] > 0]
     
@@ -223,7 +223,7 @@ def load_system_models():
     return xgb, lr, le_room, le_res, metrics
 
 # ==========================================================
-# 5. RETRAIN SYSTEM (The Gatekeeper Logic is HERE)
+# 5. RETRAIN SYSTEM (Cleaning Logic)
 # ==========================================================
 def retrain_system():
     status_text = st.empty()
@@ -231,40 +231,35 @@ def retrain_system():
     
     try:
         status_text.text("⏳ Reading data from storage...")
-        df = load_data() # โหลดข้อมูลทั้งหมดมาก่อน
+        df = load_data()
         
         if df.empty:
             st.error("ไม่พบข้อมูลสำหรับเทรนโมเดล")
             return False, 0
             
-        # --- CLEANING PROCESS (ทำเฉพาะตอนเทรน ไม่กระทบไฟล์จริง) ---
         status_text.text("🧹 Cleaning Outliers & Invalid Data for Training...")
         
-        # 1. ตัดแถวที่ไม่มีข้อมูลสำคัญ
+        # Filter Data
         df_clean = df.dropna(subset=['Price', 'Night', 'Date'])
         
-        # 2. ตัดห้องที่ไม่รู้จัก (Unknown Room Type)
         if 'Target_Room_Type' in df_clean.columns:
              df_clean = df_clean[df_clean['Target_Room_Type'] != 'Unknown']
-             
-             # ตัดห้องที่ไม่อยู่ใน Master Price (ถ้ามีไฟล์)
              valid_rooms = set(load_base_prices().keys())
              if valid_rooms:
                  df_clean = df_clean[df_clean['Target_Room_Type'].isin(valid_rooms)]
 
-        # 3. จัดการ Missing Value อื่นๆ
         df_clean['Night'] = df_clean['Night'].fillna(1)
         df_clean['Adults'] = df_clean['Adults'].fillna(2)
         df_clean['Children'] = df_clean['Children'].fillna(0)
         df_clean['Infants'] = df_clean['Infants'].fillna(0)
         df_clean['Extra Person'] = df_clean['Extra Person'].fillna(0)
         
-        # 4. Feature Engineering
         if not os.path.exists("thai_holidays.csv"):
              try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
              except: pass
         if os.path.exists("thai_holidays.csv"):
             holidays_csv = pd.read_csv("thai_holidays.csv")
+            # --- FIX 3: อ่านวันหยุดแบบ Day First ---
             holidays_csv['Holiday_Date'] = pd.to_datetime(holidays_csv['Holiday_Date'], dayfirst=True, errors='coerce')
             df_clean['is_holiday'] = df_clean['Date'].isin(holidays_csv['Holiday_Date']).astype(int)
         else: df_clean['is_holiday'] = 0
@@ -274,22 +269,19 @@ def retrain_system():
         df_clean['month'] = df_clean['Date'].dt.month
         df_clean['weekday'] = df_clean['Date'].dt.weekday
         
-        # 5. Encoding
         le_room_new = LabelEncoder()
         df_clean['RoomType_encoded'] = le_room_new.fit_transform(df_clean['Target_Room_Type'].astype(str))
         le_res_new = LabelEncoder()
         df_clean['Reservation_encoded'] = le_res_new.fit_transform(df_clean['Reservation'].astype(str))
         
-        # 6. Select Features
         feature_cols = ['Night', 'total_guests', 'is_holiday', 'is_weekend', 'month', 'weekday', 'RoomType_encoded', 'Reservation_encoded']
         X = df_clean[feature_cols]
         X = X.fillna(0)
         y = df_clean['Price']
         
         progress_bar.progress(40)
-        status_text.text(f"🏋️‍♂️ Training Model on {len(df_clean)} valid rows (from {len(df)} total)...")
+        status_text.text(f"🏋️‍♂️ Training Model on {len(df_clean)} valid rows...")
         
-        # Train
         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
         
         xgb_new = XGBRegressor(n_estimators=100, learning_rate=0.1, random_state=42)
@@ -471,7 +463,7 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     def show_manage_data_page():
-        st.title("📥 ระบบจัดการฐานข้อมูล (Lite Logic)")
+        st.title("📥 ระบบจัดการฐานข้อมูล (Lite Logic + Date Fix)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ราคาฐาน (Base Price)", "🚀 อัปเดตโมเดล (Retrain)"])
 
