@@ -456,6 +456,7 @@ def show_dashboard_page():
         st.divider()
         st.subheader("📋 Raw Data Explorer")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
+
     # ==========================================================
     # 🌟 MANAGE DATA PAGE (FIXED: Save Raw Data Only)
     # ==========================================================
@@ -772,4 +773,3 @@ def show_dashboard_page():
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
