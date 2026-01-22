@@ -765,7 +765,7 @@ else:
                     else:
                         st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
 
-def show_model_insight_page():
+    def show_model_insight_page():
         st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Model Factor Analysis)")
         st.markdown("แสดงค่าความสำคัญของตัวแปร (Feature Importance Scores) จากการเรียนรู้ของ AI")
 
@@ -855,3 +855,4 @@ def show_model_insight_page():
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
