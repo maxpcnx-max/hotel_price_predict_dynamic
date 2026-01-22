@@ -153,14 +153,15 @@ def load_data():
             df['weekday'] = df['Date'].dt.weekday
             
         if 'Room' in df.columns:
-            # แปลงเป็น string และตัด .0 ทิ้งเพื่อให้ตรงกับ Master Data
+            # แปลงเป็น string และตัด .0 ทิ้งเพื่อให้ตรงกับ Master Data (เผื่อไฟล์เก่ายังเป็นเลข)
             df['Room'] = df['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
-        # 3. Room Type Mapping (เผื่อกรณีข้อมูลเก่าเป็นเลข)
+        # 3. Room Type Mapping (Smart Loading)
         if os.path.exists(ROOM_FILE):
             try:
                 room_type = pd.read_csv(ROOM_FILE)
                 if 'Room' in room_type.columns: 
+                    # Format Master Data ให้ตรงกัน
                     room_type['Room'] = room_type['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 
                 target_col = 'Target_Room_Type'
@@ -169,22 +170,20 @@ def load_data():
                     room_type = room_type.rename(columns={'Room_Type': target_col})
 
                 if target_col in room_type.columns:
-                    # Merge แบบ Left Join
+                    # Merge เพื่อดึงชื่อห้อง
                     df = df.merge(room_type[['Room', target_col]], on='Room', how='left')
-                    
-                    # ถ้า Merge เจอชื่อห้อง (ไม่เป็น NaN) ให้เอาชื่อห้องมาใช้แทน Room เดิมเลย
+                    # ใช้ชื่อห้องจาก Master ถ้ามี
                     df['Room'] = df[target_col].fillna(df['Room'])
             except:
                 pass
         
-        # 4. Filter Outlier
-        # สร้าง Target_Room_Type ให้ครบถ้วน
+        # 4. Filter Outlier & Fill Missing Names
         if 'Target_Room_Type' in df.columns:
             df['Target_Room_Type'] = df['Target_Room_Type'].fillna(df['Room'])
         else:
             df['Target_Room_Type'] = df['Room']
             
-        # กรองเฉพาะห้องที่มีใน Base Price (Safety Net สุดท้าย)
+        # กรองเฉพาะห้องที่มีใน Base Price (Safety Net)
         valid_rooms = set(load_base_prices().keys())
         if len(valid_rooms) > 0:
             df = df[df['Target_Room_Type'].isin(valid_rooms)]
@@ -227,12 +226,25 @@ def load_system_models():
     return xgb, lr, le_room, le_res, metrics
 
 def save_uploaded_data_with_cleaning(uploaded_file):
+    """
+    ฟังก์ชันบันทึกข้อมูล พร้อมระบบทำความสะอาดและหน่วงเวลา
+    """
     try:
+        # --- ⏳ หน่วงเวลา 5 วินาที ตามที่ขอ ---
+        progress_text = "กำลังประมวลผลและตรวจสอบความถูกต้อง... (Processing Data)"
+        my_bar = st.progress(0, text=progress_text)
+        for percent_complete in range(100):
+            time.sleep(0.05) # 0.05 * 100 = 5 วินาที
+            my_bar.progress(percent_complete + 1, text=progress_text)
+        my_bar.empty()
+        # ------------------------------------
+
         uploaded_file.seek(0)
         new_data = pd.read_csv(uploaded_file)
         
-        # --- 🔥 1. Prepare Room Column: ตัด .0 ทิ้ง เพื่อให้เป็น Format กลาง (เช่น '1.0' -> '1') ---
+        # --- 🔥 1. Prepare Room Column: ตัด .0 ทิ้ง (สำคัญมาก!) ---
         if 'Room' in new_data.columns: 
+            # แปลง 1.0 -> "1" / 4.1 -> "4.1" เพื่อให้ Format ตรงกับ Master
             new_data['Room'] = new_data['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
         # --- 🛠️ 2. Force Merge with Master Data ---
@@ -251,10 +263,9 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                     # ทำการ Merge
                     merged = new_data.merge(room_master[['Room', target_col]], on='Room', how='left')
                     
-                    # Log เตือนถ้าจับคู่ไม่ได้
+                    # Log Check
                     matched_count = merged[target_col].notnull().sum()
-                    if matched_count < len(new_data):
-                        print(f"DEBUG: จับคู่ชื่อห้องได้ {matched_count}/{len(new_data)} รายการ")
+                    print(f"DEBUG: Merge Success {matched_count}/{len(new_data)}")
                     
                     # เอาชื่อห้องมาทับเลขห้อง (ถ้าหาไม่เจอ ให้ใช้ค่าเดิม)
                     new_data['Room'] = merged[target_col].fillna(new_data['Room'])
@@ -286,7 +297,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
             if len(bad_rows) > 0:
                 st.warning(f"⚠️ พบข้อมูลห้องที่ไม่รู้จัก {len(bad_rows)} รายการ")
                 st.error(f"ตัวอย่างค่าที่ผิด: {bad_rows['Room'].unique()[:10]}")
-                st.info("สาเหตุ: 1. ไม่มีเลขห้องนี้ใน room_type.csv หรือ 2. ชื่อห้องใน room_type.csv ไม่ตรงกับ Base Price")
+                st.info("สาเหตุ: ข้อมูลห้องในไฟล์อาจจะไม่มีในระบบ หรือจับคู่ไม่ติด")
             else:
                 st.success(f"✅ ข้อมูลถูกต้อง 100% (จำนวน {len(good_rows)} รายการ)")
             
@@ -299,7 +310,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
                 
-                # ทำความสะอาดข้อมูลเก่าด้วย (เผื่อมี .0 ติดอยู่)
+                # ทำความสะอาดข้อมูลเก่า
                 if 'Room' in current_df.columns: 
                     current_df['Room'] = current_df['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 
@@ -310,7 +321,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
             else:
                 updated_df = data_to_save
             
-            # แปลง Date เป็น datetime ให้ชัวร์ก่อนเซฟ
+            # แปลง Date
             if 'Date' in updated_df.columns:
                  updated_df['Date'] = pd.to_datetime(updated_df['Date'], dayfirst=True, errors='coerce')
 
@@ -594,6 +605,14 @@ else:
                 with col_save:
                     if st.button("💾 บันทึกการเปลี่ยนแปลง (Save)", type="primary"):
                         try:
+                            # ⏳ หน่วงเวลา
+                            progress_text = "กำลังบันทึกข้อมูล..."
+                            my_bar = st.progress(0, text=progress_text)
+                            for percent_complete in range(100):
+                                time.sleep(0.05)
+                                my_bar.progress(percent_complete + 1, text=progress_text)
+                            my_bar.empty()
+
                             # แปลง Date กลับเป็น format ที่ถูกต้องก่อนบันทึก
                             if 'Date' in edited_df.columns:
                                 edited_df['Date'] = pd.to_datetime(edited_df['Date'])
@@ -983,4 +1002,3 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
