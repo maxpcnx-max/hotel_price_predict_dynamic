@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Smart Date Fixed)",
+    page_title="Hotel Price Forecasting System (Factory Reset)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -42,6 +42,7 @@ MODEL_FILES = {
     'le_res': 'le_res.joblib'
 }
 
+# --- ค่า Default ที่จะถูก Revert กลับมาเมื่อกด Hard Reset ---
 DEFAULT_BASE_PRICES = {
     'Grand Suite Room': 2700,
     'Villa Suite (Garden)': 2700,
@@ -125,10 +126,8 @@ def parse_dates_smart(date_series):
         val_str = str(val).strip()
         try:
             # 1. ลองอ่านแบบ YYYY-MM-DD (มาตรฐาน ISO/System Export)
-            # สังเกตจากมีขีด '-' และปีขึ้นต้น (4 ตัว)
             if '-' in val_str and val_str[0:4].isdigit():
-                return pd.to_datetime(val_str, yearfirst=True) # บังคับ Year First
-            
+                return pd.to_datetime(val_str, yearfirst=True) 
             # 2. ลองอ่านแบบ User Input (DD/MM/YYYY)
             return pd.to_datetime(val_str, dayfirst=True)
         except:
@@ -146,11 +145,8 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # --- FIX: ใช้ Smart Parser ---
         if 'Date' in df.columns:
             df['Date'] = parse_dates_smart(df['Date'])
-            
-            # สร้าง Feature พื้นฐานสำหรับกราฟ
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
             df['Year'] = df['Date'].dt.year
             df['month'] = df['Date'].dt.month
@@ -158,7 +154,6 @@ def load_data():
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        # Map Room Type (ถ้ามี)
         if os.path.exists(ROOM_FILE):
             room_type = pd.read_csv(ROOM_FILE)
             if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
@@ -174,16 +169,14 @@ def load_data():
             df['Target_Room_Type'] = df['Room']
             
         df['Reservation'] = df['Reservation'].fillna('Unknown')
-        
         return df
     except: return pd.DataFrame()
 
 def save_data_robust(new_df, mode='append'):
     """บันทึกข้อมูล พร้อมบังคับ Format วันที่ให้เป็นสากล"""
     try:
-        # --- FIX 2: ใช้ Smart Parser ก่อนเซฟ ---
         if 'Date' in new_df.columns:
-            # แปลงเป็น datetime ให้ชัวร์ก่อน (เผื่อ User แก้ในตารางเป็น String)
+            # แปลงเป็น datetime ให้ชัวร์ก่อน
             new_df['Date'] = parse_dates_smart(new_df['Date'])
             # แปลงกลับเป็น String มาตรฐาน YYYY-MM-DD
             new_df['Date'] = new_df['Date'].dt.strftime('%Y-%m-%d')
@@ -191,7 +184,6 @@ def save_data_robust(new_df, mode='append'):
         if mode == 'append':
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
-                # แปลงวันที่ของไฟล์เก่าให้เป็นมาตรฐานเดียวกันก่อนรวม
                 if 'Date' in current_df.columns:
                     current_df['Date'] = parse_dates_smart(current_df['Date']).dt.strftime('%Y-%m-%d')
                 updated_df = pd.concat([current_df, new_df], ignore_index=True)
@@ -200,7 +192,6 @@ def save_data_robust(new_df, mode='append'):
         else: # overwrite
             updated_df = new_df
 
-        # เลือกเก็บเฉพาะ Column ที่จำเป็น
         cols_to_keep = ['Date', 'Room', 'Price', 'Reservation', 'Name', 'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
         existing_cols = [c for c in cols_to_keep if c in updated_df.columns]
         
@@ -217,7 +208,6 @@ def calculate_historical_avg(df):
     if 'Night' not in df_clean.columns: df_clean['Night'] = 1
     df_clean = df_clean.dropna(subset=['Price', 'Night'])
     df_clean = df_clean[df_clean['Night'] > 0]
-    
     df_clean['ADR_Actual'] = df_clean['Price'] / df_clean['Night']
     
     if 'Target_Room_Type' in df_clean.columns:
@@ -227,6 +217,7 @@ def calculate_historical_avg(df):
 
 @st.cache_resource
 def load_system_models():
+    # ถ้าไม่มีไฟล์โมเดล ให้ return None (เพื่อให้ระบบแจ้งเตือนว่าต้อง Retrain)
     for name, file in MODEL_FILES.items():
         if not os.path.exists(file): return None, None, None, None, None
 
@@ -235,6 +226,7 @@ def load_system_models():
     le_room = joblib.load(MODEL_FILES['le_room'])
     le_res = joblib.load(MODEL_FILES['le_res'])
     
+    # Load Metrics (ถ้าไม่มีให้ใช้ Default)
     if os.path.exists(METRICS_FILE):
         with open(METRICS_FILE, 'r') as f: metrics = json.load(f)
     else: metrics = DEFAULT_METRICS
@@ -258,7 +250,6 @@ def retrain_system():
             
         status_text.text("🧹 Cleaning Outliers & Invalid Data for Training...")
         
-        # Filter Data (ทำเฉพาะตอนเทรน)
         df_clean = df.dropna(subset=['Price', 'Night', 'Date'])
         
         if 'Target_Room_Type' in df_clean.columns:
@@ -482,7 +473,7 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     def show_manage_data_page():
-        st.title("📥 ระบบจัดการฐานข้อมูล (Lite Logic + Smart Date Fix)")
+        st.title("📥 ระบบจัดการฐานข้อมูล (Factory Reset Version)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ราคาฐาน (Base Price)", "🚀 อัปเดตโมเดล (Retrain)"])
 
@@ -513,10 +504,6 @@ else:
                 # แปลง Column ให้เป็น String เพื่อป้องกัน Error จอแดง
                 df_current.columns = df_current.columns.astype(str)
 
-                # Ensure Date is datetime for editor (if valid) but display as is if needed
-                # Actually, load_data already parsed it to datetime or NaT. 
-                # For editor, we might want to keep it as Date object if possible for date picker
-                
                 edited_df = st.data_editor(
                     df_current,
                     num_rows="dynamic",
@@ -534,11 +521,28 @@ else:
 
             st.divider()
             with st.expander("🧨 พื้นที่อันตราย (Danger Zone)"):
-                if st.button("ล้างข้อมูลทั้งหมด (Hard Reset)", type="secondary"):
-                     if os.path.exists(DATA_FILE):
-                        os.remove(DATA_FILE)
-                        st.cache_data.clear()
-                        st.rerun()
+                st.warning("⚠️ **คำเตือน:** การกดปุ่มนี้จะลบข้อมูลการจองทั้งหมด, ลบโมเดลที่เคยเทรนมา, และรีเซ็ตค่า Config ทั้งหมดกลับเป็นค่าโรงงาน")
+                if st.button("🔥 Factory Reset (ล้างทุกอย่างและคืนค่าเดิม)", type="primary"):
+                     # 1. Delete Data File
+                     if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+                     
+                     # 2. Delete Model Files (เพื่อให้ระบบรู้ว่าไม่มีโมเดล)
+                     for key, file_path in MODEL_FILES.items():
+                         if os.path.exists(file_path): os.remove(file_path)
+                     
+                     # 3. Restore Default Config (Overwrite JSON files)
+                     with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
+                         json.dump(DEFAULT_BASE_PRICES, f, indent=4)
+                     
+                     with open(METRICS_FILE, 'w') as f:
+                         json.dump(DEFAULT_METRICS, f, indent=4)
+
+                     # 4. Clear Memory & Rerun
+                     st.cache_data.clear()
+                     st.cache_resource.clear()
+                     st.success("✅ Factory Reset Complete! ระบบกลับสู่ค่าเริ่มต้นแล้ว")
+                     time.sleep(2)
+                     st.rerun()
 
         with tab_master:
             st.subheader("⚙️ กำหนดราคาฐานของห้องพัก")
