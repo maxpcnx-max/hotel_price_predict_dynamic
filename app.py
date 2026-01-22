@@ -114,7 +114,7 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 3. BACKEND SYSTEM
+# 3. BACKEND SYSTEM (FIXED LOGIC)
 # ==========================================================
 
 @st.cache_data
@@ -126,13 +126,15 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # 1. Date Processing
+        # 1. Date Processing (Allow Invalid Dates in Raw Data)
         if 'Date' in df.columns:
-            # ใช้ errors='coerce' แต่ห้าม dropna ทันที
+            # แปลงเป็น Datetime แต่ถ้าผิดพลาดให้เป็น NaT (แต่ไม่ Error)
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             
-            # คำนวณ Feature เฉพาะแถวที่มีวันที่ถูกต้อง (ไม่ลบแถวที่ผิดทิ้ง)
+            # 🔥 CRITICAL FIX: ไม่ Dropna ทิ้ง! เก็บข้อมูลดิบไว้ทั้งหมด
+            # สร้าง Mask เพื่อคำนวณ Feature เฉพาะแถวที่มีวันที่ถูกต้อง
             mask_valid = df['Date'].notna()
+            
             df.loc[mask_valid, 'is_weekend'] = df.loc[mask_valid, 'Date'].dt.weekday.isin([5, 6]).astype(int)
             df.loc[mask_valid, 'Year'] = df.loc[mask_valid, 'Date'].dt.year.astype(int)
             df.loc[mask_valid, 'month'] = df.loc[mask_valid, 'Date'].dt.month
@@ -162,6 +164,8 @@ def load_data():
             df['Target_Room_Type'] = df['Room']
         
         df['Reservation'] = df['Reservation'].fillna('Unknown')
+        
+        # ลบคอลัมน์ที่ซ้ำ
         df = df.loc[:, ~df.columns.duplicated()]
         
         return df
@@ -200,6 +204,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                 current_df = pd.read_csv(DATA_FILE)
                 if 'Room' in current_df.columns: current_df['Room'] = current_df['Room'].astype(str)
                 
+                # ลบคอลัมน์คำนวณก่อน Merge เพื่อไม่ให้ซ้ำ
                 cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'Target_Room_Type']
                 current_df = current_df.drop(columns=[c for c in cols_to_drop if c in current_df.columns], errors='ignore')
                 
@@ -230,7 +235,8 @@ def retrain_system():
             st.error("ไม่พบข้อมูลสำหรับเทรนโมเดล")
             return False, 0
         
-        # กรองเฉพาะข้อมูลที่พร้อมสำหรับ Train
+        # กรองเฉพาะข้อมูลที่พร้อมสำหรับ Train (ตรงนี้กรองได้ เพราะ Train ต้องใช้ข้อมูลดี)
+        # แต่ load_data หลักจะไม่กรอง
         df = df.dropna(subset=['Price', 'Night', 'Date'])
         
         df['Night'] = df['Night'].fillna(1)
@@ -337,7 +343,7 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    # โหลด Data มาก่อน
+    # โหลด Data มาก่อน (แบบไม่ตัดข้อมูล)
     df_raw = load_data() 
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
@@ -345,27 +351,25 @@ else:
         st.title("📊 Financial Executive Dashboard")
         if df_raw.empty: st.warning("No Data Found"); return
 
-        # 🔥 Fix: กรองเฉพาะข้อมูลที่มีวันที่สมบูรณ์สำหรับแสดงกราฟ
+        # 🔥 Fix: กรองเฉพาะข้อมูลที่มีวันที่สมบูรณ์สำหรับแสดงกราฟ (แต่ไม่ลบจากไฟล์จริง)
         df_filtered = df_raw.dropna(subset=['Date']).copy()
 
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
             
-            # 🔥 Fix: แปลงเป็น Int เพื่อแก้ปัญหาทศนิยม
+            # 🔥 Fix: บังคับแปลงเป็น Int เพื่อแก้ปัญหาทศนิยม (เช่น 2024.0 -> 2024)
             unique_years = df_filtered['Year'].dropna().unique()
             all_years = sorted([int(y) for y in unique_years])
             year_opts = ['All'] + [str(y) for y in all_years]
             with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
             
-            # 🔥 Fix: แปลงเป็น Int ก่อนเข้า datetime
+            # 🔥 Fix: บังคับแปลงเป็น Int ก่อนเข้า datetime (เช่น 1.0 -> 1)
             unique_months = df_filtered['month'].dropna().unique()
             all_months = sorted([int(m) for m in unique_months if 1 <= m <= 12])
             month_opts = ['All'] + [datetime(2024, m, 1).strftime('%B') for m in all_months]
             with f_col2: sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
 
-            if sel_year != 'All': 
-                df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
-            
+            if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
             if sel_month_str != 'All':
                 sel_month_num = datetime.strptime(sel_month_str, "%B").month
                 df_filtered = df_filtered[df_filtered['month'] == sel_month_num]
@@ -451,7 +455,7 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     # ==========================================================
-    # 🌟 MANAGE DATA PAGE (FIXED INDENTATION)
+    # 🌟 MANAGE DATA PAGE (FIXED: Save Raw Data Only)
     # ==========================================================
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
@@ -473,7 +477,7 @@ else:
             st.subheader("2. ตรวจสอบและแก้ไขข้อมูล")
             st.info("💡 ข้อมูลทุกแถวจะแสดงที่นี่ (รวมถึงแถวที่วันที่ไม่สมบูรณ์) เพื่อให้คุณแก้ไขได้")
             
-            # โหลดข้อมูล
+            # โหลดข้อมูล (load_data ตัวใหม่ที่แก้แล้ว)
             df_current = load_data()
             
             if not df_current.empty:
@@ -481,7 +485,7 @@ else:
                     df_current,
                     num_rows="dynamic",
                     use_container_width=True,
-                    key="booking_editor_unique",
+                    key="booking_editor_unique", # 🔥 Unique Key แก้บั๊ก Duplicate
                     column_config={
                         "Date": st.column_config.DateColumn("Check-in Date", format="DD/MM/YYYY"),
                         "Price": st.column_config.NumberColumn("Price (THB)", format="%d"),
@@ -490,30 +494,26 @@ else:
                 
                 col_save, col_del = st.columns([1, 4])
                 
-                # 🔥 BUTTON SAVE - แบบไม่ฆ่าข้อมูล
+                # 🔥 BUTTON SAVE - แก้บั๊ก Schema Loss ที่นี่
                 with col_save:
                     if st.button("💾 บันทึกการเปลี่ยนแปลง (Save)", type="primary"):
                         try:
                             # 1. รับค่าจากตารางตรงๆ (Raw)
                             df_to_save = edited_df.copy()
 
-                            # 2. Handle Date Format
+                            # 2. Handle Date Format (จัด Format แต่ห้าม Dropna)
                             if 'Date' in df_to_save.columns:
                                 df_to_save['Date'] = pd.to_datetime(df_to_save['Date'], dayfirst=True, errors='ignore')
 
-                            # 3. เลือก Column ที่จะเซฟ
-                            cols_to_save = ['Date', 'Room', 'Price', 'Reservation', 'Name', 
-                                            'Night', 'Adults', 'Children', 'Infants', 'Extra Person']
-                            final_cols = [c for c in cols_to_save if c in df_to_save.columns]
+                            # 3. ❌ ไม่มีการเลือก cols_to_save แล้ว (Save All)
+                            # เพื่อป้องกัน Schema Loss ที่ทำให้ Retrain พังในรอบหน้า
                             
-                            if final_cols:
-                                df_to_save = df_to_save[final_cols]
-                                df_to_save.to_csv(DATA_FILE, index=False)
-                                st.cache_data.clear()
-                                st.success(f"✅ บันทึกสำเร็จ ({len(df_to_save)} รายการ)")
-                                time.sleep(1); st.rerun()
-                            else:
-                                st.error("ไม่พบคอลัมน์ที่ถูกต้อง")
+                            # 4. Save ลงไฟล์เลย
+                            df_to_save.to_csv(DATA_FILE, index=False)
+                            st.cache_data.clear()
+                            st.success(f"✅ บันทึกสำเร็จ ({len(df_to_save)} รายการ)")
+                            time.sleep(1); st.rerun()
+
                         except Exception as e:
                             st.error(f"Save Error: {e}")
 
@@ -536,7 +536,7 @@ else:
                 df_prices,
                 num_rows="dynamic",
                 use_container_width=True,
-                key="price_editor_unique", 
+                key="price_editor_unique", # 🔥 Unique Key
                 column_config={
                     "Base Price": st.column_config.NumberColumn("Price", format="%d THB")
                 }
