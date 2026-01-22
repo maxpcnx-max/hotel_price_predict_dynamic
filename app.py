@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Final)",
+    page_title="Hotel Price Forecasting System (Safe Mode)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -90,13 +90,12 @@ if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
 if 'username' not in st.session_state: st.session_state['username'] = ""
 
 # ==========================================================
-# 2. DATABASE (ตัด Register ออกแล้ว)
+# 2. DATABASE
 # ==========================================================
 def init_db():
     conn = sqlite3.connect(DB_FILE)
     c = conn.cursor()
     c.execute('CREATE TABLE IF NOT EXISTS users (username TEXT PRIMARY KEY, password TEXT)')
-    # เช็คว่ามี admin หรือยัง ถ้าไม่มีให้สร้าง
     c.execute('SELECT * FROM users WHERE username = "admin"')
     if not c.fetchone():
         c.execute('INSERT INTO users VALUES (?,?)', ("admin", "1234"))
@@ -114,7 +113,7 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 3. BACKEND SYSTEM (Robust Version)
+# 3. BACKEND SYSTEM (Unlock Logic: No Filter)
 # ==========================================================
 
 @st.cache_data
@@ -129,7 +128,7 @@ def load_data():
         # 1. Date Processing
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
-            df = df.dropna(subset=['Date']) # ลบแถวที่วันที่พังทิ้ง (จำเป็น)
+            df = df.dropna(subset=['Date']) # ลบเฉพาะที่วันที่พัง (จำเป็น)
             
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
             df['Year'] = df['Date'].dt.year.astype(int)
@@ -139,9 +138,8 @@ def load_data():
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        # 🔥 เพิ่ม: ล้างค่า Price ให้เป็นตัวเลขเท่านั้น (กัน Error ตอน Save)
+        # 🔥 CLEAN PRICE: ล้างค่า Price ให้เป็นตัวเลขเท่านั้น (แก้ปัญหา Save พัง)
         if 'Price' in df.columns:
-            # แปลงเป็นตัวเลข ถ้าแปลงไม่ได้ (เช่นติด , หรือตัวหนังสือ) ให้เป็น NaN แล้วแทนด้วย 0
             df['Price'] = pd.to_numeric(df['Price'].astype(str).str.replace(',', ''), errors='coerce').fillna(0)
 
         # 2. Room Type Mapping
@@ -152,11 +150,9 @@ def load_data():
                 
                 target_col = 'Target_Room_Type' if 'Target_Room_Type' in room_type.columns else 'Room_Type'
                 if target_col in room_type.columns:
-                     # Rename ให้ตรงกันก่อน merge
                     if target_col != 'Target_Room_Type':
                          room_type = room_type.rename(columns={target_col: 'Target_Room_Type'})
                     
-                    # Merge เฉพาะคอลัมน์ที่จำเป็น
                     df = df.merge(room_type[['Room', 'Target_Room_Type']], on='Room', how='left')
             except: pass
         
@@ -166,8 +162,12 @@ def load_data():
         else:
             df['Target_Room_Type'] = df['Room']
         
+        # ❌❌❌ REMOVED FILTER LOGIC ❌❌❌
+        # valid_rooms = set(load_base_prices().keys())
+        # df = df[df['Target_Room_Type'].isin(valid_rooms)]  <-- สาเหตุที่ทำให้เหลือ 500 บรรทัด ถูกลบทิ้งแล้ว!
+        
         df['Reservation'] = df['Reservation'].fillna('Unknown')
-        df = df.loc[:, ~df.columns.duplicated()] # ลบคอลัมน์ซ้ำ
+        df = df.loc[:, ~df.columns.duplicated()] 
         
         return df
     except Exception as e:
@@ -190,7 +190,7 @@ def load_system_models():
         
     return xgb, lr, le_room, le_res, metrics
 
-# 🔥 Function Save แบบ Dump (รับหมด ไม่สนลูกใคร)
+# 🔥 Function Save แบบ Dump (รับหมด)
 def save_uploaded_data_with_cleaning(uploaded_file):
     try:
         uploaded_file.seek(0)
@@ -206,7 +206,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                 current_df = pd.read_csv(DATA_FILE)
                 if 'Room' in current_df.columns: current_df['Room'] = current_df['Room'].astype(str)
                 
-                # ลบคอลัมน์ขยะที่อาจติดมาก่อน Concat
+                # ลบคอลัมน์ขยะ
                 cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'Target_Room_Type']
                 current_df = current_df.drop(columns=[c for c in cols_to_drop if c in current_df.columns], errors='ignore')
                 
@@ -327,9 +327,7 @@ def login_page():
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=120)
         st.title("🔒 Login System")
         st.markdown("ระบบการพยากรณ์ราคาห้องพัก (Hotel Price Forecasting System)")
-        
         st.divider()
-        
         u = st.text_input("Username")
         p = st.text_input("Password", type="password")
         
