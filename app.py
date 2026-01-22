@@ -34,23 +34,19 @@ def load_data():
 
 @st.cache_data
 def load_aux_data():
-    # สร้าง DataFrame เปล่าๆ กัน Error ไว้ก่อน
     df_room = pd.DataFrame(columns=['Room', 'Room_Type'])
     df_holidays = pd.DataFrame(columns=['Holiday_Date', 'Holiday_Name'])
 
-    # โหลดไฟล์ room_type.csv
     try:
         df_room = pd.read_csv(FILES["room_type"])
     except FileNotFoundError:
-        st.warning(f"⚠️ ไม่พบไฟล์ {FILES['room_type']} - ฟีเจอร์ที่เกี่ยวข้องอาจทำงานไม่ถูกต้อง")
+        st.warning(f"⚠️ ไม่พบไฟล์ {FILES['room_type']}")
 
-    # โหลดไฟล์ thai_holidays.csv
     try:
         df_holidays = pd.read_csv(FILES["holidays"])
-        # แปลงวันที่
         df_holidays['Holiday_Date'] = pd.to_datetime(df_holidays['Holiday_Date'], dayfirst=True, errors='coerce')
     except FileNotFoundError:
-        st.warning(f"⚠️ ไม่พบไฟล์ {FILES['holidays']} - ระบบจะไม่สามารถคำนวณวันหยุดได้")
+        st.warning(f"⚠️ ไม่พบไฟล์ {FILES['holidays']}")
         
     return df_room, df_holidays
 
@@ -61,8 +57,7 @@ def load_models():
         le_res = joblib.load(FILES["le_res"])
         le_room = joblib.load(FILES["le_room"])
         return lr, xg, le_res, le_room
-    except Exception as e:
-        # st.error(f"Error loading models: {e}") # ซ่อน error ตอนเริ่มถ้ายังไม่มีไฟล์
+    except Exception:
         return None, None, None, None
 
 df_checkin = load_data()
@@ -75,7 +70,6 @@ def is_holiday(date_obj, holiday_df):
     return 1 if date_obj in holiday_df['Holiday_Date'].values else 0
 
 def prepare_features(date, night, adults, children, extra, room_type_str, reservation_str):
-    # derived features
     date = pd.to_datetime(date)
     total_guests = adults + children + extra
     is_hol = is_holiday(date, df_holidays)
@@ -83,20 +77,16 @@ def prepare_features(date, night, adults, children, extra, room_type_str, reserv
     month = date.month
     weekday = date.weekday()
     
-    # Encoding
     try:
         res_encoded = le_res.transform([reservation_str])[0]
     except:
-        res_encoded = -1 # Handle unknown
+        res_encoded = -1
         
     try:
-        # Note: model expects room type string encoded, not the ID
         room_encoded = le_room.transform([room_type_str])[0]
     except:
         room_encoded = -1
 
-    # Feature order must match model training:
-    # ['Night', 'total_guests', 'is_holiday', 'is_weekend', 'month', 'weekday', 'RoomType_encoded', 'Reservation_encoded']
     features = np.array([[night, total_guests, is_hol, is_weekend, month, weekday, room_encoded, res_encoded]])
     return features
 
@@ -108,11 +98,14 @@ tab1, tab2, tab3 = st.tabs(["🔮 Prediction", "📂 Data Management", "📊 Vis
 # --- Tab 1: Prediction ---
 with tab1:
     st.header("Price Prediction")
-    col1, col2 = st.columns(2)
     
+    if lr_model is None or xgb_model is None:
+        st.warning("⚠️ Models not loaded. Please go to 'Data Management' and click 'Retrain Models' first.")
+    
+    col1, col2 = st.columns(2)
     with col1:
         req_date = st.date_input("Check-in Date", value=datetime.today())
-        req_time = st.time_input("Check-in Time", value=datetime.now().time()) # User requested Time
+        req_time = st.time_input("Check-in Time", value=datetime.now().time())
         req_res = st.selectbox("Reservation Channel", le_res.classes_ if le_res else [])
         req_room = st.selectbox("Room Type", le_room.classes_ if le_room else [])
 
@@ -125,8 +118,6 @@ with tab1:
     if st.button("Predict Price", type="primary"):
         if lr_model and xgb_model:
             X = prepare_features(req_date, req_night, req_adults, req_children, req_extra, req_room, req_res)
-            
-            # Predict
             try:
                 pred_lr = lr_model.predict(X)[0]
                 pred_xgb = xgb_model.predict(X)[0]
@@ -138,13 +129,55 @@ with tab1:
             except Exception as e:
                 st.error(f"Prediction Error: {e}")
         else:
-            st.error("Models not loaded. Please ensure model files are present or Retrain models in Tab 2.")
+            st.error("Models not loaded.")
 
 # --- Tab 2: Data Management ---
 with tab2:
     st.header("Manage Check-in Records")
     
-    # Editable Dataframe
+    # --- New Feature: Import / Export / Reset ---
+    with st.expander("🛠️ Tools: Import, Export, Reset", expanded=False):
+        c_imp, c_exp, c_reset = st.columns(3)
+        
+        with c_imp:
+            st.markdown("#### Import Data")
+            uploaded_file = st.file_uploader("Upload CSV (Overwrites current data)", type="csv")
+            if uploaded_file is not None:
+                if st.button("⚠️ Confirm Import", help="This will replace all current data!"):
+                    try:
+                        new_df = pd.read_csv(uploaded_file)
+                        # Basic validation
+                        required_cols = ["Reservation", "Date", "Night", "Price"]
+                        if all(col in new_df.columns for col in required_cols):
+                            new_df.to_csv(FILES["report"], index=False)
+                            st.success("Data imported successfully!")
+                            st.cache_data.clear()
+                            st.rerun()
+                        else:
+                            st.error(f"CSV must contain columns: {required_cols}")
+                    except Exception as e:
+                        st.error(f"Import failed: {e}")
+
+        with c_exp:
+            st.markdown("#### Export Data")
+            # Convert current DF to CSV string for download
+            csv_data = df_checkin.to_csv(index=False).encode('utf-8')
+            st.download_button(
+                label="📥 Download CSV",
+                data=csv_data,
+                file_name="check_in_report_backup.csv",
+                mime="text/csv",
+            )
+            
+        with c_reset:
+            st.markdown("#### Reset View")
+            if st.button("🔄 Reload / Reset View"):
+                st.cache_data.clear()
+                st.rerun()
+
+    st.divider()
+
+    # --- Editable Dataframe ---
     edited_df = st.data_editor(df_checkin, num_rows="dynamic", use_container_width=True)
 
     c_save, c_retrain = st.columns([1, 4])
@@ -152,31 +185,25 @@ with tab2:
     with c_save:
         if st.button("💾 Save Changes"):
             edited_df.to_csv(FILES["report"], index=False)
-            st.success("Data saved successfully!")
+            st.success("Data saved to file!")
             st.cache_data.clear()
             
     with c_retrain:
         if st.button("🔄 Retrain Models"):
             with st.spinner("Retraining models..."):
                 try:
-                    # 1. Prepare Training Data
+                    # Prepare Data
                     train_df = edited_df.copy()
-                    
-                    # แปลงวันที่ และบังคับให้เป็น NaT ถ้าแปลงไม่ได้
                     train_df['Date'] = pd.to_datetime(train_df['Date'], dayfirst=True, errors='coerce')
-                    
-                    # --- FIX: Drop rows with invalid dates immediately ---
                     train_df = train_df.dropna(subset=['Date'])
                     
                     if train_df.empty:
-                        st.error("No valid data to train on. Please check dates.")
+                        st.error("No valid data to train on.")
                         st.stop()
 
-                    # Merge with room type
                     train_df['Room'] = pd.to_numeric(train_df['Room'], errors='coerce')
                     train_df = train_df.merge(df_room_map, on='Room', how='left')
                     
-                    # Calculate Features
                     train_df['total_guests'] = train_df['Adults'] + train_df['Children'] + train_df['Extra Person']
                     train_df['is_holiday'] = train_df['Date'].apply(lambda x: is_holiday(x, df_holidays))
                     train_df['is_weekend'] = train_df['Date'].apply(lambda x: 1 if x.weekday() >= 5 else 0)
@@ -190,66 +217,54 @@ with tab2:
                     le_room_new = LabelEncoder()
                     train_df['RoomType_encoded'] = le_room_new.fit_transform(train_df['Room_Type'].astype(str))
                     
-                    # Define features list
                     features_cols = ['Night', 'total_guests', 'is_holiday', 'is_weekend', 'month', 'weekday', 'RoomType_encoded', 'Reservation_encoded']
-                    
-                    # --- FIX: Drop rows with NaN in features or target ---
-                    # เช็คค่าว่างใน Features และ Price ก่อนเทรน
                     train_df = train_df.dropna(subset=features_cols + ['Price'])
                     
                     if len(train_df) < 5:
-                         st.warning("Warning: Training data is very small (< 5 records). Models might be inaccurate.")
+                         st.warning("Training data is too small.")
 
                     X = train_df[features_cols]
                     y = train_df['Price']
                     
-                    # Train Models
+                    # Train
                     new_lr = LinearRegression()
                     new_lr.fit(X, y)
-                    
                     new_xgb = xgb.XGBRegressor(objective='reg:squarederror')
                     new_xgb.fit(X, y)
                     
-                    # Save Artifacts
+                    # Save
                     joblib.dump(new_lr, FILES["model_lr"])
                     joblib.dump(new_xgb, FILES["model_xgb"])
                     joblib.dump(le_res_new, FILES["le_res"])
                     joblib.dump(le_room_new, FILES["le_room"])
                     
-                    st.success(f"Models retrained successfully using {len(train_df)} records!")
+                    st.success(f"Retrained successfully! ({len(train_df)} records)")
                     st.balloons()
                     
-                    # Reload models immediately for Tab 1
+                    # Update session state models
                     lr_model, xgb_model, le_res, le_room = new_lr, new_xgb, le_res_new, le_room_new
                     
                 except Exception as e:
-                    st.error(f"Error during retraining: {e}")
-                    st.write("Hint: Check for empty rows or invalid data in the table.")
+                    st.error(f"Error: {e}")
 
 # --- Tab 3: Visualization ---
 with tab3:
     st.header("Dashboard")
-    
-    # Metric
-    total_records = len(df_checkin)
-    st.metric("Total Records", total_records)
+    st.metric("Total Records", len(df_checkin))
     
     col_chart1, col_chart2 = st.columns(2)
     
     with col_chart1:
-        st.subheader("Reservations by Channel")
         if not df_checkin.empty:
             count_res = df_checkin['Reservation'].value_counts().reset_index()
             count_res.columns = ['Channel', 'Count']
-            fig1 = px.bar(count_res, x='Channel', y='Count', color='Channel')
+            fig1 = px.bar(count_res, x='Channel', y='Count', color='Channel', title="Reservations by Channel")
             st.plotly_chart(fig1, use_container_width=True)
             
     with col_chart2:
-        st.subheader("Price Trend")
         if not df_checkin.empty:
-            # Sort by date
-            df_chart = df_checkin.sort_values('Date')
-            # Remove NaT dates for plotting
-            df_chart = df_chart.dropna(subset=['Date'])
-            fig2 = px.line(df_chart, x='Date', y='Price', title="Price Over Time")
+            df_chart = df_checkin.copy()
+            df_chart['Date'] = pd.to_datetime(df_chart['Date'], dayfirst=True, errors='coerce')
+            df_chart = df_chart.dropna(subset=['Date']).sort_values('Date')
+            fig2 = px.line(df_chart, x='Date', y='Price', title="Price Trend Over Time")
             st.plotly_chart(fig2, use_container_width=True)
