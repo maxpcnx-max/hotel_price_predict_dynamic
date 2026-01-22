@@ -347,24 +347,31 @@ else:
     df_raw = load_data() 
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
-    def show_dashboard_page():
+def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
         if df_raw.empty: st.warning("No Data Found"); return
 
-        # 🔥 Fix: กรองเฉพาะข้อมูลที่มีวันที่สมบูรณ์สำหรับแสดงกราฟ (แต่ไม่ลบจากไฟล์จริง)
+        # 🔥 Fix 1: กรองเฉพาะข้อมูลที่มีวันที่สมบูรณ์
         df_filtered = df_raw.dropna(subset=['Date']).copy()
 
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
-            all_years = sorted(df_filtered['Year'].unique().tolist())
+            
+            # 🔥 Fix 2: บังคับแปลงเป็น Int เพื่อแก้ปัญหาทศนิยม (เช่น 2024.0 -> 2024)
+            unique_years = df_filtered['Year'].dropna().unique()
+            all_years = sorted([int(y) for y in unique_years])
             year_opts = ['All'] + [str(y) for y in all_years]
             with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
             
-            all_months = sorted(df_filtered['month'].unique().tolist())
+            # 🔥 Fix 3: บังคับแปลงเป็น Int ก่อนเข้า datetime (เช่น 1.0 -> 1)
+            unique_months = df_filtered['month'].dropna().unique()
+            all_months = sorted([int(m) for m in unique_months if 1 <= m <= 12])
             month_opts = ['All'] + [datetime(2024, m, 1).strftime('%B') for m in all_months]
             with f_col2: sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
 
-            if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
+            if sel_year != 'All': 
+                df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
+            
             if sel_month_str != 'All':
                 sel_month_num = datetime.strptime(sel_month_str, "%B").month
                 df_filtered = df_filtered[df_filtered['month'] == sel_month_num]
@@ -395,7 +402,8 @@ else:
             with c2:
                 st.subheader("Revenue vs Booking Trend")
                 monthly = df_filtered.groupby('month').agg({'Price': 'sum', 'Room': 'count'}).reset_index().sort_values('month')
-                monthly['M_Name'] = monthly['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+                # แปลงเดือนเป็นชื่อเดือน (ต้องแปลงเป็น int ก่อน)
+                monthly['M_Name'] = monthly['month'].astype(int).apply(lambda x: datetime(2024, x, 1).strftime('%b'))
                 fig2 = make_subplots(specs=[[{"secondary_y": True}]])
                 fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
                 fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", line=dict(color='blue', dash='dot')), secondary_y=True)
@@ -403,7 +411,7 @@ else:
                 st.plotly_chart(fig2, use_container_width=True)
             st.subheader("ADR Trend Analysis (Average Daily Rate)")
             monthly_adr = df_filtered.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
-            monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+            monthly_adr['M_Name'] = monthly_adr['month'].astype(int).apply(lambda x: datetime(2024, x, 1).strftime('%b'))
             fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True, title="ADR per Month")
             st.plotly_chart(fig_adr, use_container_width=True)
 
@@ -417,7 +425,7 @@ else:
             with c4:
                 st.subheader("Monthly Booking by Channel")
                 m_res = df_filtered.groupby(['month', 'Reservation']).size().reset_index(name='Count')
-                m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+                m_res['M_Name'] = m_res['month'].astype(int).apply(lambda x: datetime(2024, x, 1).strftime('%b'))
                 st.plotly_chart(px.bar(m_res, x='M_Name', y='Count', color='Reservation'), use_container_width=True)
             st.subheader("High-Value Customer Channel (ADR)")
             chan_adr = df_filtered.groupby('Reservation').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR').sort_values('ADR', ascending=False)
@@ -429,7 +437,7 @@ else:
             with c5:
                 st.subheader("Monthly Revenue by Room")
                 mt_room = df_filtered.groupby(['month', group_col])['Price'].sum().reset_index()
-                mt_room['M_Name'] = mt_room['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+                mt_room['M_Name'] = mt_room['month'].astype(int).apply(lambda x: datetime(2024, x, 1).strftime('%b'))
                 st.plotly_chart(px.bar(mt_room, x='M_Name', y='Price', color=group_col), use_container_width=True)
             with c6:
                 st.subheader("Channel Preference by Room")
@@ -448,7 +456,6 @@ else:
         st.divider()
         st.subheader("📋 Raw Data Explorer")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
-
     # ==========================================================
     # 🌟 MANAGE DATA PAGE (FIXED: Save Raw Data Only)
     # ==========================================================
@@ -765,3 +772,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
