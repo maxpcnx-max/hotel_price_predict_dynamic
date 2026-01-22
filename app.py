@@ -2,10 +2,13 @@ import streamlit as st
 import pandas as pd
 import joblib
 import numpy as np
+import json
 from datetime import datetime
 import xgboost as xgb
 from sklearn.preprocessing import LabelEncoder
 from sklearn.linear_model import LinearRegression
+from sklearn.model_selection import train_test_split
+from sklearn.metrics import mean_absolute_error, r2_score
 import plotly.express as px
 
 # --- Configuration ---
@@ -18,7 +21,8 @@ FILES = {
     "model_lr": "lr_hotel_model.joblib",
     "model_xgb": "xgb_hotel_model.joblib",
     "le_res": "le_res.joblib",
-    "le_room": "le_room.joblib"
+    "le_room": "le_room.joblib",
+    "metrics": "model_metrics.json" # New file for storing scores
 }
 
 # --- 1. Load Data Section ---
@@ -29,7 +33,6 @@ def load_data():
         df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
         return df
     except FileNotFoundError:
-        # Default Empty Structure
         return pd.DataFrame(columns=["Reservation", "Name", "Date", "Night", "Room", 
                                      "Adults", "Children", "Infants", "Extra Person", "Price"])
 
@@ -49,20 +52,28 @@ def load_aux_data():
         
     return df_room, df_holidays
 
-def load_models():
+def load_models_and_metrics():
     try:
         lr = joblib.load(FILES["model_lr"])
         xg = joblib.load(FILES["model_xgb"])
         le_res = joblib.load(FILES["le_res"])
         le_room = joblib.load(FILES["le_room"])
-        return lr, xg, le_res, le_room
+        
+        # Load Metrics
+        try:
+            with open(FILES["metrics"], 'r') as f:
+                metrics = json.load(f)
+        except:
+            metrics = None
+            
+        return lr, xg, le_res, le_room, metrics
     except Exception:
-        return None, None, None, None
+        return None, None, None, None, None
 
 # --- Main Execution ---
 df_checkin = load_data()
 df_room_map, df_holidays = load_aux_data()
-lr_model, xgb_model, le_res, le_room = load_models()
+lr_model, xgb_model, le_res, le_room, model_metrics = load_models_and_metrics()
 
 # --- Helper Functions ---
 def is_holiday(date_obj, holiday_df):
@@ -103,7 +114,6 @@ with tab_dash:
     st.divider()
     
     c1, c2 = st.columns(2)
-    
     with c1:
         st.subheader("Bookings by Channel")
         if not df_checkin.empty:
@@ -144,7 +154,7 @@ with tab_data:
                     
                     st.success(f"Added {len(new_df)} rows!")
                     st.cache_data.clear()
-                    st.rerun() # <--- FORCE RELOAD
+                    st.rerun()
                 except Exception as e:
                     st.error(f"Error: {e}")
         
@@ -158,15 +168,13 @@ with tab_data:
         # 3. Hard Reset
         with col_hard:
             st.markdown("##### Factory Reset")
-            if st.button("⚠️ Hard Reset Data", type="primary", help="Clear all data and reset to empty table"):
-                # Write empty CSV with headers only
+            if st.button("⚠️ Hard Reset Data", type="primary", help="Clear all data"):
                 empty_df = pd.DataFrame(columns=["Reservation", "Name", "Date", "Night", "Room", 
                                                  "Adults", "Children", "Infants", "Extra Person", "Price"])
                 empty_df.to_csv(FILES["report"], index=False)
-                
-                st.warning("All data has been cleared!")
+                st.warning("All data cleared!")
                 st.cache_data.clear()
-                st.rerun() # <--- FORCE RELOAD
+                st.rerun()
 
     st.divider()
 
@@ -180,11 +188,11 @@ with tab_data:
             edited_df.to_csv(FILES["report"], index=False)
             st.toast("Saved & Reloading...", icon="✅")
             st.cache_data.clear()
-            st.rerun() # <--- FORCE RELOAD TO UPDATE DASHBOARD
+            st.rerun()
             
     with col_train:
         if st.button("🚀 Retrain Models"):
-            with st.spinner("Training..."):
+            with st.spinner("Training & Evaluating..."):
                 try:
                     # Prep Data
                     train_df = edited_df.copy()
@@ -218,26 +226,56 @@ with tab_data:
                     train_df['Room_Type'] = train_df['Room_Type'].fillna('Unknown')
                     train_df['RoomType_encoded'] = le_room_new.fit_transform(train_df['Room_Type'].astype(str))
                     
-                    # Fit
+                    # Clean NaNs
                     features_cols = ['Night', 'total_guests', 'is_holiday', 'is_weekend', 'month', 'weekday', 'RoomType_encoded', 'Reservation_encoded']
                     train_df = train_df.dropna(subset=features_cols + ['Price'])
                     
                     X = train_df[features_cols]
                     y = train_df['Price']
 
+                    # --- EVALUATION STEP (Split 80/20) ---
+                    if len(train_df) > 10:
+                        X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.2, random_state=42)
+                        
+                        # Train temp models for evaluation
+                        eval_lr = LinearRegression()
+                        eval_lr.fit(X_train, y_train)
+                        eval_xgb = xgb.XGBRegressor(objective='reg:squarederror')
+                        eval_xgb.fit(X_train, y_train)
+                        
+                        # Calculate Metrics
+                        lr_pred = eval_lr.predict(X_test)
+                        xgb_pred = eval_xgb.predict(X_test)
+                        
+                        metrics_dict = {
+                            "lr_mae": mean_absolute_error(y_test, lr_pred),
+                            "lr_r2": r2_score(y_test, lr_pred),
+                            "xgb_mae": mean_absolute_error(y_test, xgb_pred),
+                            "xgb_r2": r2_score(y_test, xgb_pred),
+                            "last_trained": datetime.now().strftime("%Y-%m-%d %H:%M")
+                        }
+                    else:
+                        metrics_dict = {"note": "Not enough data to calculate reliable metrics (>10 rows needed)"}
+
+                    # --- FINAL TRAINING (Full Data) ---
                     new_lr = LinearRegression()
                     new_lr.fit(X, y)
                     new_xgb = xgb.XGBRegressor(objective='reg:squarederror')
                     new_xgb.fit(X, y)
 
+                    # Save Everything
                     joblib.dump(new_lr, FILES["model_lr"])
                     joblib.dump(new_xgb, FILES["model_xgb"])
                     joblib.dump(le_res_new, FILES["le_res"])
                     joblib.dump(le_room_new, FILES["le_room"])
                     
+                    with open(FILES["metrics"], 'w') as f:
+                        json.dump(metrics_dict, f)
+                    
                     st.success(f"Retrained! ({len(train_df)} rows)")
-                    # Reload models in session
-                    lr_model, xgb_model = new_lr, new_xgb
+                    
+                    # Reload session
+                    lr_model, xgb_model, le_res, le_room, model_metrics = new_lr, new_xgb, le_res_new, le_room_new, metrics_dict
                     
                 except Exception as e:
                     st.error(f"Failed: {e}")
@@ -246,9 +284,22 @@ with tab_data:
 with tab_pred:
     st.header("Predict Price")
     
+    # --- Show Model Performance ---
+    if model_metrics and "lr_mae" in model_metrics:
+        with st.expander("📊 Model Performance (Accuracy on Test Data)", expanded=True):
+            cols = st.columns(4)
+            cols[0].metric("LR: MAE (Error)", f"±{model_metrics['lr_mae']:,.0f} ฿", help="Mean Absolute Error: Lower is better")
+            cols[1].metric("LR: R² (Score)", f"{model_metrics['lr_r2']:.2f}", help="R-Squared: Closer to 1.0 is better")
+            cols[2].metric("AI: MAE (Error)", f"±{model_metrics['xgb_mae']:,.0f} ฿")
+            cols[3].metric("AI: R² (Score)", f"{model_metrics['xgb_r2']:.2f}")
+            st.caption(f"Last Trained: {model_metrics.get('last_trained', '-')}")
+    elif model_metrics:
+        st.info(model_metrics.get("note", "Metrics not available."))
+
     if lr_model is None:
         st.warning("Please Retrain Models first.")
     else:
+        st.divider()
         c1, c2 = st.columns(2)
         with c1:
             p_date = st.date_input("Check-in", value=datetime.today())
@@ -263,5 +314,11 @@ with tab_pred:
         if st.button("Predict"):
             X_pred = prepare_features(p_date, p_night, p_adult, p_child, p_extra, p_room, p_res)
             try:
-                st.success(f"LR: {lr_model.predict(X_pred)[0]:,.0f} | AI: {xgb_model.predict(X_pred)[0]:,.0f} THB")
+                price_lr = lr_model.predict(X_pred)[0]
+                price_xgb = xgb_model.predict(X_pred)[0]
+                
+                st.subheader("Prediction Result")
+                r1, r2 = st.columns(2)
+                r1.info(f"**Linear Regression**\n# {price_lr:,.0f} THB")
+                r2.success(f"**XGBoost AI**\n# {price_xgb:,.0f} THB")
             except: st.error("Prediction failed")
