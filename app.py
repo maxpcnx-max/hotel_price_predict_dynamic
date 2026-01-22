@@ -114,7 +114,7 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 3. BACKEND SYSTEM
+# 3. BACKEND SYSTEM (FIXED LOGIC)
 # ==========================================================
 
 @st.cache_data
@@ -126,13 +126,15 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # 1. Date Processing
+        # 1. Date Processing (Allow Invalid Dates in Raw Data)
         if 'Date' in df.columns:
-            # ใช้ errors='coerce' แต่ห้าม dropna ทันที เพื่อรักษาข้อมูล Raw
+            # แปลงเป็น Datetime แต่ถ้าผิดพลาดให้เป็น NaT (แต่ไม่ Error)
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
             
-            # คำนวณเฉพาะแถวที่วันที่ถูกต้อง (เพื่อไม่ให้ Error แต่ข้อมูลไม่หาย)
+            # 🔥 CRITICAL FIX: ไม่ Dropna ทิ้ง! เก็บข้อมูลดิบไว้ทั้งหมด
+            # สร้าง Mask เพื่อคำนวณ Feature เฉพาะแถวที่มีวันที่ถูกต้อง
             mask_valid = df['Date'].notna()
+            
             df.loc[mask_valid, 'is_weekend'] = df.loc[mask_valid, 'Date'].dt.weekday.isin([5, 6]).astype(int)
             df.loc[mask_valid, 'Year'] = df.loc[mask_valid, 'Date'].dt.year.astype(int)
             df.loc[mask_valid, 'month'] = df.loc[mask_valid, 'Date'].dt.month
@@ -141,7 +143,7 @@ def load_data():
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        # 2. Room Type Mapping (ถ้ามี Master File)
+        # 2. Room Type Mapping
         if os.path.exists(ROOM_FILE):
             try:
                 room_type = pd.read_csv(ROOM_FILE)
@@ -153,9 +155,9 @@ def load_data():
                     room_type = room_type.rename(columns={'Room_Type': 'Target_Room_Type'})
                     df = df.merge(room_type[['Room', 'Target_Room_Type']], on='Room', how='left')
             except:
-                pass
+                pass 
         
-        # 3. Handle Unknown Rooms (ใช้ชื่อเดิมถ้าหาไม่เจอ)
+        # 3. Handle Unknown Rooms
         if 'Target_Room_Type' in df.columns:
             df['Target_Room_Type'] = df['Target_Room_Type'].fillna(df['Room'])
         else:
@@ -202,7 +204,7 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                 current_df = pd.read_csv(DATA_FILE)
                 if 'Room' in current_df.columns: current_df['Room'] = current_df['Room'].astype(str)
                 
-                # ลบคอลัมน์คำนวณก่อน Merge
+                # ลบคอลัมน์คำนวณก่อน Merge เพื่อไม่ให้ซ้ำ
                 cols_to_drop = ['Year', 'month', 'is_weekend', 'weekday', 'Target_Room_Type']
                 current_df = current_df.drop(columns=[c for c in cols_to_drop if c in current_df.columns], errors='ignore')
                 
@@ -234,10 +236,14 @@ def retrain_system():
             return False, 0
         
         # กรองเฉพาะข้อมูลที่พร้อมสำหรับ Train (ตรงนี้กรองได้ เพราะ Train ต้องใช้ข้อมูลดี)
+        # แต่ load_data หลักจะไม่กรอง
         df = df.dropna(subset=['Price', 'Night', 'Date'])
         
         df['Night'] = df['Night'].fillna(1)
         df['Adults'] = df['Adults'].fillna(2)
+        df['Children'] = df['Children'].fillna(0)
+        df['Infants'] = df['Infants'].fillna(0)
+        df['Extra Person'] = df['Extra Person'].fillna(0)
         
         if not os.path.exists("thai_holidays.csv"):
              try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
@@ -444,7 +450,7 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     # ==========================================================
-    # 🌟 MANAGE DATA PAGE (FIXED: No Filter & No Duplicate Key)
+    # 🌟 MANAGE DATA PAGE (FIXED: Save Raw Data Only)
     # ==========================================================
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Data Management)")
