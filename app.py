@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting DSS",
+    page_title="Hotel Price Forecasting System",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -110,13 +110,11 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
-        # 1. Date Processing
+        # 1. Date Processing & Feature Engineering (Fix KeyError)
         if 'Date' in df.columns:
             df['Date'] = pd.to_datetime(df['Date'], dayfirst=True, errors='coerce')
-            df = df.dropna(subset=['Date']) # ลบแถวที่วันที่เป็น Null
+            # [FIX] คำนวณ is_weekend ตรงนี้เลย เพื่อให้ Dashboard เรียกใช้ได้
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
-            df['Year'] = df['Date'].dt.year.astype(int) # สร้างคอลัมน์ Year แบบ Int
-            df['month'] = df['Date'].dt.month
             
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
@@ -135,7 +133,7 @@ def load_data():
         df = df.dropna(subset=['Target_Room_Type'])
         
         df['Reservation'] = df['Reservation'].fillna('Unknown')
-        
+        df['month'] = df['Date'].dt.month
         return df
     except: return pd.DataFrame()
 
@@ -321,150 +319,125 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    df_raw = load_data() # Load ข้อมูลดิบก่อนกรอง
+    df = load_data() 
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     if not os.path.exists("thai_holidays.csv"):
         try: gdown.download("https://drive.google.com/uc?id=1L-pciKEeRce1gzuhdtpIGcLs0fYHnbZw", "thai_holidays.csv", quiet=True)
         except: pass
 
+    def show_home_page():
+        if os.path.exists("cover.jpg"): 
+            st.image("cover.jpg", use_container_width=True)
+        else: 
+            st.image("https://images.unsplash.com/photo-1566073771259-6a8506099945?q=80", use_container_width=True)
+            
+        st.title("ระบบการพยากรณ์ราคาห้องพัก 👋")
+        st.markdown("""
+        **ความสามารถของระบบ:**
+        * **📊 Data Analytics:** วิเคราะห์ข้อมูลการจองย้อนหลัง (Clean Data Only)
+        * **🔮 Price Forecasting:** พยากรณ์ราคาที่เหมาะสม (AI-Powered)
+        * **🔄 Adaptive Learning:** ระบบสามารถเรียนรู้ข้อมูลใหม่ได้ (Retrain)
+        """)
+
     def show_dashboard_page():
-        st.title("📊 Financial Executive Dashboard")
+        st.title("📊 Financial Executive Dashboard (9-Chart Edition)")
+        if df.empty: st.warning("No Data"); return
         
-        if df_raw.empty: st.warning("No Data Found"); return
-
-        # --- FILTER SECTION ---
-        with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
-            f_col1, f_col2, f_col3 = st.columns(3)
-            
-            # 1. Year Filter
-            all_years = sorted(df_raw['Year'].unique().tolist())
-            year_opts = ['All'] + [str(y) for y in all_years]
-            with f_col1:
-                sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
-            
-            # 2. Month Filter
-            all_months = sorted(df_raw['month'].unique().tolist())
-            month_opts = ['All'] + [datetime(2024, m, 1).strftime('%B') for m in all_months]
-            with f_col2:
-                sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
-
-            # Logic กรองข้อมูล
-            df_filtered = df_raw.copy()
-            
-            if sel_year != 'All':
-                df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
-            
-            if sel_month_str != 'All':
-                # แปลงชื่อเดือนกลับเป็นตัวเลข
-                sel_month_num = datetime.strptime(sel_month_str, "%B").month
-                df_filtered = df_filtered[df_filtered['month'] == sel_month_num]
-
-        if df_filtered.empty:
-            st.warning("⚠️ No data available for the selected filters.")
-            return
-
         st.divider()
         
-        # --- TOP METRICS ---
+        # --- METRICS ---
         k1, k2, k3 = st.columns(3)
-        with k1: st.metric("💰 Total Revenue", f"{df_filtered['Price'].sum()/1e6:.2f} M THB")
-        with k2: st.metric("📦 Total Bookings", f"{len(df_filtered):,} รายการ")
-        with k3: st.metric("🏷️ Avg. Booking Value", f"{df_filtered['Price'].mean():,.0f} THB")
+        with k1: st.metric("💰 Total Revenue", f"{df['Price'].sum()/1e6:.2f} M THB")
+        with k2: st.metric("📦 Total Bookings", f"{len(df):,} รายการ")
+        with k3: st.metric("🏷️ Avg. Booking Value", f"{df['Price'].mean():,.0f} THB")
         
         st.divider()
-
-        # --- TABS FOR CHARTS ---
-        tab1, tab2, tab3 = st.tabs([
-            "💰 Financial Overview", 
-            "📢 Channel Strategy", 
-            "🛌 Product & Behavior"
-        ])
-
-        group_col = 'Target_Room_Type' if 'Target_Room_Type' in df_filtered.columns else 'Room'
-
-        # === TAB 1: FINANCIAL ===
-        with tab1:
-            st.markdown("### 1. Financial Overview (ภาพรวมการเงิน)")
+        st.markdown("### 1. Financial Overview (ภาพรวมการเงิน)")
+        
+        # ROW 1.1: Financial Trends
+        c1, c2 = st.columns(2)
+        
+        with c1:
+            st.subheader("1. Revenue vs Nights (Performance) / รายได้เทียบกับจำนวนคืน")
+            group_col = 'Target_Room_Type' if 'Target_Room_Type' in df.columns else 'Room'
+            room_perf = df.groupby(group_col).agg({'Price': 'sum', 'Night': 'sum'}).reset_index().sort_values('Price', ascending=False)
+            fig = make_subplots(specs=[[{"secondary_y": True}]])
+            fig.add_trace(go.Bar(x=room_perf[group_col], y=room_perf['Price'], name="Revenue", marker_color='#1f77b4'), secondary_y=False)
+            fig.add_trace(go.Scatter(x=room_perf[group_col], y=room_perf['Night'], name="Nights", mode='lines+markers', marker_color='#ff7f0e'), secondary_y=True)
+            fig.update_layout(legend=dict(orientation="h", y=1.1))
+            st.plotly_chart(fig, use_container_width=True)
             
-            # ROW 1.1
-            c1, c2 = st.columns(2)
-            with c1:
-                st.subheader("Revenue vs Nights")
-                room_perf = df_filtered.groupby(group_col).agg({'Price': 'sum', 'Night': 'sum'}).reset_index().sort_values('Price', ascending=False)
-                fig = make_subplots(specs=[[{"secondary_y": True}]])
-                fig.add_trace(go.Bar(x=room_perf[group_col], y=room_perf['Price'], name="Revenue", marker_color='#1f77b4'), secondary_y=False)
-                fig.add_trace(go.Scatter(x=room_perf[group_col], y=room_perf['Night'], name="Nights", mode='lines+markers', marker_color='#ff7f0e'), secondary_y=True)
-                fig.update_layout(legend=dict(orientation="h", y=1.1))
-                st.plotly_chart(fig, use_container_width=True)
-                
-            with c2:
-                st.subheader("Revenue vs Booking Trend")
-                # Group by Month name for display
-                monthly = df_filtered.groupby('month').agg({'Price': 'sum', 'Room': 'count'}).reset_index().sort_values('month')
-                monthly['M_Name'] = monthly['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-                
-                fig2 = make_subplots(specs=[[{"secondary_y": True}]])
-                fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
-                fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", line=dict(color='blue', dash='dot')), secondary_y=True)
-                fig2.update_layout(legend=dict(orientation="h", y=1.1))
-                st.plotly_chart(fig2, use_container_width=True)
+        with c2:
+            st.subheader("2. Revenue vs Booking Trend / แนวโน้มรายได้และยอดจอง")
+            monthly = df.groupby('month').agg({'Price': 'sum', 'Room': 'count'}).reset_index().sort_values('month')
+            monthly['M_Name'] = monthly['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
             
-            # ROW 1.2: ADR
-            st.subheader("ADR Trend Analysis (Average Daily Rate)")
-            monthly_adr = df_filtered.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
-            monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-            fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True, title="ADR per Month")
-            st.plotly_chart(fig_adr, use_container_width=True)
-
-        # === TAB 2: CHANNEL ===
-        with tab2:
-            st.markdown("### 2. Channel Strategy (เจาะลึกช่องทางการขาย)")
+            fig2 = make_subplots(specs=[[{"secondary_y": True}]])
+            fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
+            fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", line=dict(color='blue', dash='dot')), secondary_y=True)
+            fig2.update_layout(legend=dict(orientation="h", y=1.1))
+            st.plotly_chart(fig2, use_container_width=True)
             
-            c3, c4 = st.columns(2)
-            with c3:
-                st.subheader("Revenue Share by Channel")
-                res_rev = df_filtered.groupby('Reservation')['Price'].sum().reset_index()
-                st.plotly_chart(px.pie(res_rev, values='Price', names='Reservation', hole=0.4), use_container_width=True)
-            with c4:
-                st.subheader("Monthly Booking by Channel")
-                m_res = df_filtered.groupby(['month', 'Reservation']).size().reset_index(name='Count')
-                m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-                st.plotly_chart(px.bar(m_res, x='M_Name', y='Count', color='Reservation'), use_container_width=True)
-            
-            st.subheader("High-Value Customer Channel (ADR)")
-            chan_adr = df_filtered.groupby('Reservation').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR').sort_values('ADR', ascending=False)
-            st.plotly_chart(px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Greens'), use_container_width=True)
-
-        # === TAB 3: PRODUCT & BEHAVIOR ===
-        with tab3:
-            st.markdown("### 3. Product & Behavior (พฤติกรรมลูกค้า)")
-            
-            c5, c6 = st.columns(2)
-            with c5:
-                st.subheader("Monthly Revenue by Room")
-                mt_room = df_filtered.groupby(['month', group_col])['Price'].sum().reset_index()
-                mt_room['M_Name'] = mt_room['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-                st.plotly_chart(px.bar(mt_room, x='M_Name', y='Price', color=group_col), use_container_width=True)
-            with c6:
-                st.subheader("Channel Preference by Room")
-                heatmap_data = df_filtered.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
-                fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues')
-                st.plotly_chart(fig_heat, use_container_width=True)
-            
-            st.subheader("Weekday vs Weekend Revenue")
-            df_filtered['DayType'] = df_filtered['is_weekend'].map({1: 'Weekend', 0: 'Weekday'})
-            day_rev = df_filtered.groupby('DayType')['Price'].sum().reset_index()
-            c7, c8 = st.columns(2)
-            with c7:
-                st.plotly_chart(px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Revenue Share"), use_container_width=True)
-            with c8:
-                day_avg = df_filtered.groupby('DayType')['Price'].mean().reset_index()
-                st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Booking Value", color='DayType'), use_container_width=True)
-
+        # ROW 1.2: ADR Trend
+        st.subheader("3. ADR Trend Analysis / แนวโน้มราคาเฉลี่ยต่อคืน")
+        monthly_adr = df.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
+        monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+        fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True)
+        st.plotly_chart(fig_adr, use_container_width=True)
+        
         st.divider()
-        st.subheader("📋 Raw Data Explorer")
-        with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"):
-            st.dataframe(df_filtered)
+        st.markdown("### 2. Channel Strategy (เจาะลึกช่องทางการขาย)")
+        
+        # ROW 2.1
+        c3, c4 = st.columns(2)
+        with c3:
+            st.subheader("4. Revenue Share by Channel / สัดส่วนรายได้แยกตามช่องทาง")
+            res_rev = df.groupby('Reservation')['Price'].sum().reset_index()
+            st.plotly_chart(px.pie(res_rev, values='Price', names='Reservation', hole=0.4), use_container_width=True)
+        with c4:
+            st.subheader("5. Monthly Booking by Channel / ยอดจองรายเดือนแยกตามช่องทาง")
+            m_res = df.groupby(['month', 'Reservation']).size().reset_index(name='Count')
+            m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+            st.plotly_chart(px.bar(m_res, x='M_Name', y='Count', color='Reservation'), use_container_width=True)
+            
+        # ROW 2.2: ADR by Channel
+        st.subheader("6. High-Value Customer Channel / ราคาเฉลี่ย (ADR) แยกตามช่องทาง")
+        chan_adr = df.groupby('Reservation').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR').sort_values('ADR', ascending=False)
+        st.plotly_chart(px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Greens'), use_container_width=True)
+        
+        st.divider()
+        st.markdown("### 3. Product & Behavior (พฤติกรรมลูกค้า)")
+        
+        # ROW 3.1
+        c5, c6 = st.columns(2)
+        with c5:
+            st.subheader("7. Monthly Revenue by Room / รายได้รายเดือนแยกตามประเภทห้อง")
+            mt_room = df.groupby(['month', group_col])['Price'].sum().reset_index()
+            mt_room['M_Name'] = mt_room['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+            st.plotly_chart(px.bar(mt_room, x='M_Name', y='Price', color=group_col), use_container_width=True)
+        with c6:
+            st.subheader("8. Channel Preference by Room / ความนิยมช่องทางแยกตามประเภทห้อง")
+            heatmap_data = df.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
+            fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues')
+            st.plotly_chart(fig_heat, use_container_width=True)
+            
+        # ROW 3.2: Weekend vs Weekday
+        st.subheader("9. Weekday vs Weekend Revenue / รายได้วันธรรมดา vs วันหยุด")
+        df['DayType'] = df['is_weekend'].map({1: 'Weekend', 0: 'Weekday'})
+        day_rev = df.groupby('DayType')['Price'].sum().reset_index()
+        c7, c8 = st.columns(2)
+        with c7:
+            st.plotly_chart(px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Revenue Share"), use_container_width=True)
+        with c8:
+            day_avg = df.groupby('DayType')['Price'].mean().reset_index()
+            st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Booking Value", color='DayType'), use_container_width=True)
+            
+        st.divider()
+        # --- RAW DATA TABLE ---
+        st.subheader("📋 Raw Data Explorer / ตารางข้อมูลดิบ")
+        with st.expander("คลิกเพื่อดูตารางข้อมูลดิบ (Raw Data)"):
+            st.dataframe(df)
+
 
     def show_manage_data_page():
         st.title("📥 จัดการข้อมูล & อัปเดตโมเดล")
@@ -575,10 +548,7 @@ else:
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
         st.markdown(f"### User: {st.session_state['username']}")
-        
-        # ปรับเมนู: ลบ "หน้าหลัก" ออก และให้ "แดชบอร์ด" เป็นตัวเลือกแรก
-        page = st.radio("เมนูใช้งาน:", ["📊 แดชบอร์ด", "📥 จัดการข้อมูล", "🔮 พยากรณ์ราคา", "🧠 วิเคราะห์โมเดล", "ℹ️ เกี่ยวกับระบบ"])
-        
+        page = st.radio("เมนูใช้งาน:", ["🏠 หน้าหลัก", "📊 แดชบอร์ด", "📥 จัดการข้อมูล", "🔮 พยากรณ์ราคา", "🧠 วิเคราะห์โมเดล", "ℹ️ เกี่ยวกับระบบ"])
         st.divider()
         st.markdown("#### ⚙️ Real-time Performance")
         st.progress(metrics['xgb']['r2'], text=f"XGBoost: {metrics['xgb']['r2']*100:.1f}%")
@@ -586,8 +556,8 @@ else:
         st.divider()
         if st.button("Logout"): st.session_state['logged_in'] = False; st.rerun()
 
-    # Routing หน้าเว็บ (Default คือ Dashboard)
-    if "แดชบอร์ด" in page: show_dashboard_page()
+    if "หน้าหลัก" in page: show_home_page()
+    elif "แดชบอร์ด" in page: show_dashboard_page()
     elif "จัดการข้อมูล" in page: show_manage_data_page()
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
