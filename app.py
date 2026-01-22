@@ -31,7 +31,7 @@ st.set_page_config(
 
 DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
-ROOM_FILE = "room_type.csv" # ไฟล์ Master Data
+ROOM_FILE = "room_type.csv" # ไฟล์ Master Data (Mapping)
 METRICS_FILE = "model_metrics.json"
 
 MODEL_FILES = {
@@ -133,7 +133,8 @@ def load_data():
         except: return pd.DataFrame()
 
     try:
-        df = pd.read_csv(DATA_FILE)
+        # ใช้ utf-8-sig กัน BOM
+        df = pd.read_csv(DATA_FILE, encoding='utf-8-sig')
 
         # --- 🛠️ 1. ล้างคอลัมน์ขยะ ---
         cols_to_drop = [
@@ -153,15 +154,15 @@ def load_data():
             df['weekday'] = df['Date'].dt.weekday
             
         if 'Room' in df.columns:
-            # แปลงเป็น string และตัด .0 ทิ้งเพื่อให้ตรงกับ Master Data (เผื่อไฟล์เก่ายังเป็นเลข)
+            # ตัด .0 ทิ้งเสมอ
             df['Room'] = df['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
-        # 3. Room Type Mapping (Smart Loading)
+        # 3. Room Type Mapping
         if os.path.exists(ROOM_FILE):
             try:
-                room_type = pd.read_csv(ROOM_FILE)
+                room_type = pd.read_csv(ROOM_FILE, encoding='utf-8-sig')
                 if 'Room' in room_type.columns: 
-                    # Format Master Data ให้ตรงกัน
+                    # ตัด .0 ฝั่ง Master ด้วย
                     room_type['Room'] = room_type['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 
                 target_col = 'Target_Room_Type'
@@ -170,23 +171,20 @@ def load_data():
                     room_type = room_type.rename(columns={'Room_Type': target_col})
 
                 if target_col in room_type.columns:
-                    # Merge เพื่อดึงชื่อห้อง
                     df = df.merge(room_type[['Room', target_col]], on='Room', how='left')
-                    # ใช้ชื่อห้องจาก Master ถ้ามี
                     df['Room'] = df[target_col].fillna(df['Room'])
             except:
                 pass
         
-        # 4. Filter Outlier & Fill Missing Names
+        # 4. Fill Missing Names
         if 'Target_Room_Type' in df.columns:
             df['Target_Room_Type'] = df['Target_Room_Type'].fillna(df['Room'])
         else:
             df['Target_Room_Type'] = df['Room']
             
-        # กรองเฉพาะห้องที่มีใน Base Price (Safety Net)
-        valid_rooms = set(load_base_prices().keys())
-        if len(valid_rooms) > 0:
-            df = df[df['Target_Room_Type'].isin(valid_rooms)]
+        # ⚠️ REMOVED HARD FILTER: ไม่กรองทิ้งแล้ว เก็บไว้หมด ⚠️
+        # valid_rooms = set(load_base_prices().keys())
+        # df = df[df['Target_Room_Type'].isin(valid_rooms)]
 
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         
@@ -227,45 +225,42 @@ def load_system_models():
 
 def save_uploaded_data_with_cleaning(uploaded_file):
     """
-    ฟังก์ชันบันทึกข้อมูล พร้อมระบบทำความสะอาดและหน่วงเวลา
+    ฟังก์ชันบันทึกข้อมูล พร้อมหน่วงเวลา 5 วินาที
     """
     try:
-        # --- ⏳ หน่วงเวลา 5 วินาที ตามที่ขอ ---
-        progress_text = "กำลังประมวลผลและตรวจสอบความถูกต้อง... (Processing Data)"
+        # --- ⏳ หน่วงเวลา 5 วินาที ---
+        progress_text = "⏳ กำลังตรวจสอบและรวมข้อมูล (Merge Data)... กรุณารอสักครู่"
         my_bar = st.progress(0, text=progress_text)
         for percent_complete in range(100):
             time.sleep(0.05) # 0.05 * 100 = 5 วินาที
             my_bar.progress(percent_complete + 1, text=progress_text)
         my_bar.empty()
-        # ------------------------------------
-
-        uploaded_file.seek(0)
-        new_data = pd.read_csv(uploaded_file)
         
-        # --- 🔥 1. Prepare Room Column: ตัด .0 ทิ้ง (สำคัญมาก!) ---
+        # เริ่มอ่านไฟล์
+        uploaded_file.seek(0)
+        new_data = pd.read_csv(uploaded_file, encoding='utf-8-sig')
+        
+        # --- 🔥 Step 1: Clean 'Room' Column (ตัด .0 ทิ้ง) ---
         if 'Room' in new_data.columns: 
-            # แปลง 1.0 -> "1" / 4.1 -> "4.1" เพื่อให้ Format ตรงกับ Master
             new_data['Room'] = new_data['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
 
-        # --- 🛠️ 2. Force Merge with Master Data ---
+        # --- 🛠️ Step 2: Force Merge with Master ---
         if os.path.exists(ROOM_FILE):
             try:
-                room_master = pd.read_csv(ROOM_FILE)
+                room_master = pd.read_csv(ROOM_FILE, encoding='utf-8-sig')
+                
+                # Clean Master ฝั่ง Room เหมือนกัน
                 if 'Room' in room_master.columns: 
-                    # เตรียมฝั่ง Master ให้เหมือนกันด้วย
                     room_master['Room'] = room_master['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 
+                # หาคอลัมน์ชื่อห้อง
                 target_col = 'Target_Room_Type'
                 if target_col not in room_master.columns and 'Room_Type' in room_master.columns:
-                    target_col = 'Room_Type'
+                    target_col = 'Room_Type' 
 
                 if target_col in room_master.columns:
-                    # ทำการ Merge
+                    # Merge เลย
                     merged = new_data.merge(room_master[['Room', target_col]], on='Room', how='left')
-                    
-                    # Log Check
-                    matched_count = merged[target_col].notnull().sum()
-                    print(f"DEBUG: Merge Success {matched_count}/{len(new_data)}")
                     
                     # เอาชื่อห้องมาทับเลขห้อง (ถ้าหาไม่เจอ ให้ใช้ค่าเดิม)
                     new_data['Room'] = merged[target_col].fillna(new_data['Room'])
@@ -273,8 +268,6 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                     st.error("Format ของไฟล์ room_type.csv ไม่ถูกต้อง (หาคอลัมน์ชื่อห้องไม่เจอ)")
             except Exception as e:
                 st.error(f"เกิดข้อผิดพลาดในการอ่านไฟล์ room_type.csv: {e}")
-        else:
-            st.warning("⚠️ ไม่พบไฟล์ room_type.csv ระบบจะไม่สามารถแปลงเลขห้องเป็นชื่อห้องได้")
 
         # --- 🛠️ 3. Check Reservation (Allow New Channels) ---
         if 'Reservation' in new_data.columns:
@@ -284,33 +277,15 @@ def save_uploaded_data_with_cleaning(uploaded_file):
                 st.warning(f"⚠️ พบข้อมูลช่องทางการจองว่างเปล่า (Null) {null_count} รายการ -> ตัดทิ้ง")
             new_data = new_data.dropna(subset=['Reservation'])
 
-        # --- 🛠️ 4. Check Valid Room (Outlier Check) ---
-        # ถึงตรงนี้ new_data['Room'] ควรจะเป็นชื่อภาษาอังกฤษแล้ว
-        current_base_prices = load_base_prices()
-        valid_rooms = set(current_base_prices.keys())
-        
-        if len(valid_rooms) > 0:
-            # กรองเฉพาะห้องที่มีชื่อตรงกับใน Base Price
-            good_rows = new_data[new_data['Room'].isin(valid_rooms)]
-            bad_rows = new_data[~new_data['Room'].isin(valid_rooms)]
-            
-            if len(bad_rows) > 0:
-                st.warning(f"⚠️ พบข้อมูลห้องที่ไม่รู้จัก {len(bad_rows)} รายการ")
-                st.error(f"ตัวอย่างค่าที่ผิด: {bad_rows['Room'].unique()[:10]}")
-                st.info("สาเหตุ: ข้อมูลห้องในไฟล์อาจจะไม่มีในระบบ หรือจับคู่ไม่ติด")
-            else:
-                st.success(f"✅ ข้อมูลถูกต้อง 100% (จำนวน {len(good_rows)} รายการ)")
-            
-            data_to_save = good_rows
-        else:
-            data_to_save = new_data
+        # ⚠️ REMOVED HARD FILTER: ไม่กรองทิ้งแล้ว เก็บไว้หมด เพื่อไม่ให้ข้อมูลหาย ⚠️
+        data_to_save = new_data
 
         # --- 🛠️ 5. Save Process ---
         if not data_to_save.empty:
             if os.path.exists(DATA_FILE):
                 current_df = pd.read_csv(DATA_FILE)
                 
-                # ทำความสะอาดข้อมูลเก่า
+                # ทำความสะอาดข้อมูลเก่าด้วย
                 if 'Room' in current_df.columns: 
                     current_df['Room'] = current_df['Room'].astype(str).str.replace(r'\.0$', '', regex=True).str.strip()
                 
@@ -327,9 +302,10 @@ def save_uploaded_data_with_cleaning(uploaded_file):
 
             updated_df.to_csv(DATA_FILE, index=False)
             st.cache_data.clear()
+            st.success(f"✅ บันทึกสำเร็จ! รวมข้อมูลทั้งหมด {len(updated_df)} รายการ")
             return True
         else:
-            st.error("❌ ไม่มีข้อมูลที่ถูกต้องให้บันทึก (ถูกกรองออกหมด)")
+            st.error("❌ ไม่มีข้อมูลให้บันทึก")
             return False
 
     except Exception as e:
@@ -674,13 +650,12 @@ else:
                 # บันทึกลง JSON
                 save_base_prices(new_prices_dict)
                 
-                # อัปเดต Master Data ไฟล์ room_type.csv ด้วย (เผื่อใช้กรอง)
-                # สร้าง room_type.csv ใหม่จากรายชื่อห้องที่มีใน Base Price
-                df_room_master = pd.DataFrame({'Room': list(new_prices_dict.keys()), 'Target_Room_Type': list(new_prices_dict.keys())})
-                df_room_master.to_csv(ROOM_FILE, index=False)
+                # --- 🔥 IMPORTANT: ไม่ Overwrite ROOM_FILE แล้ว เพื่อป้องกันข้อมูล Mapping หาย ---
+                # df_room_master = pd.DataFrame({'Room': list(new_prices_dict.keys()), 'Target_Room_Type': list(new_prices_dict.keys())})
+                # df_room_master.to_csv(ROOM_FILE, index=False)
                 
-                st.success("✅ อัปเดตข้อมูลห้องพักและราคาฐานเรียบร้อย!")
-                st.info("⚠️ หากมีการเพิ่มห้องพักประเภทใหม่ อย่าลืมไปกด 'Retrain Model' ใน Tab ถัดไป")
+                st.success("✅ อัปเดตข้อมูลราคาฐานเรียบร้อย! (Mapping ชื่อห้องจะไม่ถูกเปลี่ยนแปลง)")
+                st.info("⚠️ หากต้องการเพิ่มเลขห้องใหม่ กรุณาแก้ไฟล์ room_type.csv โดยตรง")
 
         # ---------------------------------------------------------
         # TAB 3: RETRAIN
