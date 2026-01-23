@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Dashboard Filtered)",
+    page_title="Hotel Price Forecasting System (Master Data)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -31,9 +31,10 @@ st.set_page_config(
 
 DB_FILE = "users.db"
 DATA_FILE = "check_in_report.csv"
-ROOM_FILE = "room_type.csv" # ไฟล์ Master Data
+ROOM_FILE = "room_type.csv" 
 METRICS_FILE = "model_metrics.json"
-BASE_PRICE_FILE = "base_prices.json" # ไฟล์เก็บราคาฐาน
+BASE_PRICE_FILE = "base_prices.json"
+CHANNELS_FILE = "channels.json" # ไฟล์เก็บช่องทาง
 
 MODEL_FILES = {
     'xgb': 'xgb_hotel_model.joblib',
@@ -42,7 +43,7 @@ MODEL_FILES = {
     'le_res': 'le_res.joblib'
 }
 
-# --- ค่า Default ที่จะถูก Revert กลับมาเมื่อกด Hard Reset ---
+# --- ค่า Default ห้องพัก (7 ห้อง) ---
 DEFAULT_BASE_PRICES = {
     'Grand Suite Room': 2700,
     'Villa Suite (Garden)': 2700,
@@ -52,6 +53,16 @@ DEFAULT_BASE_PRICES = {
     'Deluxe Room': 1500,
     'Standard Room': 1000
 }
+
+# --- ค่า Default ช่องทาง (6 ช่องทาง - ยังไม่มี Agoda) ---
+DEFAULT_CHANNELS = [
+    "Direct Booking",
+    "Trip.com",
+    "Expedia",
+    "Booking.com",
+    "B2B",
+    "Traveloka.com"
+]
 
 DEFAULT_METRICS = {
     'xgb': {'mae': 1112.79, 'r2': 0.7256},
@@ -68,16 +79,16 @@ if 'username' not in st.session_state: st.session_state['username'] = ""
 if 'historical_avg' not in st.session_state: st.session_state['historical_avg'] = {}
 
 # ==========================================================
-# 2. HELPER FUNCTIONS
+# 2. HELPER FUNCTIONS (Master Data)
 # ==========================================================
 def load_base_prices():
     if not os.path.exists(BASE_PRICE_FILE):
-        return DEFAULT_BASE_PRICES
+        return DEFAULT_BASE_PRICES.copy()
     try:
         with open(BASE_PRICE_FILE, 'r', encoding='utf-8') as f:
             return json.load(f)
     except:
-        return DEFAULT_BASE_PRICES
+        return DEFAULT_BASE_PRICES.copy()
 
 def save_base_prices(price_dict):
     with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
@@ -86,9 +97,25 @@ def save_base_prices(price_dict):
 def get_base_price(room_text):
     if not isinstance(room_text, str): return 0
     prices = load_base_prices()
+    # Exact match first
+    if room_text in prices: return prices[room_text]
+    # Partial match fallback
     for key in prices:
         if key in room_text: return prices[key]
     return 0
+
+def load_channels():
+    if not os.path.exists(CHANNELS_FILE):
+        return DEFAULT_CHANNELS.copy()
+    try:
+        with open(CHANNELS_FILE, 'r', encoding='utf-8') as f:
+            return json.load(f)
+    except:
+        return DEFAULT_CHANNELS.copy()
+
+def save_channels(channel_list):
+    with open(CHANNELS_FILE, 'w', encoding='utf-8') as f:
+        json.dump(channel_list, f, ensure_ascii=False, indent=4)
 
 # ==========================================================
 # 3. DATABASE
@@ -114,7 +141,7 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 4. DATA HANDLING (SMART DATE PARSER)
+# 4. DATA HANDLING
 # ==========================================================
 
 def parse_dates_smart(date_series):
@@ -131,7 +158,6 @@ def parse_dates_smart(date_series):
 
 @st.cache_data
 def load_data():
-    """โหลดข้อมูลดิบทั้งหมด (รวม Outlier)"""
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
         except: return pd.DataFrame()
@@ -148,14 +174,9 @@ def load_data():
         if 'Room' in df.columns:
             df['Room'] = df['Room'].astype(str)
 
-        if os.path.exists(ROOM_FILE):
-            room_type = pd.read_csv(ROOM_FILE)
-            if 'Room' in room_type.columns: room_type['Room'] = room_type['Room'].astype(str)
-            
-            if 'Room_Type' in room_type.columns:
-                df = df.merge(room_type, on='Room', how='left')
-                if 'Room_Type' in df.columns: df = df.rename(columns={'Room_Type': 'Target_Room_Type'})
-                elif 'Room_Type_y' in df.columns: df = df.rename(columns={'Room_Type_y': 'Target_Room_Type'})
+        # Mapping ชื่อห้องจาก Master Data (ถ้ามีไฟล์)
+        # แต่เพื่อความยืดหยุ่น เราจะไม่ Force map จนเกินไป ปล่อยให้เป็นชื่อเดิม
+        # แต่ถ้าชื่อใน CSV ตรงกับ Master ให้ใช้ชื่อ Master
         
         if 'Target_Room_Type' in df.columns:
             df['Target_Room_Type'] = df['Target_Room_Type'].fillna('Unknown')
@@ -245,11 +266,20 @@ def retrain_system():
         
         df_clean = df.dropna(subset=['Price', 'Night', 'Date'])
         
+        # กรองเอาเฉพาะห้องที่มีใน Master Data
         if 'Target_Room_Type' in df_clean.columns:
-             df_clean = df_clean[df_clean['Target_Room_Type'] != 'Unknown']
              valid_rooms = set(load_base_prices().keys())
-             if valid_rooms:
-                 df_clean = df_clean[df_clean['Target_Room_Type'].isin(valid_rooms)]
+             # Keep only known rooms
+             df_clean = df_clean[df_clean['Target_Room_Type'].isin(valid_rooms)]
+
+        # กรองเอาเฉพาะช่องทางที่มีใน Master Data
+        if 'Reservation' in df_clean.columns:
+             valid_channels = set(load_channels())
+             df_clean = df_clean[df_clean['Reservation'].isin(valid_channels)]
+
+        if df_clean.empty:
+            st.error("No valid data left after filtering with Master Data.")
+            return False, 0
 
         df_clean['Night'] = df_clean['Night'].fillna(1)
         df_clean['Adults'] = df_clean['Adults'].fillna(2)
@@ -354,7 +384,7 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    df_raw = load_data() # โหลดข้อมูลดิบทั้งหมดมาก่อน
+    df_raw = load_data() 
     
     if not df_raw.empty and not st.session_state['historical_avg']:
         st.session_state['historical_avg'] = calculate_historical_avg(df_raw)
@@ -367,9 +397,7 @@ else:
 
         # --- Dashboard Filter Logic (กรอง Outlier ทิ้งที่นี่) ---
         df_clean_dash = df_raw.copy()
-        # 1. Drop NaT dates
         df_clean_dash = df_clean_dash.dropna(subset=['Date'])
-        # 2. Drop Unknown Room Type
         if 'Target_Room_Type' in df_clean_dash.columns:
             df_clean_dash = df_clean_dash[df_clean_dash['Target_Room_Type'] != 'Unknown']
         
@@ -380,7 +408,7 @@ else:
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
             f_col1, f_col2, f_col3 = st.columns(3)
             
-            valid_years = df_clean_dash['Year'].unique() # ใช้ข้อมูลที่คลีนแล้วหาปี
+            valid_years = df_clean_dash['Year'].unique()
             all_years = sorted(valid_years.tolist())
             year_opts = ['All'] + [str(int(y)) for y in all_years]
             with f_col1: sel_year = st.selectbox("📅 Select Year (เลือกปี)", year_opts)
@@ -390,7 +418,7 @@ else:
             month_opts = ['All'] + [datetime(2024, int(m), 1).strftime('%B') for m in all_months]
             with f_col2: sel_month_str = st.selectbox("🗓️ Select Month (เลือกเดือน)", month_opts)
 
-            df_filtered = df_clean_dash.copy() # เริ่มจากข้อมูลคลีน
+            df_filtered = df_clean_dash.copy()
             if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
             if sel_month_str != 'All':
                 sel_month_num = datetime.strptime(sel_month_str, "%B").month
@@ -477,12 +505,12 @@ else:
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
     def show_manage_data_page():
-        st.title("📥 ระบบจัดการฐานข้อมูล (Lite Logic + Smart Date Fix)")
+        st.title("📥 ระบบจัดการฐานข้อมูล (Master Data Management)")
         
-        tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ราคาฐาน (Base Price)", "🚀 อัปเดตโมเดล (Retrain)"])
+        tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ข้อมูลหลัก (Master Data)", "🚀 อัปเดตโมเดล (Retrain)"])
 
         with tab_trans:
-            # PART A: Import (No Gatekeeper)
+            # PART A: Import
             st.subheader("1. นำเข้าข้อมูลใหม่ (Import)")
             st.caption("นำข้อมูลมาต่อท้าย (Append) โดยไม่มีการกรอง")
             up_file = st.file_uploader("เลือกไฟล์ Booking CSV", type=['csv'])
@@ -497,7 +525,7 @@ else:
 
             st.divider()
 
-            # PART B: Edit (Load All -> Edit -> Save All)
+            # PART B: Edit
             st.subheader("2. แก้ไขข้อมูล (Edit Mode)")
             st.caption("แก้ไขข้อมูลในถังข้อมูลโดยตรง (ระวัง: แก้ผิดก็บันทึกผิด)")
 
@@ -505,9 +533,7 @@ else:
             if df_current.empty:
                 st.info("📭 ยังไม่มีข้อมูลในระบบ")
             else:
-                # แปลง Column ให้เป็น String เพื่อป้องกัน Error จอแดง
                 df_current.columns = df_current.columns.astype(str)
-
                 edited_df = st.data_editor(
                     df_current,
                     num_rows="dynamic",
@@ -527,42 +553,63 @@ else:
             with st.expander("🧨 พื้นที่อันตราย (Danger Zone)"):
                 st.warning("⚠️ **คำเตือน:** การกดปุ่มนี้จะลบข้อมูลการจองทั้งหมด, ลบโมเดลที่เคยเทรนมา, และรีเซ็ตค่า Config ทั้งหมดกลับเป็นค่าโรงงาน")
                 if st.button("🔥 Factory Reset (ล้างทุกอย่างและคืนค่าเดิม)", type="primary"):
-                     # 1. Delete Data File
                      if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
-                     
-                     # 2. Delete Model Files (เพื่อให้ระบบรู้ว่าไม่มีโมเดล)
                      for key, file_path in MODEL_FILES.items():
                          if os.path.exists(file_path): os.remove(file_path)
                      
-                     # 3. Restore Default Config (Overwrite JSON files)
-                     with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f:
-                         json.dump(DEFAULT_BASE_PRICES, f, indent=4)
-                     
-                     with open(METRICS_FILE, 'w') as f:
-                         json.dump(DEFAULT_METRICS, f, indent=4)
+                     # Reset Channels & Rooms
+                     with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_BASE_PRICES, f, indent=4)
+                     with open(CHANNELS_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_CHANNELS, f, indent=4)
+                     with open(METRICS_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_METRICS, f, indent=4)
 
-                     # 4. Clear Memory & Rerun
                      st.cache_data.clear()
                      st.cache_resource.clear()
                      st.success("✅ Factory Reset Complete! ระบบกลับสู่ค่าเริ่มต้นแล้ว")
-                     time.sleep(2)
-                     st.rerun()
+                     time.sleep(2); st.rerun()
 
         with tab_master:
-            st.subheader("⚙️ กำหนดราคาฐานของห้องพัก")
-            current_prices = load_base_prices()
-            df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
-            edited_prices_df = st.data_editor(
-                df_prices,
-                num_rows="dynamic",
-                use_container_width=True,
-                column_config={"Base Price": st.column_config.NumberColumn("Base Price (THB)", format="%d THB")},
-                key="base_price_editor"
-            )
-            if st.button("💾 บันทึกราคาฐาน (Update Master Data)"):
-                new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
-                save_base_prices(new_prices_dict)
-                st.success("✅ อัปเดตราคาฐานเรียบร้อย!")
+            c1, c2 = st.columns([2, 1])
+            
+            with c1:
+                st.subheader("🏨 จัดการห้องพักและราคาฐาน")
+                st.caption("สามารถแก้ไขชื่อห้อง, เพิ่มห้องใหม่, หรือปรับราคาฐานได้ที่นี่")
+                current_prices = load_base_prices()
+                df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
+                
+                edited_prices_df = st.data_editor(
+                    df_prices,
+                    num_rows="dynamic", # อนุญาตให้เพิ่ม/ลบห้องได้
+                    use_container_width=True,
+                    column_config={
+                        "Room Type": st.column_config.TextColumn("ชื่อห้องพัก (Room Type)", required=True),
+                        "Base Price": st.column_config.NumberColumn("ราคาฐาน (THB)", format="%d THB", min_value=0, required=True)
+                    },
+                    key="base_price_editor"
+                )
+                if st.button("💾 บันทึกห้องพัก (Save Rooms)", type="primary"):
+                    new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
+                    save_base_prices(new_prices_dict)
+                    st.success("✅ อัปเดตข้อมูลห้องพักเรียบร้อย!")
+            
+            with c2:
+                st.subheader("📢 จัดการช่องทางการขาย")
+                st.caption("เพิ่ม/ลบ ช่องทาง (เช่น Agoda)")
+                current_channels = load_channels()
+                df_channels = pd.DataFrame(current_channels, columns=['Channel Name'])
+                
+                edited_channels_df = st.data_editor(
+                    df_channels,
+                    num_rows="dynamic",
+                    use_container_width=True,
+                    column_config={
+                        "Channel Name": st.column_config.TextColumn("ชื่อช่องทาง", required=True)
+                    },
+                    key="channel_editor"
+                )
+                if st.button("💾 บันทึกช่องทาง (Save Channels)"):
+                    new_channels_list = [row['Channel Name'] for index, row in edited_channels_df.iterrows() if row['Channel Name']]
+                    save_channels(new_channels_list)
+                    st.success("✅ อัปเดตช่องทางเรียบร้อย!")
 
         with tab_train:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
@@ -575,14 +622,16 @@ else:
 
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
-        if xgb_model is None: st.error("❌ Model not found"); return
+        
+        # Load Master Data for Dropdowns
+        master_rooms = list(load_base_prices().keys())
+        master_channels = load_channels()
 
         def get_historical_avg_price(room_text):
             hist_map = st.session_state.get('historical_avg', {})
             if room_text in hist_map: return hist_map[room_text]
             return 0
 
-        # Helper: Segmented Prediction (Rolling Window)
         def predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code):
             MAX_CHUNK = 7 
             total_predicted = 0
@@ -614,7 +663,12 @@ else:
                     'Reservation_encoded': res_code
                 }])
                 
-                chunk_price = model.predict(inp_chunk)[0]
+                # --- FIX: Handle Unknown Labels (New Room/Channel) ---
+                try:
+                    chunk_price = model.predict(inp_chunk)[0]
+                except:
+                    chunk_price = 0 # AI Failed (Unknown Data) -> Return 0 to trigger fallback
+                
                 total_predicted += chunk_price
                 remaining_nights -= chunk_nights
                 current_date = chunk_end_date
@@ -645,37 +699,38 @@ else:
                 current_date += timedelta(days=1)
             return total_price
 
-        # Helper: Main Calculation with Offset Logic
         def calculate_clamped_price(model, start_date, n_nights, guests, r_code, res_code, room_name_selected, use_h, use_w):
-            # 1. AI Raw Prediction (Using Segmentation)
-            raw_predicted = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
-            
-            # 2. Rule-Based Price (The Anchor)
-            base_per_night = get_base_price(room_name_selected) # เรียกใช้ Dynamic Base Price
+            base_per_night = get_base_price(room_name_selected) 
             rule_price = calculate_rule_based_price(base_per_night, start_date, n_nights, use_h, use_w)
             
-            # 3. Apply Offset: Rule_Price + (Raw_Predicted - Historical_Avg_Total)
-            hist_avg = get_historical_avg_price(room_name_selected)
-            if hist_avg > 0:
-                hist_total = hist_avg * n_nights
-                offset = raw_predicted - hist_total
-                final_price = rule_price + offset
+            # AI Prediction
+            if model is not None:
+                raw_predicted = predict_segmented_price(model, start_date, n_nights, guests, r_code, res_code)
             else:
-                final_price = rule_price
+                raw_predicted = 0
 
-            # 4. Final Safety: Never go below Base Price
+            # Logic: If AI is 0 (Unknown Data) -> Use Rule Price
+            if raw_predicted == 0:
+                final_price = rule_price
+            else:
+                hist_avg = get_historical_avg_price(room_name_selected)
+                if hist_avg > 0:
+                    hist_total = hist_avg * n_nights
+                    offset = raw_predicted - hist_total
+                    final_price = rule_price + offset
+                else:
+                    final_price = rule_price
+
             total_base = base_per_night * n_nights
             final_price = max(final_price, total_base)
             
             return final_price, raw_predicted, rule_price
 
         with st.container(border=True):
-            # --- Layout: Header + Status ---
             col_head, col_status_placeholder = st.columns([1.5, 1]) 
             with col_head: st.subheader("🛠️ กำหนดเงื่อนไขการจอง")
             status_container = col_status_placeholder.container()
 
-            # --- Inputs: Date & Calculation ---
             c1, c2 = st.columns([2, 1])
             with c1:
                 date_range = st.date_input("Select Dates (Check-in - Check-out)", value=[], min_value=None)
@@ -700,7 +755,6 @@ else:
             
             with c2: st.number_input("Nights", value=nights, disabled=True)
 
-            # --- Fill Placeholder (Checkboxes) ---
             with status_container:
                 st.write("") 
                 sc1, sc2 = st.columns(2)
@@ -709,10 +763,9 @@ else:
 
             c3, c4, c5 = st.columns(3)
             with c3:
-                prices = load_base_prices()
+                # Dropdown from Master Data
                 room_display_map = {"All (เลือกทั้งหมด)": "All"}
-                for r in le_room.classes_:
-                    if str(r).lower() == 'nan' or r is None: continue
+                for r in master_rooms:
                     bp = get_base_price(r) 
                     display_text = f"{r} (Base: {bp:,.0f})"
                     room_display_map[display_text] = r
@@ -726,7 +779,8 @@ else:
                 guests = st.number_input(f"Guests (Max {max_g})", min_value=1, max_value=max_g, value=min(2, max_g))
 
             with c5:
-                res_options = ["All (เลือกทั้งหมด)"] + list(le_res.classes_)
+                # Dropdown from Master Channels
+                res_options = ["All (เลือกทั้งหมด)"] + master_channels
                 selected_res = st.selectbox("Channel", res_options)
                 selected_res_val = "All" if "All" in selected_res else selected_res
 
@@ -734,19 +788,35 @@ else:
                 use_holiday_val = auto_holiday
                 use_weekend_val = auto_weekend
 
+                # Encoders (Handle missing safely)
+                try:
+                    le_room_enc = joblib.load(MODEL_FILES['le_room'])
+                    le_res_enc = joblib.load(MODEL_FILES['le_res'])
+                except:
+                    le_room_enc, le_res_enc = None, None
+
                 if selected_room_val == "All" or selected_res_val == "All":
                     st.info(f"📊 รายงานผลการพยากรณ์รวม (Batch Report)")
-                    target_rooms = le_room.classes_ if selected_room_val == "All" else [selected_room_val]
-                    target_res = le_res.classes_ if selected_res_val == "All" else [selected_res_val]
+                    target_rooms = master_rooms if selected_room_val == "All" else [selected_room_val]
+                    target_res = master_channels if selected_res_val == "All" else [selected_res_val]
                     
                     results = []
                     for r_type in target_rooms:
-                        if str(r_type).lower() == 'nan' or pd.isna(r_type): continue
-                        r_code = le_room.transform([r_type])[0]
                         base_per_night = get_base_price(r_type)
                         
+                        # Encode Room (Safe)
+                        r_code = 0
+                        if le_room_enc:
+                            try: r_code = le_room_enc.transform([r_type])[0]
+                            except: r_code = -1
+
                         for ch_type in target_res:
-                            res_code = le_res.transform([ch_type])[0]
+                            # Encode Channel (Safe)
+                            res_code = 0
+                            if le_res_enc:
+                                try: res_code = le_res_enc.transform([ch_type])[0]
+                                except: res_code = -1
+
                             final_xgb, _, _ = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, r_type, use_holiday_val, use_weekend_val)
                             final_lr, _, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, r_type, use_holiday_val, use_weekend_val)
                             
@@ -758,8 +828,16 @@ else:
                     st.dataframe(pd.DataFrame(results).style.format("{:,.0f}", subset=["Base Price (Total)", "XGB Price", "LR Price"]), use_container_width=True, height=500)
 
                 else:
-                    r_code = le_room.transform([selected_room_val])[0]
-                    res_code = le_res.transform([selected_res_val])[0]
+                    # Single Prediction
+                    r_code = 0
+                    if le_room_enc:
+                        try: r_code = le_room_enc.transform([selected_room_val])[0]
+                        except: r_code = -1
+                    
+                    res_code = 0
+                    if le_res_enc:
+                        try: res_code = le_res_enc.transform([selected_res_val])[0]
+                        except: res_code = -1
                     
                     p_xgb_norm, raw_xgb, _ = calculate_clamped_price(xgb_model, checkin_date, nights, guests, r_code, res_code, selected_room_val, use_holiday_val, use_weekend_val)
                     p_lr_norm, raw_lr, _ = calculate_clamped_price(lr_model, checkin_date, nights, guests, r_code, res_code, selected_room_val, use_holiday_val, use_weekend_val)
@@ -769,6 +847,9 @@ else:
                     st.markdown(f"### 🏨 ผลการวิเคราะห์ราคาห้อง: **{selected_room_val}**")
                     st.caption(f"เงื่อนไข: {nights} คืน | {guests} ท่าน | ช่องทาง {selected_res_val} | Standard Base: {std_base:,.0f} THB")
                     
+                    if r_code == -1 or res_code == -1:
+                        st.warning("⚠️ ห้องหรือช่องทางนี้ยังไม่เคยผ่านการเทรน AI (ระบบใช้ราคาฐานคำนวณแทน)")
+
                     r1c1, r1c2 = st.columns(2)
                     with r1c1:
                         diff_xgb = p_xgb_norm - std_base
