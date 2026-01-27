@@ -418,17 +418,14 @@ else:
         # --- 1. CSS Tweak: ลด Padding ของหน้าจอ และปรับแต่งระยะห่าง ---
         st.markdown("""
             <style>
-                /* ลดระยะห่างขอบบนสุด */
                 div.block-container {
                     padding-top: 3rem !important;
                     padding-bottom: 2rem !important;
                 }
-                /* ลดระยะห่างของ Header */
                 h1 {
                     margin-bottom: 0.1rem !important;
                     font-size: 2rem !important;
                 }
-                /* ปรับแต่ง Dropdown ให้ดูแน่นขึ้น */
                 div[data-testid="stSelectbox"] label {
                     font-size: 0.8rem;
                     margin-bottom: 0rem;
@@ -442,17 +439,14 @@ else:
         st.title("📊 Financial Executive Dashboard")
 
         # --- 2. Layout ใหม่: แบ่งซ้าย (Metrics 75%) | ขวา (Filters 25%) ---
-        # การทำแบบนี้จะยุบพื้นที่สีแดงและสีน้ำเงินให้อยู่บรรทัดเดียวกัน ประหยัดที่แนวตั้งมหาศาล
         col_kpi, col_filter = st.columns([3, 1.2], gap="medium")
 
-        # --- ส่วนขวา: Filter (สีน้ำเงิน -> ย้ายมาพื้นที่สีเหลือง) ---
+        # --- ส่วนขวา: Filter ---
         with col_filter:
-            # ใช้ Container ช่วยจัดกลุ่มให้ดูเป็นสัดส่วนทางขวา
             with st.container(border=True):
                 st.markdown("**🔎 Filter (ตัวกรอง)**")
                 fc1, fc2 = st.columns(2)
                 
-                # เตรียมตัวเลือก
                 valid_years = df_raw['Year'].unique()
                 all_years = sorted(valid_years.tolist())
                 year_opts = ['All'] + [str(int(y)) for y in all_years]
@@ -464,20 +458,17 @@ else:
                 with fc1: sel_year = st.selectbox("Year", year_opts, label_visibility="collapsed")
                 with fc2: sel_month_str = st.selectbox("Month", month_opts, label_visibility="collapsed")
 
-                # Logic Filter
                 df_filtered = df_raw.copy()
                 if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
                 if sel_month_str != 'All':
                     sel_month_num = datetime.strptime(sel_month_str, "%B").month
                     df_filtered = df_filtered[df_filtered['month'] == sel_month_num]
 
-        # --- ส่วนซ้าย: Metrics (สีแดง) ---
+        # --- ส่วนซ้าย: Metrics ---
         with col_kpi:
             if df_filtered.empty:
                 st.warning("⚠️ No data available.")
             else:
-                # แสดง Metrics แบบปกติ (ไม่มินิมอล) ตามที่ขอ
-                # ใช้ st.columns ซ้อนเข้าไปอีกที
                 k1, k2, k3 = st.columns(3)
                 with k1: st.metric("💰 Total Revenue", f"{df_filtered['Price'].sum()/1e6:.2f} M", delta="THB")
                 with k2: st.metric("📦 Total Bookings", f"{len(df_filtered):,}", delta="Transactions")
@@ -485,15 +476,13 @@ else:
 
         if df_filtered.empty: return
 
-        # --- 3. Tabs & Graphs (ส่วนล่างแสดงผลเต็มจอปกติ) ---
-        # ไม่ใส่ Divider เพื่อให้กราฟขยับขึ้นมาชิดกับ Metrics
-        st.write("") # เว้นบรรทัดนิดนึง
+        # --- 3. Tabs & Graphs ---
+        st.write("") 
         
         tab1, tab2, tab3 = st.tabs(["💰 Financial Overview", "📢 Channel Strategy", "🛌 Product & Behavior"])
         group_col = 'Target_Room_Type' 
 
         with tab1:
-            # st.markdown("### 1. Financial Overview") # ลบหัวข้อซ้ำซ้อนออกเพื่อให้กราฟขึ้นบนสุด
             c1, c2 = st.columns(2)
             with c1:
                 st.subheader("Revenue vs Nights")
@@ -513,8 +502,6 @@ else:
                 fig2.update_layout(legend=dict(orientation="h", y=1.1), height=380, margin=dict(t=20, b=20, l=20, r=20))
                 st.plotly_chart(fig2, use_container_width=True)
             
-            # ADR Graph
-            st.subheader("ADR Trend Analysis (Average Daily Rate)")
             st.caption("ADR Trend Analysis (Average Daily Rate)")
             monthly_adr = df_filtered.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
             monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
@@ -523,7 +510,6 @@ else:
             st.plotly_chart(fig_adr, use_container_width=True)
 
         with tab2:
-            # st.markdown("### 2. Channel Strategy")
             c3, c4 = st.columns(2)
             with c3:
                 st.subheader("Revenue Share")
@@ -540,7 +526,6 @@ else:
             st.plotly_chart(px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Greens', height=350), use_container_width=True)
 
         with tab3:
-            # st.markdown("### 3. Product & Behavior")
             c5, c6 = st.columns(2)
             with c5:
                 st.subheader("Revenue by Room")
@@ -564,7 +549,11 @@ else:
                 st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Value", color='DayType', height=300), use_container_width=True)
 
         st.divider()
-        with st.expander("🔎 กดเพื่อดูข้อมูลที่ผ่านการกรองแล้ว", expanded=False): st.dataframe(df_filtered, use_container_width=True)
+        with st.expander("🔎 กดเพื่อดูข้อมูลที่ผ่านการกรองแล้ว", expanded=False): 
+            # --- UPDATE: Run Index from 1 ---
+            df_display = df_filtered.reset_index(drop=True)
+            df_display.index = df_display.index + 1
+            st.dataframe(df_display, use_container_width=True)
             
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Master Data Management)")
@@ -600,6 +589,9 @@ else:
             if df_raw_edit.empty:
                 st.info("📭 ยังไม่มีข้อมูลในระบบ")
             else:
+                # --- UPDATE: Run Index from 1 ---
+                df_raw_edit.index = df_raw_edit.index + 1
+                
                 df_raw_edit.columns = df_raw_edit.columns.astype(str)
                 edited_df = st.data_editor(
                     df_raw_edit,
@@ -632,29 +624,30 @@ else:
         with tab_master:
             # Section 1: ราคาฐาน
             st.subheader("1. จัดการข้อมูลห้องพัก")
-            st.caption("กำหนดชื่อและราคาสำหรับห้องพักแต่ละประเภท")
+            st.caption("กำหนดชื่อและราคาสำหรับห้องพักแต่ละประเภท (แก้ไขได้ แต่เพิ่ม/ลบแถวไม่ได้)")
             current_prices = load_base_prices()
             df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
+            
+            # --- UPDATE: Run Index from 1 ---
+            df_prices.index = df_prices.index + 1
+
+            # --- UPDATE: num_rows="fixed" (ล็อกการเพิ่ม/ลบแถว) ---
             edited_prices_df = st.data_editor(
                 df_prices,
-                num_rows="dynamic", use_container_width=True,
+                num_rows="fixed", 
+                use_container_width=True,
                 column_config={"Room Type": st.column_config.TextColumn("ชื่อห้องพัก (Room Name)", required=True),
                                "Base Price": st.column_config.NumberColumn("ราคาฐาน (THB)", format="%d THB", min_value=0)},
                 key="base_price_editor"
             )
             
-            # --- Sync Name Logic (Robust) ---
             if st.button("💾 บันทึกข้อมูลห้องพัก"):
-                # 1. Prepare new data for JSON
                 new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
                 
-                # 2. Sync Logic (Rename in CSV Map)
                 if os.path.exists(ROOM_FILE):
                     try:
                         df_room_map = pd.read_csv(ROOM_FILE)
-                        # Clean whitespace in CSV before processing
                         df_room_map['Room_Type'] = df_room_map['Room_Type'].astype(str).str.strip()
-                        
                         sync_count = 0
                         common_indices = df_prices.index.intersection(edited_prices_df.index)
                         
@@ -663,7 +656,6 @@ else:
                             new_name = str(edited_prices_df.loc[idx, 'Room Type']).strip()
                             
                             if old_name and new_name and old_name != new_name:
-                                # Compare against cleaned CSV data
                                 mask = df_room_map['Room_Type'] == old_name
                                 if mask.any():
                                     df_room_map.loc[mask, 'Room_Type'] = new_name
@@ -672,9 +664,6 @@ else:
                         if sync_count > 0:
                             df_room_map.to_csv(ROOM_FILE, index=False)
                             st.toast(f"🔄 อัปเดตชื่อในกราฟเรียบร้อย ({sync_count} จุด)", icon="✅")
-                        else:
-                            st.warning("⚠️ บันทึกข้อมูลแล้วแล้ว แต่ไม่พบชื่อห้องเดิมในไฟล์ประวัติ (จึงไม่ได้แก้กราฟ)")
-                            
                     except Exception as e:
                         st.error(f"Sync Error: {e}")
 
@@ -691,13 +680,16 @@ else:
             st.caption("เพิ่ม/ลบ ช่องทางที่รับจอง")
             current_channels = load_channels()
             df_channels = pd.DataFrame(current_channels, columns=['Channel Name'])
+            
+            # --- UPDATE: Run Index from 1 ---
+            df_channels.index = df_channels.index + 1
+
             edited_channels_df = st.data_editor(
                 df_channels, num_rows="dynamic", use_container_width=True,
                 column_config={"Channel Name": st.column_config.TextColumn("ชื่อช่องทาง", required=True)},
                 key="channel_editor"
             )
             
-            # --- แก้ไขตรรกะการบันทึกให้ดึงค่าชัวร์ 100% ---
             if st.button("💾 บันทึกช่องทาง"):
                 new_channels_list = []
                 for index, row in edited_channels_df.iterrows():
@@ -711,32 +703,6 @@ else:
                 st.cache_resource.clear()
                 st.success("✅ อัปเดตช่องทางเรียบร้อย!")
                 time.sleep(1); st.rerun()
-
-            # --- เพิ่ม Section พิเศษ: ซ่อมแซมชื่อห้อง (Advanced Sync) ---
-#            st.divider()
-#            with st.expander("🔧 เครื่องมือซ่อมชื่อห้อง (Force Rename)"):
-#                st.info("ใช้สำหรับกรณีเปลี่ยนชื่อในตารางด้านบนแล้วกราฟไม่เปลี่ยนตาม")
-#                c_fix1, c_fix2 = st.columns(2)
-#               with c_fix1: old_n = st.text_input("ชื่อเดิม (ที่เห็นในกราฟ)", placeholder="เช่น Grand Suite Room")
-#                with c_fix2: new_n = st.text_input("ชื่อใหม่ (ที่ต้องการ)", placeholder="เช่น test1")
-#                
-#                if st.button("บังคับเปลี่ยนชื่อเดี๋ยวนี้"):
-#                    if os.path.exists(ROOM_FILE) and old_n and new_n:
-#                        try:
-#                            df_map_fix = pd.read_csv(ROOM_FILE)
-#                            df_map_fix['Room_Type'] = df_map_fix['Room_Type'].astype(str).str.strip()
-#                            mask_fix = df_map_fix['Room_Type'] == old_n.strip()
-#                            if mask_fix.any():
-#                                count_fix = mask_fix.sum()
-#                                df_map_fix.loc[mask_fix, 'Room_Type'] = new_n.strip()
-#                                df_map_fix.to_csv(ROOM_FILE, index=False)
-#                                st.cache_data.clear()
-#                                st.success(f"✅ แก้ไขเรียบร้อย! เปลี่ยน '{old_n}' เป็น '{new_n}' จำนวน {count_fix} จุด")
-#                                time.sleep(1.5); st.rerun()
-#                            else:
-#                                st.error(f"❌ ไม่พบห้องชื่อ '{old_n}' ในระบบประวัติ")
-#                       except Exception as e:
-#                           st.error(f"Error: {e}")
 
         with tab_train:
             st.subheader("🧠 สั่งให้แบบจำลองเรียนรู้ใหม่ (Retrain Model)")
@@ -1162,15 +1128,3 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
-
-
-
-
-
-
-
-
-
-
-
