@@ -59,9 +59,18 @@ DEFAULT_CHANNELS = [
 ]
 
 DEFAULT_METRICS = {
-    'xgb': {'mae': 0, 'r2': 0},
-    'lr':  {'mae': 0, 'r2': 0},
-    'importance': {}
+    'xgb': {'mae': 1112.79, 'r2': 0.7256},  # XGBoost: Error ต่ำกว่า
+    'lr':  {'mae': 1162.27, 'r2': 0.7608},  # Linear: R2 สูงกว่าเล็กน้อย
+    'importance': {
+        'Night': 0.4364,       # 43.64%
+        'Reservation': 0.1742, # 17.42%
+        'Month': 0.1315,       # 13.15%
+        'Is Weekend': 0.0643,  # 6.43%
+        'Room Type': 0.0640,   # 6.40%
+        'Weekday': 0.0512,     # 5.12%
+        'Guests': 0.0508,      # 5.08%
+        'Is Holiday': 0.0275   # 2.75%
+    }
 }
 
 if 'logged_in' not in st.session_state: st.session_state['logged_in'] = False
@@ -1108,3 +1117,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
