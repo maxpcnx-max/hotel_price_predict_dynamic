@@ -512,7 +512,7 @@ else:
         st.subheader("📋 Raw Data Explorer (Cleaned for Dashboard)")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
-   def show_manage_data_page():
+       def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Master Data Management)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ข้อมูลหลัก (Master Data)", "🚀 อัปเดตโมเดล (Retrain)"])
@@ -1067,4 +1067,5 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
