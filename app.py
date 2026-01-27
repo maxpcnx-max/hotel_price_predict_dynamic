@@ -694,18 +694,18 @@ else:
                             st.error(f"Error: {e}")
 
         with tab_train:
-            st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
-            st.info("ระบบจะดึงข้อมูลจากถังข้อมูลมา **คัดกรองเฉพาะข้อมูลที่มีคุณภาพ** เพื่อสอน AI")
+            st.subheader("🧠 สั่งให้แบบจำลองเรียนรู้ใหม่ (Retrain Model)")
+            st.info("ระบบจะดึงข้อมูลจากฐานข้อมูลล่าสุด เพื่อฝึกสอนแบบจำลอง")
             
             st.markdown("#### 📊 Model Performance Report")
             col_xgb, col_lr = st.columns(2)
             with col_xgb:
-                st.markdown("##### ⚡ XGBoost (AI หลัก)")
+                st.markdown("##### ⚡ XGBoost (โมเดล หลัก)")
                 m1, m2 = st.columns(2)
                 m1.metric("Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
                 m2.metric("Error (MAE)", f"{metrics['xgb']['mae']:.2f} ฿")
             with col_lr:
-                st.markdown("##### 📉 Linear Regression (AI รอง)")
+                st.markdown("##### 📉 Linear Regression (โมเดล รอง)")
                 m3, m4 = st.columns(2)
                 m3.metric("Accuracy (R²)", f"{metrics['lr']['r2']*100:.2f}%")
                 m4.metric("Error (MAE)", f"{metrics['lr']['mae']:.2f} ฿")
@@ -714,7 +714,7 @@ else:
 
             if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
                 success, count = retrain_system()
-                if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูลคุณภาพ {count:,} รายการ"); time.sleep(2); st.rerun()
+                if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูล {count:,} รายการ"); time.sleep(2); st.rerun()
 
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
@@ -1117,4 +1117,5 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
