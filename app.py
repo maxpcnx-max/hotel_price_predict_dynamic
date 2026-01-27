@@ -544,7 +544,7 @@ else:
                 success, count = retrain_system()
                 if success: st.success("✅ เรียบร้อย!"); time.sleep(1); st.rerun()
 
-def show_pricing_page():
+    def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
 
         # ----------------------------------------------------
@@ -672,3 +672,4 @@ def show_pricing_page():
     elif "พยากรณ์ราคา" in pg: show_pricing_page()
     elif "วิเคราะห์โมเดล" in pg: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in pg: show_about_page()
+
