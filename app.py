@@ -589,32 +589,44 @@ else:
                 key="base_price_editor"
             )
             
-            # --- CODE UPDATE: Sync Name Logic ---
+            # --- CODE UPDATE: Sync Name Logic (Robust) ---
             if st.button("💾 บันทึกราคาฐาน"):
+                # 1. Prepare new data for JSON
                 new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
                 
-                # Sync Logic
-                if len(df_prices) == len(edited_prices_df) and os.path.exists(ROOM_FILE):
+                # 2. Sync Logic (Rename in CSV Map)
+                if os.path.exists(ROOM_FILE):
                     try:
-                        df_map_sync = pd.read_csv(ROOM_FILE)
-                        df_map_sync['Room_Type'] = df_map_sync['Room_Type'].astype(str)
-                        updated_count = 0
-                        for i in range(len(df_prices)):
-                            old_name = str(df_prices.iloc[i]['Room Type'])
-                            new_name = str(edited_prices_df.iloc[i]['Room Type'])
-                            if old_name != new_name and old_name.strip() != "" and new_name.strip() != "":
-                                mask = df_map_sync['Room_Type'] == old_name
+                        df_room_map = pd.read_csv(ROOM_FILE)
+                        df_room_map['Room_Type'] = df_room_map['Room_Type'].astype(str)
+                        
+                        sync_count = 0
+                        
+                        # Use intersection of indices to safely compare old vs new
+                        common_indices = df_prices.index.intersection(edited_prices_df.index)
+                        
+                        for idx in common_indices:
+                            old_name = str(df_prices.loc[idx, 'Room Type']).strip()
+                            new_name = str(edited_prices_df.loc[idx, 'Room Type']).strip()
+                            
+                            # Check for name change
+                            if old_name and new_name and old_name != new_name:
+                                # Update in Room Map
+                                mask = df_room_map['Room_Type'].str.strip() == old_name
                                 if mask.any():
-                                    df_map_sync.loc[mask, 'Room_Type'] = new_name
-                                    updated_count += 1
-                        if updated_count > 0:
-                            df_map_sync.to_csv(ROOM_FILE, index=False)
-                            st.toast(f"🔄 ระบบอัปเดตชื่อในกราฟให้แล้ว {updated_count} รายการ", icon="✅")
-                    except Exception as e: st.error(f"Sync Error: {e}")
+                                    df_room_map.loc[mask, 'Room_Type'] = new_name
+                                    sync_count += mask.sum()
+                        
+                        if sync_count > 0:
+                            df_room_map.to_csv(ROOM_FILE, index=False)
+                            st.toast(f"🔄 อัปเดตชื่อในกราฟเรียบร้อย ({sync_count} จุด)", icon="✅")
+                            
+                    except Exception as e:
+                        st.error(f"Sync Error: {e}")
 
                 save_base_prices(new_prices_dict)
                 st.cache_data.clear()
-                st.success("✅ อัปเดตราคาฐานและชื่อห้องเรียบร้อย!")
+                st.success("✅ บันทึกสำเร็จ!")
                 time.sleep(1); st.rerun()
 
             st.divider()
