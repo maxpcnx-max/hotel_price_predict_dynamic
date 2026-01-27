@@ -117,10 +117,11 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 4. DATA HANDLING
+# 4. DATA HANDLING (FIXED DATE PARSING)
 # ==========================================================
 
 def parse_dates_smart(date_series):
+    """ฟังก์ชันอัจฉริยะ: บังคับแปลงเป็น Datetime64[ns] เพื่อแก้ปัญหา .dt accessor"""
     def convert_dt(val):
         if pd.isna(val) or val == '': return pd.NaT
         val_str = str(val).strip()
@@ -130,7 +131,9 @@ def parse_dates_smart(date_series):
             return pd.to_datetime(val_str, dayfirst=True)
         except:
             return pd.NaT
-    return date_series.apply(convert_dt)
+    
+    # --- FIX: เพิ่ม pd.to_datetime() ครอบอีกชั้นเพื่อให้มั่นใจว่าเป็น Type Date จริงๆ ---
+    return pd.to_datetime(date_series.apply(convert_dt), errors='coerce')
 
 def normalize_room_id(val):
     try:
@@ -143,7 +146,7 @@ def normalize_room_id(val):
 
 @st.cache_data
 def load_data():
-    """โหลดข้อมูล + Room Mapping + Channel Mapping"""
+    """โหลดข้อมูล + Room Mapping + Channel Mapping (Robust)"""
     # 1. Load Transactions
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
@@ -189,21 +192,22 @@ def load_data():
             df['Target_Room_Type'] = df['Target_Room_Type'].fillna(df['Room'])
 
         # 3. Channel/Reservation Mapping (reservation_master.csv)
-        if 'Reservation' in df.columns:
-             df['Reservation'] = df['Reservation'].astype(str) # Ensure string
+        # --- FIX: ตรวจสอบคอลัมน์ Reservation ให้แน่ใจว่ามีอยู่จริง ---
+        if 'Reservation' not in df.columns:
+            df['Reservation'] = 'Unknown'
+            
+        df['Reservation'] = df['Reservation'].astype(str) # Ensure string
              
-             if os.path.exists(RES_FILE):
-                try:
-                    res_master = pd.read_csv(RES_FILE)
-                    # Expect columns: Reservation (Original), Reservation_Type (New Name)
-                    if 'Reservation' in res_master.columns and 'Reservation_Type' in res_master.columns:
-                        res_master['Reservation'] = res_master['Reservation'].astype(str)
-                        df = df.merge(res_master, on='Reservation', how='left')
-                        
-                        # If mapped, use the new name, otherwise keep original
-                        df['Reservation'] = df['Reservation_Type'].fillna(df['Reservation'])
-                        df = df.drop(columns=['Reservation_Type'], errors='ignore')
-                except: pass
+        if os.path.exists(RES_FILE):
+            try:
+                res_master = pd.read_csv(RES_FILE)
+                if 'Reservation' in res_master.columns and 'Reservation_Type' in res_master.columns:
+                    res_master['Reservation'] = res_master['Reservation'].astype(str)
+                    df = df.merge(res_master, on='Reservation', how='left')
+                    
+                    df['Reservation'] = df['Reservation_Type'].fillna(df['Reservation'])
+                    df = df.drop(columns=['Reservation_Type'], errors='ignore')
+            except: pass
 
         df['Reservation'] = df['Reservation'].fillna('Unknown')
         
@@ -214,9 +218,10 @@ def load_data():
 
 def save_data_robust(new_df, mode='append'):
     try:
+        # --- FIX: Ensure Datetime format before saving ---
         if 'Date' in new_df.columns:
-            new_df['Date'] = parse_dates_smart(new_df['Date'])
-            new_df['Date'] = new_df['Date'].dt.strftime('%Y-%m-%d')
+            new_df['Date'] = parse_dates_smart(new_df['Date']) # Ensure Type
+            new_df['Date'] = new_df['Date'].dt.strftime('%Y-%m-%d') # Now .dt works
             
         if mode == 'append':
             if os.path.exists(DATA_FILE):
@@ -291,7 +296,6 @@ def retrain_system():
         
         if 'Target_Room_Type' in df_clean.columns:
              df_clean = df_clean[df_clean['Target_Room_Type'] != 'Unknown']
-             # ใช้ชื่อห้องจากไฟล์ CSV เป็นเกณฑ์
              valid_rooms = set(load_base_prices().keys())
              if not valid_rooms and os.path.exists(ROOM_FILE):
                   try:
@@ -628,11 +632,15 @@ else:
             st.markdown("#### 3. จัดการช่องทางการขาย (Channel Management)")
             st.caption("ตั้งชื่อช่องทาง: แก้คำผิดหรือรวมกลุ่ม (เช่น 'Agoda.com' -> 'Agoda')")
 
+            df_full = load_data()
+            if not df_full.empty and 'Reservation' in df_full.columns:
+                df_unique_res = df_full['Reservation'].unique()
+            else:
+                df_unique_res = []
+
             if os.path.exists(RES_FILE):
                 df_res_master = pd.read_csv(RES_FILE)
             else:
-                # ถ้ายังไม่มีไฟล์ ให้ดึงจากข้อมูลจริงมาโชว์ก่อน
-                df_unique_res = load_data()['Reservation'].unique()
                 df_res_master = pd.DataFrame({'Reservation': df_unique_res, 'Reservation_Type': df_unique_res})
 
             edited_res_master = st.data_editor(
