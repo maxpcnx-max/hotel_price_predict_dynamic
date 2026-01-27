@@ -629,17 +629,22 @@ else:
                      st.success("✅ ล้างข้อมูลการจองเรียบร้อย! (Master Data ยังอยู่ครบ)")
                      time.sleep(2); st.rerun()
 
-        with tab_master:
+    with tab_master:
             # Section 1: ราคาฐาน
             st.subheader("1. จัดการข้อมูลห้องพัก")
-            st.caption("กำหนดชื่อและราคาสำหรับห้องพักแต่ละประเภท")
+            st.caption("กำหนดชื่อและราคาสำหรับห้องพักแต่ละประเภท (แก้ไขได้ แต่เพิ่ม/ลบแถวไม่ได้)")
             current_prices = load_base_prices()
             df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
+            
+            # --- แก้ไขตรงนี้: เปลี่ยน num_rows="dynamic" เป็น "fixed" ---
             edited_prices_df = st.data_editor(
                 df_prices,
-                num_rows="dynamic", use_container_width=True,
-                column_config={"Room Type": st.column_config.TextColumn("ชื่อห้องพัก (Room Name)", required=True),
-                               "Base Price": st.column_config.NumberColumn("ราคาฐาน (THB)", format="%d THB", min_value=0)},
+                num_rows="fixed",  # <--- ล็อกจำนวนแถว: แก้ไขข้อมูลได้ แต่เพิ่ม/ลบห้องไม่ได้
+                use_container_width=True,
+                column_config={
+                    "Room Type": st.column_config.TextColumn("ชื่อห้องพัก (Room Name)", required=True),
+                    "Base Price": st.column_config.NumberColumn("ราคาฐาน (THB)", format="%d THB", min_value=0)
+                },
                 key="base_price_editor"
             )
             
@@ -682,6 +687,33 @@ else:
                 st.cache_data.clear()
                 st.cache_resource.clear()
                 st.success("✅ บันทึกสำเร็จ!")
+                time.sleep(1); st.rerun()
+
+            st.divider()
+
+            # Section 2: ช่องทางการขาย (ส่วนนี้ยังคงเดิม หรือจะปรับเป็น fixed ด้วยก็ได้ถ้าต้องการ)
+            st.subheader("2. จัดการช่องทางการขาย (Channels)")
+            st.caption("เพิ่ม/ลบ ช่องทางที่รับจอง")
+            current_channels = load_channels()
+            df_channels = pd.DataFrame(current_channels, columns=['Channel Name'])
+            edited_channels_df = st.data_editor(
+                df_channels, num_rows="dynamic", use_container_width=True,
+                column_config={"Channel Name": st.column_config.TextColumn("ชื่อช่องทาง", required=True)},
+                key="channel_editor"
+            )
+            
+            if st.button("💾 บันทึกช่องทาง"):
+                new_channels_list = []
+                for index, row in edited_channels_df.iterrows():
+                    val = str(row['Channel Name']).strip()
+                    if val and val.lower() != 'nan' and val.lower() != 'none':
+                        new_channels_list.append(val)
+                
+                new_channels_list = list(dict.fromkeys(new_channels_list))
+                save_channels(new_channels_list)
+                st.cache_data.clear()
+                st.cache_resource.clear()
+                st.success("✅ อัปเดตช่องทางเรียบร้อย!")
                 time.sleep(1); st.rerun()
 
             st.divider()
@@ -1162,6 +1194,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
