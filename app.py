@@ -629,7 +629,7 @@ else:
                      st.success("✅ ล้างข้อมูลการจองเรียบร้อย! (Master Data ยังอยู่ครบ)")
                      time.sleep(2); st.rerun()
 
-    with tab_master:
+        with tab_master:
             # Section 1: ราคาฐาน
             st.subheader("1. จัดการข้อมูลห้องพัก")
             st.caption("กำหนดชื่อและราคาสำหรับห้องพักแต่ละประเภท (แก้ไขได้ แต่เพิ่ม/ลบแถวไม่ได้)")
@@ -1194,6 +1194,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
