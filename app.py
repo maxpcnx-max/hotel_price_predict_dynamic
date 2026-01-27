@@ -530,7 +530,7 @@ else:
         with tab_trans:
             # PART A: Import
             st.subheader("1. นำเข้าข้อมูลใหม่ (Import)")
-            st.caption("นำข้อมูลมาต่อท้าย (Append) **โดยยังไม่มีการกรอง** (เมื่อบันทึกแล้วจะถูกกรองอัตโนมัติตอนใช้งาน)")
+            st.caption("นำข้อมูลมาต่อท้าย (Append) โดยไม่มีการกรอง")
             up_file = st.file_uploader("เลือกไฟล์ Booking CSV", type=['csv'])
             if up_file is not None:
                 if st.button("💾 บันทึกข้อมูลเข้าระบบ"):
@@ -544,19 +544,21 @@ else:
             st.divider()
 
             # PART B: Edit
-            st.subheader("2. แก้ไขข้อมูล (View All Raw Data)")
-            st.caption("แสดงข้อมูลทั้งหมด (รวมถึงที่ยังไม่ได้ Map หรือเป็น Outlier)")
+            st.subheader("2. แก้ไขข้อมูล (View All Data)")
+            st.caption("แสดงข้อมูลทั้งหมดในถังข้อมูล")
 
-            # โหลดข้อมูลดิบตรงๆ (ไม่ผ่าน filter ของ load_data) เพื่อให้ User เห็นว่ามีอะไรบ้าง
             if os.path.exists(DATA_FILE):
                 df_raw_edit = pd.read_csv(DATA_FILE)
-                if 'Date' in df_raw_edit.columns: df_raw_edit['Date'] = parse_dates_smart(df_raw_edit['Date'])
+                # แปลงวันที่เพื่อการแสดงผล
+                if 'Date' in df_raw_edit.columns: 
+                    df_raw_edit['Date'] = parse_dates_smart(df_raw_edit['Date'])
             else:
                 df_raw_edit = pd.DataFrame()
 
             if df_raw_edit.empty:
                 st.info("📭 ยังไม่มีข้อมูลในระบบ")
             else:
+                # แปลงชื่อคอลัมน์เป็น string ป้องกัน error
                 df_raw_edit.columns = df_raw_edit.columns.astype(str)
                 edited_df = st.data_editor(
                     df_raw_edit,
@@ -575,28 +577,29 @@ else:
 
             st.divider()
             with st.expander("🧨 พื้นที่อันตราย (Danger Zone)"):
-                st.warning("⚠️ **คำเตือน:** การกดปุ่มนี้จะลบข้อมูลการจองทั้งหมด และรีเซ็ตค่า Config")
-                if st.button("🔥 Factory Reset (ล้างทุกอย่างและคืนค่าเดิม)", type="primary"):
+                st.warning("⚠️ **คำเตือน:** การกดปุ่มนี้จะลบ **ข้อมูลการจองและ AI Memory** เท่านั้น (ข้อมูลห้อง, ราคา, ช่องทาง จะ **ไม่ถูกลบ**)")
+                if st.button("🔥 ล้างข้อมูลการจอง (Clear Transactions)", type="primary"):
+                     # 1. ลบไฟล์ Transaction
                      if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
+                     
+                     # 2. ลบโมเดล AI (เพื่อให้เรียนรู้ใหม่)
                      for key, file_path in MODEL_FILES.items():
                          if os.path.exists(file_path): os.remove(file_path)
                      
-                     if os.path.exists(ROOM_FILE): os.remove(ROOM_FILE)
-                     with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_BASE_PRICES, f, indent=4)
-                     with open(CHANNELS_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_CHANNELS, f, indent=4)
-                     with open(METRICS_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_METRICS, f, indent=4)
-
+                     # *** สำคัญ: ไม่ลบ Master Files (ROOM_FILE, BASE_PRICE, CHANNELS) ตามสั่ง ***
+                     
                      st.cache_data.clear()
                      st.cache_resource.clear()
-                     st.success("✅ Factory Reset Complete!")
+                     st.success("✅ ล้างข้อมูลการจองเรียบร้อย! (Master Data ยังอยู่ครบ)")
                      time.sleep(2); st.rerun()
 
         with tab_master:
-            # Layout Vertical: Base Price (Top) -> Channels (Bottom)
+            # Layout: แนวตั้ง (Vertical) ตามที่ขอ
             
-            # --- Section 1: ราคาฐาน (Base Prices) ---
+            # --- ส่วนที่ 1: ราคาฐาน (Base Prices) ---
             st.subheader("1. จัดการราคาฐาน (Base Price)")
-            st.caption("กำหนดราคาสำหรับห้องพัก (ถ้าไม่มีในนี้ ข้อมูลจะถูกกรองออก)")
+            st.caption("กำหนดราคาสำหรับห้องพักแต่ละประเภท")
+            
             current_prices = load_base_prices()
             df_prices = pd.DataFrame(list(current_prices.items()), columns=['Room Type', 'Base Price'])
             
@@ -605,22 +608,23 @@ else:
                 num_rows="dynamic", 
                 use_container_width=True,
                 column_config={
-                    "Room Type": st.column_config.TextColumn("ชื่อห้องพัก (Target_Room_Type)", required=True),
+                    "Room Type": st.column_config.TextColumn("ชื่อห้องพัก (Room Name)", required=True),
                     "Base Price": st.column_config.NumberColumn("ราคาฐาน (THB)", format="%d THB", min_value=0, required=True)
                 },
                 key="base_price_editor"
             )
+            
             if st.button("💾 บันทึกราคาฐาน"):
                 new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
                 save_base_prices(new_prices_dict)
-                st.cache_data.clear() # Clear cache to refresh dashboard
+                st.cache_data.clear() 
                 st.success("✅ อัปเดตราคาฐานเรียบร้อย!")
 
             st.divider()
 
-            # --- Section 2: ช่องทาง (Channels) ---
+            # --- ส่วนที่ 2: ช่องทางการขาย (Channels) ---
             st.subheader("2. จัดการช่องทางการขาย (Channels)")
-            st.caption("เพิ่ม/ลบ ช่องทาง (ถ้าไม่มีในนี้ ข้อมูลจะถูกกรองออก)")
+            st.caption("เพิ่ม/ลบ ช่องทางที่รับจอง")
 
             current_channels = load_channels()
             df_channels = pd.DataFrame(current_channels, columns=['Channel Name'])
@@ -634,10 +638,11 @@ else:
                 },
                 key="channel_editor"
             )
+            
             if st.button("💾 บันทึกช่องทาง"):
                 new_channels_list = [row['Channel Name'] for index, row in edited_channels_df.iterrows() if row['Channel Name']]
                 save_channels(new_channels_list)
-                st.cache_data.clear() # Clear cache to refresh dashboard
+                st.cache_data.clear()
                 st.success("✅ อัปเดตช่องทางเรียบร้อย!")
 
         with tab_train:
@@ -648,7 +653,7 @@ else:
             if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
                 success, count = retrain_system()
                 if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูลคุณภาพ {count:,} รายการ"); time.sleep(2); st.rerun()
-
+                    
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         
@@ -1052,3 +1057,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
