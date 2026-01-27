@@ -642,11 +642,14 @@ else:
                 column_config={"Channel Name": st.column_config.TextColumn("ชื่อช่องทาง", required=True)},
                 key="channel_editor"
             )
+            
+            # --- แก้ไขตรงนี้: เพิ่ม st.rerun() เพื่อให้หน้าจอรีเฟรชทันทีที่กดบันทึก ---
             if st.button("💾 บันทึกช่องทาง"):
                 new_channels_list = [row['Channel Name'] for index, row in edited_channels_df.iterrows() if row['Channel Name']]
                 save_channels(new_channels_list)
                 st.cache_data.clear()
                 st.success("✅ อัปเดตช่องทางเรียบร้อย!")
+                time.sleep(1); st.rerun()
 
         with tab_train:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
@@ -673,7 +676,7 @@ else:
             if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
                 success, count = retrain_system()
                 if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูลคุณภาพ {count:,} รายการ"); time.sleep(2); st.rerun()
-
+                    
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         
@@ -1075,3 +1078,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
