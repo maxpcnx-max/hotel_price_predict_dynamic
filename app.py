@@ -415,26 +415,42 @@ else:
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
     def show_dashboard_page():
-        # --- 1. CSS: ปรับแค่ระยะห่างด้านบน (Padding) ไม่ไปยุ่งกับขนาด Metrics ---
+        # --- 1. CSS Injection: ลดพื้นที่ว่างด้านบนสุด (Padding) ---
         st.markdown("""
             <style>
                 div.block-container {
-                    padding-top: 2rem !important;
-                    padding-bottom: 5rem !important;
+                    padding-top: 1rem !important; /* ดึงเนื้อหาขึ้นบนสุด */
+                    padding-bottom: 2rem !important;
                 }
+                /* ปรับลดระยะห่างระหว่าง Header กับ Metrics */
+                h1 { margin-bottom: 0.5rem !important; }
             </style>
         """, unsafe_allow_html=True)
 
-        # --- 2. สร้าง Container จองพื้นที่ส่วนบนสุดไว้ก่อน (Header & Metrics) ---
-        # เทคนิค: เราสร้างพื้นที่ด้านบนไว้ แต่ยังไม่ใส่ข้อมูล จนกว่าจะคำนวณ Filter ด้านล่างเสร็จ
-        header_section = st.container()
+        # --- 2. Header & Metrics (ส่วนบนสุด) ---
+        # แสดง Title แบบเต็ม
+        st.title("📊 Financial Executive Dashboard")
+        
+        # แสดง Metrics แบบเต็ม (Original Style)
+        # ใช้ container เพื่อให้ Metrics อยู่บนสุดก่อน Filter
+        if not df_raw.empty:
+            # คำนวณเบื้องต้นเพื่อโชว์ค่ารวมก่อน (หรือจะรอ Filter ก็ได้ แต่ถ้าจะให้ Layout นิ่ง โชว์เป็น Total ก่อน หรือรอ Filter ก็ได้)
+            # ในที่นี้เพื่อให้ Flow เหมือนเดิม คือต้อง Filter ก่อนค่าถึงเปลี่ยน ผมจะวาง Placeholder หรือ Logic ไว้
+            pass
 
-        # --- 3. ส่วน Filter (ย้ายลงมาตามที่ขอ) ---
-        st.divider() # เส้นคั่นระหว่าง Metrics กับ Filter
-        st.markdown("#### 🔎 Filter Data (ตัวกรองข้อมูล)") # เขียนกำกับหัวข้อ
+        # ส่วนนี้ต้องดึง Logic Filter มาคำนวณก่อนแสดงผล แต่ User อยากให้ Filter อยู่ข้างล่าง
+        # ดังนั้นเราจะสร้าง Filter UI ก่อน เพื่อเอาค่าไปคำนวณ แล้วค่อยแสดง Metrics ข้างบน
+        # แต่ Streamlit รันจากบนลงล่าง ... เทคนิคคือใช้ st.container() จองที่ไว้
+
+        top_container = st.container() # จองที่ด้านบนสำหรับ Metrics
+
+        # --- 3. Filter Data (ย้ายลงมาข้างล่างตามภาพวาด) ---
+        st.markdown("---") # เส้นคั่น
+        st.markdown("#### 🔎 Filter Data (ตัวกรองข้อมูล)") # เขียนกำกับตามที่ขอ
         
-        f_col1, f_col2 = st.columns(2)
+        f_col1, f_col2 = st.columns([1, 1])
         
+        # ตัวเลือกปีและเดือน
         valid_years = df_raw['Year'].unique()
         all_years = sorted(valid_years.tolist())
         year_opts = ['All'] + [str(int(y)) for y in all_years]
@@ -443,36 +459,32 @@ else:
         all_months = sorted(valid_months.tolist())
         month_opts = ['All'] + [datetime(2024, int(m), 1).strftime('%B') for m in all_months]
 
-        with f_col1: 
-            sel_year = st.selectbox("Select Year (เลือกปี)", year_opts)
-        with f_col2: 
-            sel_month_str = st.selectbox("Select Month (เลือกเดือน)", month_opts)
+        with f_col1: sel_year = st.selectbox("Select Year (เลือกปี)", year_opts)
+        with f_col2: sel_month_str = st.selectbox("Select Month (เลือกเดือน)", month_opts)
 
-        # Logic: กรองข้อมูล
+        # Logic การกรองข้อมูล
         df_filtered = df_raw.copy()
         if sel_year != 'All': df_filtered = df_filtered[df_filtered['Year'] == int(sel_year)]
         if sel_month_str != 'All':
             sel_month_num = datetime.strptime(sel_month_str, "%B").month
             df_filtered = df_filtered[df_filtered['month'] == sel_month_num]
 
-        # --- 4. ย้อนกลับไปเติมข้อมูลใน Header และ Metrics ด้านบน ---
-        with header_section:
-            st.title("📊 Financial Executive Dashboard")
-            st.caption(f"Last update: {datetime.now().strftime('%d/%m/%Y')}")
-            
+        # --- 4. ย้อนกลับไปแสดง Metrics ในพื้นที่ที่จองไว้ด้านบน (top_container) ---
+        with top_container:
             if df_filtered.empty:
-                st.warning("⚠️ No data available for the selected filters.")
+                st.warning("⚠️ ไม่พบข้อมูลตามเงื่อนไขที่เลือก")
             else:
-                # แสดง Metrics แบบ Original (ใหญ่ๆ ชัดเจน ไม่มินิมอล)
                 k1, k2, k3 = st.columns(3)
+                # ใช้คำเต็ม ไม่ย่อ
                 with k1: st.metric("💰 Total Revenue", f"{df_filtered['Price'].sum()/1e6:.2f} M THB")
                 with k2: st.metric("📦 Total Bookings", f"{len(df_filtered):,} รายการ")
                 with k3: st.metric("🏷️ Avg. Booking Value", f"{df_filtered['Price'].mean():,.0f} THB")
 
         if df_filtered.empty: return
 
-        # --- 5. Tabs & Graphs (แบบเดิม) ---
-        st.markdown("---") # เส้นคั่นก่อนเข้ากราฟ
+        # --- 5. Tabs & Graphs (ส่วนล่าง) ---
+        st.markdown("---") 
+        # ใช้ชื่อ Tab เต็มเหมือนเดิม
         tab1, tab2, tab3 = st.tabs(["💰 Financial Overview", "📢 Channel Strategy", "🛌 Product & Behavior"])
         group_col = 'Target_Room_Type' 
 
@@ -485,7 +497,7 @@ else:
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
                 fig.add_trace(go.Bar(x=room_perf[group_col], y=room_perf['Price'], name="Revenue", marker_color='#1f77b4'), secondary_y=False)
                 fig.add_trace(go.Scatter(x=room_perf[group_col], y=room_perf['Night'], name="Nights", mode='lines+markers', marker_color='#ff7f0e'), secondary_y=True)
-                fig.update_layout(legend=dict(orientation="h", y=1.1))
+                fig.update_layout(legend=dict(orientation="h", y=1.1), height=400) # ปรับ Height ให้พอดี
                 st.plotly_chart(fig, use_container_width=True)
             with c2:
                 st.subheader("Revenue vs Booking Trend")
@@ -494,13 +506,15 @@ else:
                 fig2 = make_subplots(specs=[[{"secondary_y": True}]])
                 fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
                 fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", line=dict(color='blue', dash='dot')), secondary_y=True)
-                fig2.update_layout(legend=dict(orientation="h", y=1.1))
+                fig2.update_layout(legend=dict(orientation="h", y=1.1), height=400)
                 st.plotly_chart(fig2, use_container_width=True)
             
+            # กราฟ ADR
             st.subheader("ADR Trend Analysis (Average Daily Rate)")
             monthly_adr = df_filtered.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
             monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
             fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True, title="ADR per Month")
+            fig_adr.update_layout(height=350)
             st.plotly_chart(fig_adr, use_container_width=True)
 
         with tab2:
@@ -515,6 +529,7 @@ else:
                 m_res = df_filtered.groupby(['month', 'Reservation']).size().reset_index(name='Count')
                 m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
                 st.plotly_chart(px.bar(m_res, x='M_Name', y='Count', color='Reservation'), use_container_width=True)
+            
             st.subheader("High-Value Customer Channel (ADR)")
             chan_adr = df_filtered.groupby('Reservation').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR').sort_values('ADR', ascending=False)
             st.plotly_chart(px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Greens'), use_container_width=True)
@@ -532,6 +547,7 @@ else:
                 heatmap_data = df_filtered.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
                 fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues')
                 st.plotly_chart(fig_heat, use_container_width=True)
+            
             st.subheader("Weekday vs Weekend Revenue")
             df_filtered['DayType'] = df_filtered['is_weekend'].map({1: 'Weekend', 0: 'Weekday'})
             day_rev = df_filtered.groupby('DayType')['Price'].sum().reset_index()
@@ -1140,6 +1156,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
