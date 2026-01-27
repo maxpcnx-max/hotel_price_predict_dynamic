@@ -23,7 +23,7 @@ from sklearn.metrics import mean_absolute_error, r2_score
 # 1. SETUP & CONSTANTS
 # ==========================================================
 st.set_page_config(
-    page_title="Hotel Price Forecasting System (Master Data)",
+    page_title="Hotel Price Forecasting System (Strict Master Data)",
     page_icon="🏨",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -98,7 +98,8 @@ def load_channels():
         return DEFAULT_CHANNELS.copy()
     try:
         with open(CHANNELS_FILE, 'r', encoding='utf-8') as f:
-            return json.load(f)
+            data = json.load(f)
+            return data if isinstance(data, list) else DEFAULT_CHANNELS.copy()
     except:
         return DEFAULT_CHANNELS.copy()
 
@@ -130,7 +131,7 @@ def login_user(username, password):
 init_db()
 
 # ==========================================================
-# 4. DATA HANDLING (Core Logic)
+# 4. DATA HANDLING (Core Logic: Strict Filtering)
 # ==========================================================
 
 def parse_dates_smart(date_series):
@@ -157,7 +158,7 @@ def normalize_room_id(val):
 
 @st.cache_data
 def load_data():
-    """โหลดข้อมูล + กรองห้องผีออก (Strict Filter)"""
+    """โหลดข้อมูลและกรอง Outlier ตาม Master Data"""
     # 1. โหลดไฟล์ Transaction
     if not os.path.exists(DATA_FILE):
         try: gdown.download("https://drive.google.com/uc?id=1dxgKIvSTelLaJvAtBSCMCU5K4FuJvfri", DATA_FILE, quiet=True)
@@ -166,50 +167,59 @@ def load_data():
     try:
         df = pd.read_csv(DATA_FILE)
         
+        # จัดการวันที่
         if 'Date' in df.columns:
             df['Date'] = parse_dates_smart(df['Date'])
             df['is_weekend'] = df['Date'].dt.weekday.isin([5, 6]).astype(int)
             df['Year'] = df['Date'].dt.year
             df['month'] = df['Date'].dt.month
             
+        # จัดการเลขห้อง
         if 'Room' in df.columns:
             df['Room'] = df['Room'].apply(normalize_room_id)
 
-        # 2. โหลดไฟล์ Mapping (room_type.csv)
-        # นี่คือหัวใจสำคัญ: ถ้าไม่มีไฟล์นี้ หรือเลขห้องไม่อยู่ในไฟล์นี้ จะถือว่าเป็นห้องผี
+        # -----------------------------------------------------------
+        # กรองที่ 1: ห้องพัก (ต้องมีใน Mapping เท่านั้น)
+        # -----------------------------------------------------------
         if os.path.exists(ROOM_FILE):
             try:
                 room_master = pd.read_csv(ROOM_FILE)
-                # Normalize Room ID ใน Master ให้ตรงกัน
                 if 'Room' in room_master.columns:
                     room_master['Room'] = room_master['Room'].apply(normalize_room_id)
                 
-                # เตรียมชื่อ Column เป้าหมาย
+                # หาชื่อ Column เป้าหมาย
                 target_col = 'Room_Type' if 'Room_Type' in room_master.columns else 'Target_Room_Type'
                 
                 if target_col in room_master.columns:
-                    # เลือกเฉพาะ Column ที่จำเป็น
-                    room_master = room_master[['Room', target_col]]
+                    # เลือกเฉพาะ Column ที่จำเป็นและ Merge
+                    room_master_clean = room_master[['Room', target_col]]
+                    df = df.merge(room_master_clean, on='Room', how='left')
                     
-                    # Merge ข้อมูล: เอา Transaction เป็นตัวตั้ง, เอาชื่อห้องมาแปะ
-                    df = df.merge(room_master, on='Room', how='left')
-                    
-                    # เปลี่ยนชื่อ Column ให้เป็นมาตรฐาน 'Target_Room_Type'
+                    # Rename ให้เป็นมาตรฐาน
                     if target_col != 'Target_Room_Type':
                         df = df.rename(columns={target_col: 'Target_Room_Type'})
-            except: pass
-
-        # 3. STRICT FILTER: กรองข้อมูลขยะ
-        if 'Target_Room_Type' in df.columns:
-            # ลบแถวที่ Target_Room_Type เป็น NaN (แปลว่าหาใน Master ไม่เจอ)
-            df = df.dropna(subset=['Target_Room_Type'])
-            # ลบแถวที่เป็น Unknown (เผื่อหลุดมา)
-            df = df[df['Target_Room_Type'] != 'Unknown']
+                    
+                    # *** STRICT FILTER *** ตัดห้องที่ไม่มีชื่อ (NaN) ทิ้ง
+                    df = df.dropna(subset=['Target_Room_Type'])
+                else:
+                    return pd.DataFrame() # ไฟล์ Mapping เสียหาย
+            except:
+                return pd.DataFrame() # อ่านไฟล์ Mapping ไม่ได้
         else:
-            # ถ้าไม่มีการ Map เลย ให้คืนค่าว่างไปเลย เพื่อความปลอดภัย
+            # ถ้าไม่มีไฟล์ Mapping เลย ให้คืนค่าว่าง (เพราะถือว่ายังไม่รู้จักห้องไหนเลย)
             return pd.DataFrame()
 
-        df['Reservation'] = df['Reservation'].fillna('Unknown')
+        # -----------------------------------------------------------
+        # กรองที่ 2: ช่องทางการขาย (ต้องมีใน Channels เท่านั้น)
+        # -----------------------------------------------------------
+        valid_channels = load_channels()
+        if 'Reservation' in df.columns:
+            df['Reservation'] = df['Reservation'].astype(str).str.strip()
+            # *** STRICT FILTER *** ตัดช่องทางที่ไม่อยู่ในรายการทิ้ง
+            df = df[df['Reservation'].isin(valid_channels)]
+        else:
+            return pd.DataFrame()
+
         return df
     except Exception as e:
         print(f"Error: {e}") 
@@ -284,24 +294,16 @@ def retrain_system():
     
     try:
         status_text.text("⏳ Reading data from storage...")
-        df = load_data()
+        df = load_data() # load_data กรองมาให้แล้วอย่างดี
         
         if df.empty:
-            st.error("ไม่พบข้อมูลสำหรับเทรนโมเดล (กรุณาตรวจสอบ Master Data ว่าจับคู่ห้องครบถ้วนหรือไม่)")
+            st.error("ไม่พบข้อมูลที่ผ่านเกณฑ์ (กรุณาตรวจสอบการจับคู่ห้องและช่องทางในหน้าจัดการข้อมูล)")
             return False, 0
             
         status_text.text("🧹 Preparing data...")
         df_clean = df.dropna(subset=['Price', 'Night', 'Date'])
-        
-        # กรองเอาเฉพาะช่องทางที่มีใน Master Data
-        if 'Reservation' in df_clean.columns:
-             valid_channels = set(load_channels())
-             df_clean = df_clean[df_clean['Reservation'].isin(valid_channels)]
 
-        if df_clean.empty:
-            st.error("ไม่เหลือข้อมูลหลังจากกรอง (ตรวจสอบช่องทางการขาย)")
-            return False, 0
-
+        # Prepare Features
         df_clean['Night'] = df_clean['Night'].fillna(1)
         df_clean['Adults'] = df_clean['Adults'].fillna(2)
         df_clean['Children'] = df_clean['Children'].fillna(0)
@@ -405,7 +407,7 @@ def login_page():
 if not st.session_state['logged_in']:
     login_page()
 else:
-    df_raw = load_data() 
+    df_raw = load_data() # โหลดข้อมูลที่กรองแล้วมาใช้งาน
     
     if not df_raw.empty and not st.session_state['historical_avg']:
         st.session_state['historical_avg'] = calculate_historical_avg(df_raw)
@@ -415,14 +417,13 @@ else:
     def show_dashboard_page():
         st.title("📊 Financial Executive Dashboard")
         
-        # เช็คก่อนว่ามีข้อมูลหรือไม่ (ถ้า load_data กรองออกหมด ก็จะว่าง)
-        if df_raw.empty: 
-            st.warning("⚠️ ไม่พบข้อมูลสำหรับแสดงผล (อาจเป็นเพราะยังไม่ได้จับคู่เลขห้อง หรือข้อมูลถูกกรองออกหมด)")
-            st.info("👉 กรุณาไปที่เมนู **'จัดการข้อมูล' -> 'จัดการ Master Data' -> 'จับคู่เลขห้อง'** เพื่อเพิ่มเลขห้องเข้าระบบ")
+        if df_raw.empty:
+            st.warning("⚠️ ไม่พบข้อมูลที่พร้อมแสดงผล (ข้อมูลอาจถูกกรองออกหมดเพราะไม่มีใน Master Data)")
+            st.info("💡 คำแนะนำ: กรุณาไปที่หน้า 'จัดการข้อมูล' เพื่อเพิ่ม 'เลขห้อง' หรือ 'ช่องทางการขาย' ที่ขาดหายไป")
             return
 
         with st.expander("🔎 Filter Data (ตัวกรองข้อมูล)", expanded=True):
-            f_col1, f_col2, f_col3 = st.columns(3)
+            f_col1, f_col2 = st.columns(2)
             
             valid_years = df_raw['Year'].unique()
             all_years = sorted(valid_years.tolist())
@@ -450,8 +451,8 @@ else:
         
         st.divider()
         tab1, tab2, tab3 = st.tabs(["💰 Financial Overview", "📢 Channel Strategy", "🛌 Product & Behavior"])
-        # ใช้ Target_Room_Type (ชื่อห้อง) ในการ Group เสมอ
-        group_col = 'Target_Room_Type'
+        # ใช้ชื่อห้องที่ Map แล้วเสมอ (Target_Room_Type)
+        group_col = 'Target_Room_Type' 
 
         with tab1:
             st.markdown("### 1. Financial Overview (ภาพรวมการเงิน)")
@@ -529,7 +530,7 @@ else:
         with tab_trans:
             # PART A: Import
             st.subheader("1. นำเข้าข้อมูลใหม่ (Import)")
-            st.caption("นำข้อมูลมาต่อท้าย (Append) โดยไม่มีการกรอง")
+            st.caption("นำข้อมูลมาต่อท้าย (Append) **โดยยังไม่มีการกรอง** (เมื่อบันทึกแล้วจะถูกกรองอัตโนมัติตอนใช้งาน)")
             up_file = st.file_uploader("เลือกไฟล์ Booking CSV", type=['csv'])
             if up_file is not None:
                 if st.button("💾 บันทึกข้อมูลเข้าระบบ"):
@@ -543,27 +544,28 @@ else:
             st.divider()
 
             # PART B: Edit
-            st.subheader("2. แก้ไขข้อมูล (Edit Mode)")
-            st.caption("แก้ไขข้อมูลในถังข้อมูลโดยตรง")
+            st.subheader("2. แก้ไขข้อมูล (View All Raw Data)")
+            st.caption("แสดงข้อมูลทั้งหมด (รวมถึงที่ยังไม่ได้ Map หรือเป็น Outlier)")
 
-            df_current = load_data() # โหลดข้อมูลมาแสดง (อันนี้ผ่านการกรองแล้ว)
-            
-            # ถ้าอยากโชว์ข้อมูลดิบทั้งหมดให้ user แก้ (รวมถึงอันที่ยังไม่ได้ map) ต้องโหลดแบบ raw
-            # แต่เพื่อความปลอดภัย ให้โชว์เท่าที่ load_data เห็นจะดีกว่า หรือไม่ก็ต้องเขียน load_raw แยก
-            if df_current.empty:
-                st.info("📭 ยังไม่มีข้อมูลที่แสดงผลได้ (ลองตรวจสอบ Master Data)")
+            # โหลดข้อมูลดิบตรงๆ (ไม่ผ่าน filter ของ load_data) เพื่อให้ User เห็นว่ามีอะไรบ้าง
+            if os.path.exists(DATA_FILE):
+                df_raw_edit = pd.read_csv(DATA_FILE)
+                if 'Date' in df_raw_edit.columns: df_raw_edit['Date'] = parse_dates_smart(df_raw_edit['Date'])
             else:
-                df_current.columns = df_current.columns.astype(str)
+                df_raw_edit = pd.DataFrame()
+
+            if df_raw_edit.empty:
+                st.info("📭 ยังไม่มีข้อมูลในระบบ")
+            else:
+                df_raw_edit.columns = df_raw_edit.columns.astype(str)
                 edited_df = st.data_editor(
-                    df_current,
+                    df_raw_edit,
                     num_rows="dynamic",
                     use_container_width=True,
                     key="trans_editor",
                     column_config={
                         "Date": st.column_config.DateColumn("Date", format="DD/MM/YYYY"),
                         "Price": st.column_config.NumberColumn("Price", format="%d THB"),
-                        # ซ่อนคอลัมน์ที่คำนวณมา
-                        "Target_Room_Type": None 
                     }
                 )
 
@@ -573,39 +575,37 @@ else:
 
             st.divider()
             with st.expander("🧨 พื้นที่อันตราย (Danger Zone)"):
-                st.warning("⚠️ **คำเตือน:** การกดปุ่มนี้จะลบข้อมูลการจองทั้งหมด, ลบโมเดลที่เคยเทรนมา, และรีเซ็ตค่า Config ทั้งหมดกลับเป็นค่าโรงงาน")
+                st.warning("⚠️ **คำเตือน:** การกดปุ่มนี้จะลบข้อมูลการจองทั้งหมด และรีเซ็ตค่า Config")
                 if st.button("🔥 Factory Reset (ล้างทุกอย่างและคืนค่าเดิม)", type="primary"):
                      if os.path.exists(DATA_FILE): os.remove(DATA_FILE)
                      for key, file_path in MODEL_FILES.items():
                          if os.path.exists(file_path): os.remove(file_path)
                      
-                     # Reset Channels & Rooms & Base Prices
-                     if os.path.exists(ROOM_FILE): os.remove(ROOM_FILE) # ลบ mapping ด้วย
+                     if os.path.exists(ROOM_FILE): os.remove(ROOM_FILE)
                      with open(BASE_PRICE_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_BASE_PRICES, f, indent=4)
                      with open(CHANNELS_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_CHANNELS, f, indent=4)
                      with open(METRICS_FILE, 'w', encoding='utf-8') as f: json.dump(DEFAULT_METRICS, f, indent=4)
 
                      st.cache_data.clear()
                      st.cache_resource.clear()
-                     st.success("✅ Factory Reset Complete! ระบบกลับสู่ค่าเริ่มต้นแล้ว")
+                     st.success("✅ Factory Reset Complete!")
                      time.sleep(2); st.rerun()
 
         with tab_master:
-            # Layout: 3 Columns
             c1, c2, c3 = st.columns(3)
             
             # --- Column 1: จับคู่เลขห้อง (Room Mapping) ---
             with c1:
                 st.subheader("1. จับคู่เลขห้อง")
                 st.caption("Map: เลขห้อง (CSV) -> ชื่อห้อง")
+                st.info("💡 ห้องที่ไม่อยู่ในตารางนี้ จะถูก **ตัดทิ้ง** จาก Dashboard")
                 
-                # โหลดไฟล์ room_type.csv
                 if os.path.exists(ROOM_FILE):
                     df_room_map = pd.read_csv(ROOM_FILE)
                 else:
                     df_room_map = pd.DataFrame(columns=['Room', 'Room_Type'])
                 
-                df_room_map = df_room_map.astype(str) # แปลงเป็น string ให้หมดกัน error
+                df_room_map = df_room_map.astype(str) 
 
                 edited_room_map = st.data_editor(
                     df_room_map,
@@ -620,8 +620,8 @@ else:
                 
                 if st.button("💾 บันทึกการจับคู่"):
                     edited_room_map.to_csv(ROOM_FILE, index=False)
-                    st.cache_data.clear() # สำคัญ! ต้องเคลียร์ cache เพื่อให้ dashboard เห็นค่าใหม่
-                    st.success("✅ บันทึกเรียบร้อย!")
+                    st.cache_data.clear() 
+                    st.success("✅ บันทึกเรียบร้อย! Dashboard จะแสดงห้องใหม่ทันที")
                     time.sleep(0.5); st.rerun()
 
             # --- Column 2: ราคาฐาน (Base Prices) ---
@@ -650,6 +650,8 @@ else:
             with c3:
                 st.subheader("3. ช่องทางการขาย")
                 st.caption("เพิ่ม/ลบ ช่องทาง")
+                st.info("💡 ช่องทางที่ไม่อยู่ในนี้ จะถูก **ตัดทิ้ง** จาก Dashboard")
+
                 current_channels = load_channels()
                 df_channels = pd.DataFrame(current_channels, columns=['Channel Name'])
                 
@@ -665,6 +667,7 @@ else:
                 if st.button("💾 บันทึกช่องทาง"):
                     new_channels_list = [row['Channel Name'] for index, row in edited_channels_df.iterrows() if row['Channel Name']]
                     save_channels(new_channels_list)
+                    st.cache_data.clear()
                     st.success("✅ อัปเดตช่องทางเรียบร้อย!")
 
         with tab_train:
@@ -1014,7 +1017,7 @@ else:
             st.info("วิทยานิพนธ์: การพัฒนาระบบสนับสนุนการตัดสินใจเพื่อการพยากรณ์ราคาแบบพลวัต")
 
     # ==========================================================
-    # UI Sidebar ใหม่ (แบ่งหมวดหมู่ + มีเส้นคั่น)
+    # ส่วนที่แก้ไข: UI Sidebar ใหม่ (แบ่งหมวดหมู่ + มีเส้นคั่น)
     # ==========================================================
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
