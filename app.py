@@ -415,12 +415,12 @@ else:
     xgb_model, lr_model, le_room, le_res, metrics = load_system_models()
     
     def show_dashboard_page():
-        # --- CSS: ลดพื้นที่ว่างด้านบนสุดของหน้าจอลง (Padding Top) ---
+        # --- CSS: ปรับระยะห่างด้านบนใหม่ (ขยับลงมา 3rem ไม่ให้ชนขอบ) ---
         st.markdown("""
             <style>
                .block-container {
-                    padding-top: 1rem;
-                    padding-bottom: 0rem;
+                    padding-top: 3rem; 
+                    padding-bottom: 2rem;
                 }
             </style>
         """, unsafe_allow_html=True)
@@ -430,25 +430,24 @@ else:
             return
 
         # =========================================================
-        # 1. COMPACT HEADER (ชื่อ + ตัวกรอง อยู่บรรทัดเดียวกัน)
+        # 1. COMPACT HEADER
         # =========================================================
-        # แบ่งเป็น 3 ส่วน: ชื่อ (50%) | เลือกปี (25%) | เลือกเดือน (25%)
         col_head, col_year, col_month = st.columns([2, 1, 1])
         
         with col_head:
-            st.markdown("## 📊 Financial Dashboard") # ลดขนาดจาก Title เป็น H2
+            st.markdown("## 📊 Financial Dashboard")
             
         with col_year:
             valid_years = df_raw['Year'].unique()
             all_years = sorted(valid_years.tolist())
             year_opts = ['All'] + [str(int(y)) for y in all_years]
-            sel_year = st.selectbox("Year", year_opts, label_visibility="collapsed") # ซ่อน Label เพื่อประหยัดที่
+            sel_year = st.selectbox("Year", year_opts, label_visibility="collapsed")
 
         with col_month:
             valid_months = df_raw['month'].unique()
             all_months = sorted(valid_months.tolist())
             month_opts = ['All'] + [datetime(2024, int(m), 1).strftime('%B') for m in all_months]
-            sel_month_str = st.selectbox("Month", month_opts, label_visibility="collapsed") # ซ่อน Label
+            sel_month_str = st.selectbox("Month", month_opts, label_visibility="collapsed")
 
         # Logic กรองข้อมูล
         df_filtered = df_raw.copy()
@@ -460,12 +459,10 @@ else:
         if df_filtered.empty: st.warning("⚠️ No data"); return
 
         # =========================================================
-        # 2. MINI METRICS (สรุปยอดแบบกะทัดรัด)
+        # 2. MINI METRICS
         # =========================================================
-        # ใช้ container border แบบบางๆ เพื่อจัดกลุ่ม
         with st.container(border=True):
             k1, k2, k3 = st.columns(3)
-            # ปรับตัวเลขให้ดูง่าย
             rev_val = df_filtered['Price'].sum()
             rev_str = f"{rev_val/1e6:.2f} M" if rev_val > 1000000 else f"{rev_val:,.0f}"
             
@@ -474,80 +471,90 @@ else:
             with k3: st.markdown(f"**🏷️ เฉลี่ยต่อบิล:** {df_filtered['Price'].mean():,.0f} THB")
         
         # =========================================================
-        # 3. CHARTS AREA (พื้นที่กราฟ)
+        # 3. CHARTS AREA
         # =========================================================
         tab1, tab2, tab3 = st.tabs(["💰 Financial", "📢 Channels", "🛌 Rooms"])
         group_col = 'Target_Room_Type' 
+        
+        # ตั้งค่า Theme กราฟให้ดูคลีนและทันสมัย
+        chart_template = "plotly_white"
 
         with tab1:
-            # ตัด Header "Financial Overview" ออก เพื่อให้กราฟขึ้นมาบนสุดเลย
             c1, c2 = st.columns(2)
             with c1:
-                # st.caption("Revenue vs Nights") # ใส่ caption เล็กๆ แทน header ใหญ่
                 room_perf = df_filtered.groupby(group_col).agg({'Price': 'sum', 'Night': 'sum'}).reset_index().sort_values('Price', ascending=False)
                 fig = make_subplots(specs=[[{"secondary_y": True}]])
-                fig.add_trace(go.Bar(x=room_perf[group_col], y=room_perf['Price'], name="Revenue", marker_color='#1f77b4'), secondary_y=False)
-                fig.add_trace(go.Scatter(x=room_perf[group_col], y=room_perf['Night'], name="Nights", mode='lines+markers', marker_color='#ff7f0e'), secondary_y=True)
-                fig.update_layout(legend=dict(orientation="h", y=1.1), margin=dict(l=20, r=20, t=30, b=20), height=350) # ลด height
+                # Bar Chart
+                fig.add_trace(go.Bar(x=room_perf[group_col], y=room_perf['Price'], name="Revenue", marker_color='#0068C9', opacity=0.8), secondary_y=False)
+                # Line Chart (วิ่งๆ)
+                fig.add_trace(go.Scatter(x=room_perf[group_col], y=room_perf['Night'], name="Nights", mode='lines+markers', line=dict(color='#FF2B2B', width=3)), secondary_y=True)
+                
+                fig.update_layout(template=chart_template, legend=dict(orientation="h", y=1.1), margin=dict(l=10, r=10, t=30, b=10), height=350)
                 st.plotly_chart(fig, use_container_width=True)
             with c2:
-                # st.caption("Revenue Trend")
                 monthly = df_filtered.groupby('month').agg({'Price': 'sum', 'Room': 'count'}).reset_index().sort_values('month')
                 monthly['M_Name'] = monthly['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
+                
                 fig2 = make_subplots(specs=[[{"secondary_y": True}]])
-                fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", line=dict(color='green', width=3)), secondary_y=False)
-                fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", line=dict(color='blue', dash='dot')), secondary_y=True)
-                fig2.update_layout(legend=dict(orientation="h", y=1.1), margin=dict(l=20, r=20, t=30, b=20), height=350) # ลด height
+                fig2.add_trace(go.Scatter(x=monthly['M_Name'], y=monthly['Price'], name="Revenue", fill='tozeroy', line=dict(color='#29B09D', width=3)), secondary_y=False)
+                fig2.add_trace(go.Bar(x=monthly['M_Name'], y=monthly['Room'], name="Bookings", marker_color='#83C9FF', opacity=0.5), secondary_y=True)
+                
+                fig2.update_layout(template=chart_template, legend=dict(orientation="h", y=1.1), margin=dict(l=10, r=10, t=30, b=10), height=350)
                 st.plotly_chart(fig2, use_container_width=True)
             
-            # กราฟ ADR ยาวด้านล่าง
+            # กราฟ ADR
             monthly_adr = df_filtered.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
             monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-            fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True, title="ADR Trend (ราคาเฉลี่ยต่อคืน)")
-            fig_adr.update_layout(height=300) # ลด height
+            fig_adr = px.line(monthly_adr, x='M_Name', y='ADR', markers=True, title="ADR Trend (ราคาเฉลี่ยต่อคืน)", template=chart_template)
+            fig_adr.update_traces(line_color='#FF8700', line_width=4) # เส้นหนาขึ้นเห็นชัดๆ
+            fig_adr.update_layout(height=300)
             st.plotly_chart(fig_adr, use_container_width=True)
 
         with tab2:
             c3, c4 = st.columns(2)
             with c3:
-                st.caption("Revenue Share by Channel")
                 res_rev = df_filtered.groupby('Reservation')['Price'].sum().reset_index()
-                fig_pie = px.pie(res_rev, values='Price', names='Reservation', hole=0.4)
-                fig_pie.update_layout(margin=dict(t=20, b=20), height=350)
+                fig_pie = px.pie(res_rev, values='Price', names='Reservation', hole=0.4, template=chart_template, color_discrete_sequence=px.colors.qualitative.Pastel)
+                fig_pie.update_traces(textposition='inside', textinfo='percent+label')
+                fig_pie.update_layout(margin=dict(t=30, b=20), height=350, showlegend=False)
                 st.plotly_chart(fig_pie, use_container_width=True)
             with c4:
-                st.caption("Monthly Booking by Channel")
                 m_res = df_filtered.groupby(['month', 'Reservation']).size().reset_index(name='Count')
                 m_res['M_Name'] = m_res['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-                fig_bar = px.bar(m_res, x='M_Name', y='Count', color='Reservation')
-                fig_bar.update_layout(margin=dict(t=20, b=20), height=350)
+                fig_bar = px.bar(m_res, x='M_Name', y='Count', color='Reservation', template=chart_template)
+                fig_bar.update_layout(margin=dict(t=30, b=20), height=350)
                 st.plotly_chart(fig_bar, use_container_width=True)
             
             chan_adr = df_filtered.groupby('Reservation').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR').sort_values('ADR', ascending=False)
-            st.plotly_chart(px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Greens', title="Channel Value (ADR)"), use_container_width=True)
+            fig_bar_h = px.bar(chan_adr, x='Reservation', y='ADR', color='ADR', color_continuous_scale='Viridis', title="Channel Value (ADR)", template=chart_template)
+            st.plotly_chart(fig_bar_h, use_container_width=True)
 
         with tab3:
             c5, c6 = st.columns(2)
             with c5:
                 mt_room = df_filtered.groupby(['month', group_col])['Price'].sum().reset_index()
                 mt_room['M_Name'] = mt_room['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
-                st.plotly_chart(px.bar(mt_room, x='M_Name', y='Price', color=group_col, title="Room Revenue"), use_container_width=True)
+                fig_room = px.bar(mt_room, x='M_Name', y='Price', color=group_col, title="Room Revenue", template=chart_template)
+                st.plotly_chart(fig_room, use_container_width=True)
             with c6:
                 heatmap_data = df_filtered.groupby([group_col, 'Reservation']).size().unstack(fill_value=0)
-                fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues', title="Room vs Channel")
+                fig_heat = px.imshow(heatmap_data, text_auto=True, aspect="auto", color_continuous_scale='Blues', title="Room vs Channel", template=chart_template)
                 st.plotly_chart(fig_heat, use_container_width=True)
             
             c7, c8 = st.columns(2)
             df_filtered['DayType'] = df_filtered['is_weekend'].map({1: 'Weekend', 0: 'Weekday'})
             day_rev = df_filtered.groupby('DayType')['Price'].sum().reset_index()
-            with c7: st.plotly_chart(px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Wkday vs Wkend"), use_container_width=True)
+            with c7: 
+                fig_pie2 = px.pie(day_rev, values='Price', names='DayType', hole=0.4, title="Wkday vs Wkend", template=chart_template)
+                st.plotly_chart(fig_pie2, use_container_width=True)
             with c8:
                 day_avg = df_filtered.groupby('DayType')['Price'].mean().reset_index()
-                st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Price (DayType)", color='DayType'), use_container_width=True)
+                fig_bar2 = px.bar(day_avg, x='DayType', y='Price', title="Avg Price", color='DayType', template=chart_template)
+                st.plotly_chart(fig_bar2, use_container_width=True)
 
         with st.expander("ดูข้อมูลดิบ (Raw Data)"): 
             st.dataframe(df_filtered)
-
+            
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Master Data Management)")
         
@@ -1144,6 +1151,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
