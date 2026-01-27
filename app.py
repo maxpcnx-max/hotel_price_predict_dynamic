@@ -514,6 +514,7 @@ else:
                 st.plotly_chart(fig2, use_container_width=True)
             
             # ADR Graph
+            st.subheader("ADR Trend Analysis (Average Daily Rate)")
             st.caption("ADR Trend Analysis (Average Daily Rate)")
             monthly_adr = df_filtered.groupby('month').apply(lambda x: x['Price'].sum() / x['Night'].sum()).reset_index(name='ADR')
             monthly_adr['M_Name'] = monthly_adr['month'].apply(lambda x: datetime(2024, int(x), 1).strftime('%b'))
@@ -563,7 +564,7 @@ else:
                 st.plotly_chart(px.bar(day_avg, x='DayType', y='Price', title="Avg Value", color='DayType', height=300), use_container_width=True)
 
         st.divider()
-        with st.expander("🔎 Raw Data Explorer", expanded=False): st.dataframe(df_filtered, use_container_width=True)
+        with st.expander("🔎 กดเพื่อดูข้อมูลที่ผ่านการกรองแล้ว", expanded=False): st.dataframe(df_filtered, use_container_width=True)
             
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Master Data Management)")
@@ -1161,6 +1162,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
