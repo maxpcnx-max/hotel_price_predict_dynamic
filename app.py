@@ -591,27 +591,38 @@ else:
             
             # --- Sync Name Logic (Robust) ---
             if st.button("💾 บันทึกราคาฐาน"):
+                # 1. Prepare new data for JSON
                 new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
                 
+                # 2. Sync Logic (Rename in CSV Map)
                 if os.path.exists(ROOM_FILE):
                     try:
                         df_room_map = pd.read_csv(ROOM_FILE)
-                        df_room_map['Room_Type'] = df_room_map['Room_Type'].astype(str)
+                        # Clean whitespace in CSV before processing
+                        df_room_map['Room_Type'] = df_room_map['Room_Type'].astype(str).str.strip()
+                        
                         sync_count = 0
                         common_indices = df_prices.index.intersection(edited_prices_df.index)
                         
                         for idx in common_indices:
                             old_name = str(df_prices.loc[idx, 'Room Type']).strip()
                             new_name = str(edited_prices_df.loc[idx, 'Room Type']).strip()
+                            
                             if old_name and new_name and old_name != new_name:
-                                mask = df_room_map['Room_Type'].str.strip() == old_name
+                                # Compare against cleaned CSV data
+                                mask = df_room_map['Room_Type'] == old_name
                                 if mask.any():
                                     df_room_map.loc[mask, 'Room_Type'] = new_name
                                     sync_count += mask.sum()
+                        
                         if sync_count > 0:
                             df_room_map.to_csv(ROOM_FILE, index=False)
                             st.toast(f"🔄 อัปเดตชื่อในกราฟเรียบร้อย ({sync_count} จุด)", icon="✅")
-                    except Exception as e: st.error(f"Sync Error: {e}")
+                        else:
+                            st.warning("⚠️ บันทึกราคาแล้ว แต่ไม่พบชื่อห้องเดิมในไฟล์ประวัติ (จึงไม่ได้แก้กราฟ)")
+                            
+                    except Exception as e:
+                        st.error(f"Sync Error: {e}")
 
                 save_base_prices(new_prices_dict)
                 st.cache_data.clear()
@@ -635,21 +646,43 @@ else:
             # --- แก้ไขตรรกะการบันทึกให้ดึงค่าชัวร์ 100% ---
             if st.button("💾 บันทึกช่องทาง"):
                 new_channels_list = []
-                # วนลูปดึงข้อมูลแบบปลอดภัย (Safe Extraction)
                 for index, row in edited_channels_df.iterrows():
-                    val = str(row['Channel Name']).strip() # แปลงเป็นข้อความและตัดช่องว่าง
-                    # เช็คว่าไม่ใช่ค่าว่าง และไม่ใช่คำว่า nan/none
+                    val = str(row['Channel Name']).strip()
                     if val and val.lower() != 'nan' and val.lower() != 'none':
                         new_channels_list.append(val)
                 
-                # ลบค่าซ้ำ (ถ้ามี)
                 new_channels_list = list(dict.fromkeys(new_channels_list))
-
                 save_channels(new_channels_list)
                 st.cache_data.clear()
-                st.cache_resource.clear() # เคลียร์ทุกอย่างให้สะอาด
+                st.cache_resource.clear()
                 st.success("✅ อัปเดตช่องทางเรียบร้อย!")
                 time.sleep(1); st.rerun()
+
+            # --- เพิ่ม Section พิเศษ: ซ่อมแซมชื่อห้อง (Advanced Sync) ---
+            st.divider()
+            with st.expander("🔧 เครื่องมือซ่อมชื่อห้อง (Force Rename)"):
+                st.info("ใช้สำหรับกรณีเปลี่ยนชื่อในตารางด้านบนแล้วกราฟไม่เปลี่ยนตาม")
+                c_fix1, c_fix2 = st.columns(2)
+                with c_fix1: old_n = st.text_input("ชื่อเดิม (ที่เห็นในกราฟ)", placeholder="เช่น Grand Suite Room")
+                with c_fix2: new_n = st.text_input("ชื่อใหม่ (ที่ต้องการ)", placeholder="เช่น test1")
+                
+                if st.button("บังคับเปลี่ยนชื่อเดี๋ยวนี้"):
+                    if os.path.exists(ROOM_FILE) and old_n and new_n:
+                        try:
+                            df_map_fix = pd.read_csv(ROOM_FILE)
+                            df_map_fix['Room_Type'] = df_map_fix['Room_Type'].astype(str).str.strip()
+                            mask_fix = df_map_fix['Room_Type'] == old_n.strip()
+                            if mask_fix.any():
+                                count_fix = mask_fix.sum()
+                                df_map_fix.loc[mask_fix, 'Room_Type'] = new_n.strip()
+                                df_map_fix.to_csv(ROOM_FILE, index=False)
+                                st.cache_data.clear()
+                                st.success(f"✅ แก้ไขเรียบร้อย! เปลี่ยน '{old_n}' เป็น '{new_n}' จำนวน {count_fix} จุด")
+                                time.sleep(1.5); st.rerun()
+                            else:
+                                st.error(f"❌ ไม่พบห้องชื่อ '{old_n}' ในระบบประวัติ")
+                        except Exception as e:
+                            st.error(f"Error: {e}")
 
         with tab_train:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
@@ -673,7 +706,7 @@ else:
             if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
                 success, count = retrain_system()
                 if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูลคุณภาพ {count:,} รายการ"); time.sleep(2); st.rerun()
-                    
+
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         
@@ -1075,6 +1108,3 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
-
-
