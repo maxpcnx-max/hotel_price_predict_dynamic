@@ -544,7 +544,7 @@ else:
 
             # PART B: Edit
             st.subheader("2. แก้ไขข้อมูล (View All Raw Data)")
-            st.caption("แสดงข้อมูลทั้งหมด (รวมถึงที่ยังไม่ได้ Map หรือเป็น Outlier)")
+            st.caption("แสดงข้อมูลทั้งหมด")
 
             if os.path.exists(DATA_FILE):
                 df_raw_edit = pd.read_csv(DATA_FILE)
@@ -668,30 +668,30 @@ else:
                 time.sleep(1); st.rerun()
 
             # --- เพิ่ม Section พิเศษ: ซ่อมแซมชื่อห้อง (Advanced Sync) ---
-            st.divider()
-            with st.expander("🔧 เครื่องมือซ่อมชื่อห้อง (Force Rename)"):
-                st.info("ใช้สำหรับกรณีเปลี่ยนชื่อในตารางด้านบนแล้วกราฟไม่เปลี่ยนตาม")
-                c_fix1, c_fix2 = st.columns(2)
-                with c_fix1: old_n = st.text_input("ชื่อเดิม (ที่เห็นในกราฟ)", placeholder="เช่น Grand Suite Room")
-                with c_fix2: new_n = st.text_input("ชื่อใหม่ (ที่ต้องการ)", placeholder="เช่น test1")
-                
-                if st.button("บังคับเปลี่ยนชื่อเดี๋ยวนี้"):
-                    if os.path.exists(ROOM_FILE) and old_n and new_n:
-                        try:
-                            df_map_fix = pd.read_csv(ROOM_FILE)
-                            df_map_fix['Room_Type'] = df_map_fix['Room_Type'].astype(str).str.strip()
-                            mask_fix = df_map_fix['Room_Type'] == old_n.strip()
-                            if mask_fix.any():
-                                count_fix = mask_fix.sum()
-                                df_map_fix.loc[mask_fix, 'Room_Type'] = new_n.strip()
-                                df_map_fix.to_csv(ROOM_FILE, index=False)
-                                st.cache_data.clear()
-                                st.success(f"✅ แก้ไขเรียบร้อย! เปลี่ยน '{old_n}' เป็น '{new_n}' จำนวน {count_fix} จุด")
-                                time.sleep(1.5); st.rerun()
-                            else:
-                                st.error(f"❌ ไม่พบห้องชื่อ '{old_n}' ในระบบประวัติ")
-                        except Exception as e:
-                            st.error(f"Error: {e}")
+#            st.divider()
+#            with st.expander("🔧 เครื่องมือซ่อมชื่อห้อง (Force Rename)"):
+#                st.info("ใช้สำหรับกรณีเปลี่ยนชื่อในตารางด้านบนแล้วกราฟไม่เปลี่ยนตาม")
+#                c_fix1, c_fix2 = st.columns(2)
+#               with c_fix1: old_n = st.text_input("ชื่อเดิม (ที่เห็นในกราฟ)", placeholder="เช่น Grand Suite Room")
+#                with c_fix2: new_n = st.text_input("ชื่อใหม่ (ที่ต้องการ)", placeholder="เช่น test1")
+#                
+#                if st.button("บังคับเปลี่ยนชื่อเดี๋ยวนี้"):
+#                    if os.path.exists(ROOM_FILE) and old_n and new_n:
+#                        try:
+#                            df_map_fix = pd.read_csv(ROOM_FILE)
+#                            df_map_fix['Room_Type'] = df_map_fix['Room_Type'].astype(str).str.strip()
+#                            mask_fix = df_map_fix['Room_Type'] == old_n.strip()
+#                            if mask_fix.any():
+#                                count_fix = mask_fix.sum()
+#                                df_map_fix.loc[mask_fix, 'Room_Type'] = new_n.strip()
+#                                df_map_fix.to_csv(ROOM_FILE, index=False)
+#                                st.cache_data.clear()
+#                                st.success(f"✅ แก้ไขเรียบร้อย! เปลี่ยน '{old_n}' เป็น '{new_n}' จำนวน {count_fix} จุด")
+#                                time.sleep(1.5); st.rerun()
+#                            else:
+#                                st.error(f"❌ ไม่พบห้องชื่อ '{old_n}' ในระบบประวัติ")
+#                       except Exception as e:
+#                           st.error(f"Error: {e}")
 
         with tab_train:
             st.subheader("🧠 สั่งให้แบบจำลองเรียนรู้ใหม่ (Retrain Model)")
@@ -1117,6 +1117,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
