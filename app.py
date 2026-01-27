@@ -964,19 +964,74 @@ else:
             st.divider()
             st.info("วิทยานิพนธ์: การพัฒนาระบบสนับสนุนการตัดสินใจเพื่อการพยากรณ์ราคาแบบพลวัต")
 
+# ... (ส่วนบนของโค้ดเดิมคงไว้เหมือนเดิม) ...
+
+    # ==========================================================
+    # ส่วนที่แก้ไข: UI Sidebar ใหม่ (แบ่งหมวดหมู่ + มีเส้นคั่น)
+    # ==========================================================
     with st.sidebar:
         st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
         st.markdown(f"### User: {st.session_state['username']}")
-        page = st.radio("เมนูใช้งาน:", ["📊 แดชบอร์ด", "📥 จัดการข้อมูล", "🔮 พยากรณ์ราคา", "🧠 วิเคราะห์โมเดล", "ℹ️ เกี่ยวกับระบบ"])
+        
+        # กำหนดค่าเริ่มต้นของหน้า (State) ถ้ายังไม่มี
+        if 'current_page' not in st.session_state:
+            st.session_state['current_page'] = "📊 แดชบอร์ด"
+        
+        def set_page(page_name):
+            st.session_state['current_page'] = page_name
+
+        st.divider() # เส้นคั่นแรก (ตามลูกศรเหลือง)
+
+        # --- หมวด 1: หน้าแรก ---
+        st.caption("หน้าแรก") # Category Header
+        if st.button("📊 หน้าแดชบอร์ด", use_container_width=True, 
+                     type="primary" if st.session_state['current_page'] == "📊 แดชบอร์ด" else "secondary"):
+            set_page("📊 แดชบอร์ด")
+            st.rerun()
+
+        st.divider() # เส้นคั่น (ตามลูกศรน้ำเงิน 1)
+
+        # --- หมวด 2: จัดการข้อมูล ---
+        st.caption("จัดการข้อมูล") # Category Header
+        if st.button("📥 จัดการข้อมูล", use_container_width=True,
+                     type="primary" if st.session_state['current_page'] == "📥 จัดการข้อมูล" else "secondary"):
+            set_page("📥 จัดการข้อมูล")
+            st.rerun()
+            
+        if st.button("🔮 พยากรณ์ราคา", use_container_width=True,
+                     type="primary" if st.session_state['current_page'] == "🔮 พยากรณ์ราคา" else "secondary"):
+            set_page("🔮 พยากรณ์ราคา")
+            st.rerun()
+
+        if st.button("🧠 วิเคราะห์โมเดล", use_container_width=True,
+                     type="primary" if st.session_state['current_page'] == "🧠 วิเคราะห์โมเดล" else "secondary"):
+            set_page("🧠 วิเคราะห์โมเดล")
+            st.rerun()
+
+        st.divider() # เส้นคั่น (ตามลูกศรน้ำเงิน 2)
+
+        # --- หมวด 3: อื่นๆ ---
+        st.caption("อื่น ๆ") # Category Header
+        if st.button("ℹ️ เกี่ยวกับระบบ", use_container_width=True,
+                     type="primary" if st.session_state['current_page'] == "ℹ️ เกี่ยวกับระบบ" else "secondary"):
+            set_page("ℹ️ เกี่ยวกับระบบ")
+            st.rerun()
+            
+        # (ลบส่วน Real-time Performance ออกตามคำขอในวงสีแดง)
+        
         st.divider()
-        st.markdown("#### ⚙️ Real-time Performance")
-        st.progress(metrics['xgb']['r2'], text=f"XGBoost: {metrics['xgb']['r2']*100:.1f}%")
-        st.progress(metrics['lr']['r2'], text=f"Linear Regression: {metrics['lr']['r2']*100:.1f}%")
-        st.divider()
-        if st.button("Logout"): st.session_state['logged_in'] = False; st.rerun()
+        if st.button("Log out", type="secondary"): 
+            st.session_state['logged_in'] = False
+            st.rerun()
+
+    # ==========================================================
+    # ส่วนการเรียกหน้า (Page Routing) - ปรับมาใช้ State
+    # ==========================================================
+    page = st.session_state['current_page']
 
     if "แดชบอร์ด" in page: show_dashboard_page()
     elif "จัดการข้อมูล" in page: show_manage_data_page()
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
-    elif "เกี่ยวกับระบบ" in page: show_about_page()
+    elif "เกี่ยวกับระบบ" in page: show_about_page()show_about_page()
+
