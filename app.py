@@ -589,40 +589,29 @@ else:
                 key="base_price_editor"
             )
             
-            # --- CODE UPDATE: Sync Name Logic (Robust) ---
+            # --- Sync Name Logic (Robust) ---
             if st.button("💾 บันทึกราคาฐาน"):
-                # 1. Prepare new data for JSON
                 new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
                 
-                # 2. Sync Logic (Rename in CSV Map)
                 if os.path.exists(ROOM_FILE):
                     try:
                         df_room_map = pd.read_csv(ROOM_FILE)
                         df_room_map['Room_Type'] = df_room_map['Room_Type'].astype(str)
-                        
                         sync_count = 0
-                        
-                        # Use intersection of indices to safely compare old vs new
                         common_indices = df_prices.index.intersection(edited_prices_df.index)
                         
                         for idx in common_indices:
                             old_name = str(df_prices.loc[idx, 'Room Type']).strip()
                             new_name = str(edited_prices_df.loc[idx, 'Room Type']).strip()
-                            
-                            # Check for name change
                             if old_name and new_name and old_name != new_name:
-                                # Update in Room Map
                                 mask = df_room_map['Room_Type'].str.strip() == old_name
                                 if mask.any():
                                     df_room_map.loc[mask, 'Room_Type'] = new_name
                                     sync_count += mask.sum()
-                        
                         if sync_count > 0:
                             df_room_map.to_csv(ROOM_FILE, index=False)
                             st.toast(f"🔄 อัปเดตชื่อในกราฟเรียบร้อย ({sync_count} จุด)", icon="✅")
-                            
-                    except Exception as e:
-                        st.error(f"Sync Error: {e}")
+                    except Exception as e: st.error(f"Sync Error: {e}")
 
                 save_base_prices(new_prices_dict)
                 st.cache_data.clear()
@@ -643,29 +632,36 @@ else:
                 key="channel_editor"
             )
             
-            # --- แก้ไขตรงนี้: เพิ่ม st.rerun() เพื่อให้หน้าจอรีเฟรชทันทีที่กดบันทึก ---
+            # --- แก้ไขตรรกะการบันทึกให้ดึงค่าชัวร์ 100% ---
             if st.button("💾 บันทึกช่องทาง"):
-                new_channels_list = [row['Channel Name'] for index, row in edited_channels_df.iterrows() if row['Channel Name']]
+                new_channels_list = []
+                # วนลูปดึงข้อมูลแบบปลอดภัย (Safe Extraction)
+                for index, row in edited_channels_df.iterrows():
+                    val = str(row['Channel Name']).strip() # แปลงเป็นข้อความและตัดช่องว่าง
+                    # เช็คว่าไม่ใช่ค่าว่าง และไม่ใช่คำว่า nan/none
+                    if val and val.lower() != 'nan' and val.lower() != 'none':
+                        new_channels_list.append(val)
+                
+                # ลบค่าซ้ำ (ถ้ามี)
+                new_channels_list = list(dict.fromkeys(new_channels_list))
+
                 save_channels(new_channels_list)
                 st.cache_data.clear()
+                st.cache_resource.clear() # เคลียร์ทุกอย่างให้สะอาด
                 st.success("✅ อัปเดตช่องทางเรียบร้อย!")
-                time.sleep(1) # หน่วงเวลาเล็กน้อยให้ผู้ใช้เห็นข้อความ Success
-                st.rerun()    # สั่งรีเฟรชหน้าจอเพื่อโหลดช่องทางใหม่ทันที
-                
+                time.sleep(1); st.rerun()
+
         with tab_train:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
             st.info("ระบบจะดึงข้อมูลจากถังข้อมูลมา **คัดกรองเฉพาะข้อมูลที่มีคุณภาพ** เพื่อสอน AI")
             
-            # --- CODE UPDATE: Show MAE & R2 for Both Models ---
             st.markdown("#### 📊 Model Performance Report")
             col_xgb, col_lr = st.columns(2)
-            
             with col_xgb:
                 st.markdown("##### ⚡ XGBoost (AI หลัก)")
                 m1, m2 = st.columns(2)
                 m1.metric("Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
                 m2.metric("Error (MAE)", f"{metrics['xgb']['mae']:.2f} ฿")
-                
             with col_lr:
                 st.markdown("##### 📉 Linear Regression (AI รอง)")
                 m3, m4 = st.columns(2)
@@ -1079,5 +1075,6 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
