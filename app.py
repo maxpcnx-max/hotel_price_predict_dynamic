@@ -626,6 +626,7 @@ else:
 
                 save_base_prices(new_prices_dict)
                 st.cache_data.clear()
+                st.cache_resource.clear()
                 st.success("✅ บันทึกสำเร็จ!")
                 time.sleep(1); st.rerun()
 
