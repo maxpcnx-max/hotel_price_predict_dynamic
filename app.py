@@ -591,27 +591,38 @@ else:
             
             # --- Sync Name Logic (Robust) ---
             if st.button("💾 บันทึกราคาฐาน"):
+                # 1. Prepare new data for JSON
                 new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
                 
+                # 2. Sync Logic (Rename in CSV Map)
                 if os.path.exists(ROOM_FILE):
                     try:
                         df_room_map = pd.read_csv(ROOM_FILE)
                         df_room_map['Room_Type'] = df_room_map['Room_Type'].astype(str)
+                        
                         sync_count = 0
+                        
+                        # Use intersection of indices to safely compare old vs new
                         common_indices = df_prices.index.intersection(edited_prices_df.index)
                         
                         for idx in common_indices:
                             old_name = str(df_prices.loc[idx, 'Room Type']).strip()
                             new_name = str(edited_prices_df.loc[idx, 'Room Type']).strip()
+                            
+                            # Check for name change
                             if old_name and new_name and old_name != new_name:
+                                # Update in Room Map
                                 mask = df_room_map['Room_Type'].str.strip() == old_name
                                 if mask.any():
                                     df_room_map.loc[mask, 'Room_Type'] = new_name
                                     sync_count += mask.sum()
+                        
                         if sync_count > 0:
                             df_room_map.to_csv(ROOM_FILE, index=False)
                             st.toast(f"🔄 อัปเดตชื่อในกราฟเรียบร้อย ({sync_count} จุด)", icon="✅")
-                    except Exception as e: st.error(f"Sync Error: {e}")
+                            
+                    except Exception as e:
+                        st.error(f"Sync Error: {e}")
 
                 save_base_prices(new_prices_dict)
                 st.cache_data.clear()
@@ -655,13 +666,16 @@ else:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
             st.info("ระบบจะดึงข้อมูลจากถังข้อมูลมา **คัดกรองเฉพาะข้อมูลที่มีคุณภาพ** เพื่อสอน AI")
             
+            # --- CODE UPDATE: Show MAE & R2 for Both Models ---
             st.markdown("#### 📊 Model Performance Report")
             col_xgb, col_lr = st.columns(2)
+            
             with col_xgb:
                 st.markdown("##### ⚡ XGBoost (AI หลัก)")
                 m1, m2 = st.columns(2)
                 m1.metric("Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
                 m2.metric("Error (MAE)", f"{metrics['xgb']['mae']:.2f} ฿")
+                
             with col_lr:
                 st.markdown("##### 📉 Linear Regression (AI รอง)")
                 m3, m4 = st.columns(2)
@@ -673,7 +687,7 @@ else:
             if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
                 success, count = retrain_system()
                 if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูลคุณภาพ {count:,} รายการ"); time.sleep(2); st.rerun()
-                    
+
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         
@@ -1075,6 +1089,3 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
-
-
-
