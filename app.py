@@ -512,12 +512,13 @@ else:
         st.subheader("📋 Raw Data Explorer (Cleaned for Dashboard)")
         with st.expander("คลิกเพื่อดูตารางข้อมูลที่ผ่านการกรองแล้ว"): st.dataframe(df_filtered)
 
-    def show_manage_data_page():
+   def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Master Data Management)")
         
         tab_trans, tab_master, tab_train = st.tabs(["📝 ข้อมูลการจอง (Transactions)", "⚙️ ข้อมูลหลัก (Master Data)", "🚀 อัปเดตโมเดล (Retrain)"])
 
         with tab_trans:
+            # ... (ส่วนนี้เหมือนเดิม ไม่ต้องแก้) ...
             # PART A: Import
             st.subheader("1. นำเข้าข้อมูลใหม่ (Import)")
             st.caption("นำข้อมูลมาต่อท้าย (Append) **โดยยังไม่มีการกรอง** (เมื่อบันทึกแล้วจะถูกกรองอัตโนมัติตอนใช้งาน)")
@@ -588,11 +589,34 @@ else:
                                "Base Price": st.column_config.NumberColumn("ราคาฐาน (THB)", format="%d THB", min_value=0)},
                 key="base_price_editor"
             )
+            
+            # --- CODE UPDATE: Sync Name Logic ---
             if st.button("💾 บันทึกราคาฐาน"):
                 new_prices_dict = {row['Room Type']: row['Base Price'] for index, row in edited_prices_df.iterrows() if row['Room Type']}
+                
+                # Sync Logic
+                if len(df_prices) == len(edited_prices_df) and os.path.exists(ROOM_FILE):
+                    try:
+                        df_map_sync = pd.read_csv(ROOM_FILE)
+                        df_map_sync['Room_Type'] = df_map_sync['Room_Type'].astype(str)
+                        updated_count = 0
+                        for i in range(len(df_prices)):
+                            old_name = str(df_prices.iloc[i]['Room Type'])
+                            new_name = str(edited_prices_df.iloc[i]['Room Type'])
+                            if old_name != new_name and old_name.strip() != "" and new_name.strip() != "":
+                                mask = df_map_sync['Room_Type'] == old_name
+                                if mask.any():
+                                    df_map_sync.loc[mask, 'Room_Type'] = new_name
+                                    updated_count += 1
+                        if updated_count > 0:
+                            df_map_sync.to_csv(ROOM_FILE, index=False)
+                            st.toast(f"🔄 ระบบอัปเดตชื่อในกราฟให้แล้ว {updated_count} รายการ", icon="✅")
+                    except Exception as e: st.error(f"Sync Error: {e}")
+
                 save_base_prices(new_prices_dict)
                 st.cache_data.clear()
-                st.success("✅ อัปเดตราคาฐานเรียบร้อย!")
+                st.success("✅ อัปเดตราคาฐานและชื่อห้องเรียบร้อย!")
+                time.sleep(1); st.rerun()
 
             st.divider()
 
@@ -612,34 +636,30 @@ else:
                 st.cache_data.clear()
                 st.success("✅ อัปเดตช่องทางเรียบร้อย!")
 
-            st.divider()
-
-            # Section 3: จับคู่ห้อง (ซ่อนไว้ใน Expander)
-            with st.expander("🔧 Advanced: จับคู่เลขห้อง (Room Mapping)"):
-                st.warning("⚠️ แก้ไขเฉพาะเมื่อจำเป็น (เช่น เพิ่มห้องใหม่เลข 999) หากลบผิด ข้อมูลใน Dashboard อาจหายไป")
-                if os.path.exists(ROOM_FILE):
-                    df_room_map = pd.read_csv(ROOM_FILE)
-                else:
-                    df_room_map = pd.DataFrame(columns=['Room', 'Room_Type'])
-                
-                df_room_map = df_room_map.astype(str)
-                edited_room_map = st.data_editor(
-                    df_room_map, num_rows="dynamic", use_container_width=True,
-                    key="room_map_editor",
-                    column_config={"Room": st.column_config.TextColumn("เลขห้อง (ID)", required=True),
-                                   "Room_Type": st.column_config.TextColumn("ชื่อห้อง (Name)", required=True)}
-                )
-                if st.button("💾 บันทึกการจับคู่"):
-                    edited_room_map.to_csv(ROOM_FILE, index=False)
-                    st.cache_data.clear()
-                    st.success("✅ บันทึกเรียบร้อย!")
-                    time.sleep(0.5); st.rerun()
+            # --- REMOVED: Section 3 Room Mapping (Advanced) ตามคำขอ ---
 
         with tab_train:
             st.subheader("🧠 สั่งให้โมเดลเรียนรู้ใหม่ (Retrain Model)")
             st.info("ระบบจะดึงข้อมูลจากถังข้อมูลมา **คัดกรองเฉพาะข้อมูลที่มีคุณภาพ** เพื่อสอน AI")
-            col_m1, col_m2 = st.columns(2)
-            with col_m1: st.metric("Current Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
+            
+            # --- CODE UPDATE: Show MAE & R2 for Both Models ---
+            st.markdown("#### 📊 Model Performance Report")
+            col_xgb, col_lr = st.columns(2)
+            
+            with col_xgb:
+                st.markdown("##### ⚡ XGBoost (AI หลัก)")
+                m1, m2 = st.columns(2)
+                m1.metric("Accuracy (R²)", f"{metrics['xgb']['r2']*100:.2f}%")
+                m2.metric("Error (MAE)", f"{metrics['xgb']['mae']:.2f} ฿")
+                
+            with col_lr:
+                st.markdown("##### 📉 Linear Regression (AI รอง)")
+                m3, m4 = st.columns(2)
+                m3.metric("Accuracy (R²)", f"{metrics['lr']['r2']*100:.2f}%")
+                m4.metric("Error (MAE)", f"{metrics['lr']['mae']:.2f} ฿")
+            
+            st.divider()
+
             if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
                 success, count = retrain_system()
                 if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูลคุณภาพ {count:,} รายการ"); time.sleep(2); st.rerun()
@@ -867,22 +887,30 @@ else:
                     if r_code == -1 or res_code == -1:
                         st.warning("⚠️ ห้องหรือช่องทางนี้ยังไม่เคยผ่านการเทรน AI (ระบบใช้ราคาฐานคำนวณแทน)")
 
+                    # ... (โค้ดก่อนหน้าเหมือนเดิม) ...
+
                     r1c1, r1c2 = st.columns(2)
                     with r1c1:
                         diff_xgb = p_xgb_norm - std_base
+                        # ดึงค่า R2 ของ XGB
+                        acc_xgb = metrics['xgb']['r2'] * 100
                         st.container(border=True).metric(
                             label=f"⚡ XGBoost (ปกติ: {guests} ท่าน)",
                             value=f"{p_xgb_norm:,.0f} THB",
-                            delta=f"{diff_xgb:+,.0f} THB (vs Base)",
+                            # เพิ่ม R2% ตรงนี้
+                            delta=f"{diff_xgb:+,.0f} THB (Acc: {acc_xgb:.1f}%)", 
                             delta_color="normal"
                         )
                     
                     with r1c2:
                         diff_lr = p_lr_norm - std_base
+                        # ดึงค่า R2 ของ Linear
+                        acc_lr = metrics['lr']['r2'] * 100
                         st.container(border=True).metric(
                             label=f"📉 Linear Regression (ปกติ: {guests} ท่าน)",
                             value=f"{p_lr_norm:,.0f} THB",
-                            delta=f"{diff_lr:+,.0f} THB (vs Base)",
+                            # เพิ่ม R2% ตรงนี้
+                            delta=f"{diff_lr:+,.0f} THB (Acc: {acc_lr:.1f}%)",
                             delta_color="normal"
                         )
 
@@ -1039,3 +1067,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
