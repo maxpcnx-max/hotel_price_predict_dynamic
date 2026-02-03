@@ -723,10 +723,47 @@ else:
             
             st.divider()
 
-            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
-                success, count = retrain_system()
-                if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูล {count:,} รายการ"); time.sleep(2); st.rerun()
+            # --- ย้ายการวิเคราะห์ปัจจัยมาไว้ที่นี่ ---
+            st.subheader("💡 วิเคราะห์ปัจจัยที่มีผลต่อราคา (Feature Importance)")
+            
+            imp_data = metrics.get('importance', {})
+            if not imp_data: imp_data = DEFAULT_METRICS['importance']
 
+            name_mapping = {
+                'Night': 'Night (จำนวนคืน)',
+                'Reservation': 'Reservation (ช่องทางการจอง)',
+                'Month': 'Month (เดือนที่เข้าพัก)',
+                'Is Weekend': 'Is Weekend (วันหยุดสุดสัปดาห์)',
+                'Room Type': 'Room Type (ประเภทห้องพัก)',
+                'Weekday': 'Weekday (วันในสัปดาห์)',
+                'Guests': 'Total Guests (ผู้เข้าพักรวม)',
+                'Is Holiday': 'Is Holiday (วันหยุดนักขัตฤกษ์)'
+            }
+
+            data_list = [{'Feature': name_mapping.get(k, k), 'Importance': v} for k, v in imp_data.items()]
+            fi_df = pd.DataFrame(data_list).sort_values('Importance', ascending=True)
+
+            if not fi_df.empty:
+                fig = px.bar(fi_df, x='Importance', y='Feature', orientation='h', 
+                             text_auto='.4f', color='Importance', color_continuous_scale='Blues',
+                             height=400)
+                fig.update_layout(margin=dict(l=20, r=20, t=20, b=20))
+                st.plotly_chart(fig, use_container_width=True)
+                
+                with st.expander("🔍 ดูรายละเอียดความสำคัญแบบเปอร์เซ็นต์"):
+                    display_df = fi_df.sort_values('Importance', ascending=False)
+                    display_df['Percentage'] = (display_df['Importance'] * 100).map('{:.2f}%'.format)
+                    st.dataframe(display_df, use_container_width=True)
+            
+            st.divider()
+
+            # ปุ่มสำหรับเริ่มกระบวนการ Retrain
+            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary", use_container_width=True):
+                success, count = retrain_system()
+                if success: 
+                    st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูล {count:,} รายการ")
+                    time.sleep(2)
+                    st.rerun()
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         
@@ -999,60 +1036,6 @@ else:
                     else:
                         st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
 
-    def show_model_insight_page():
-        st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Model Factor Analysis)")
-        st.markdown("แสดงค่าความสำคัญของตัวแปร (Feature Importance Scores) จากการเรียนรู้ของ AI")
-
-        imp_data = metrics.get('importance', {})
-        if not imp_data: imp_data = DEFAULT_METRICS['importance']
-
-        name_mapping = {
-            'Night': 'Night (จำนวนคืน)',
-            'Reservation': 'Reservation (ช่องทางการจอง)',
-            'Month': 'Month (เดือนที่เข้าพัก)',
-            'Is Weekend': 'Is Weekend (วันหยุดสุดสัปดาห์)',
-            'Room Type': 'Room Type (ประเภทห้องพัก)',
-            'Weekday': 'Weekday (วันในสัปดาห์)',
-            'Guests': 'Total Guests (ผู้เข้าพักรวม)',
-            'Is Holiday': 'Is Holiday (วันหยุดนักขัตฤกษ์)'
-        }
-
-        data_list = []
-        for key, value in imp_data.items():
-            th_name = name_mapping.get(key, key) 
-            data_list.append({'Feature': th_name, 'Importance': value})
-
-        fi_df = pd.DataFrame(data_list)
-        if fi_df.empty or 'Importance' not in fi_df.columns:
-            st.warning("⚠️ ยังไม่มีข้อมูลโมเดล (กรุณากด Retrain Model ที่เมนู 'จัดการข้อมูล' เพื่อเริ่มเรียนรู้)")
-            return
-
-        fi_df = fi_df.sort_values('Importance', ascending=True) 
-
-        st.divider()
-        st.subheader("กราฟแสดงน้ำหนักความสำคัญของตัวแปร (Dynamic)")
-
-        fig = px.bar(fi_df, x='Importance', y='Feature', orientation='h', 
-                     title='Feature Importance Score (อัปเดตล่าสุด)',
-                     text_auto='.4f', 
-                     color='Importance', 
-                     color_continuous_scale='Blues')
-        st.plotly_chart(fig, use_container_width=True)
-
-        with st.expander("ดูข้อมูลแบบตาราง (Table View)", expanded=True):
-            display_df = fi_df.sort_values('Importance', ascending=False)
-            display_df['Percentage'] = (display_df['Importance'] * 100).map('{:.2f}%'.format)
-            st.dataframe(display_df, use_container_width=True)
-
-        if not display_df.empty:
-            top_1 = display_df.iloc[0]
-            top_2 = display_df.iloc[1] if len(display_df) > 1 else display_df.iloc[0]
-            st.info(f"""
-            **💡 ข้อสังเกตจาก AI:**
-            * **{top_1['Feature']}:** มีผลต่อราคามากที่สุด ({top_1['Percentage']})
-            * **{top_2['Feature']}:** มีผลรองลงมา ({top_2['Percentage']})
-            """)
-
     def show_about_page():
         st.title("ℹ️ เกี่ยวกับระบบ / ผู้จัดทำ")
         st.divider()
@@ -1102,11 +1085,6 @@ else:
             set_page("🔮 พยากรณ์ราคา")
             st.rerun()
 
-        if st.button("🧠 วิเคราะห์โมเดล", use_container_width=True,
-                     type="primary" if st.session_state['current_page'] == "🧠 วิเคราะห์โมเดล" else "secondary"):
-            set_page("🧠 วิเคราะห์โมเดล")
-            st.rerun()
-
         st.divider() # เส้นคั่น
 
         # --- หมวด 3: อื่นๆ ---
@@ -1128,5 +1106,6 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
