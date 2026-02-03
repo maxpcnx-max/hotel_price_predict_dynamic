@@ -1155,9 +1155,35 @@ else:
             st.rerun()
             
         st.divider()
-        if st.button("Log out", type="secondary"): 
-            st.session_state['logged_in'] = False
-            st.rerun()
+        # --- ส่วน Logic ยืนยันการ Logout ---
+        
+        # 1. สร้างตัวแปร session_state เพื่อจำว่ากดปุ่ม Logout หรือยัง (ถ้ายังไม่มี)
+        if 'confirm_logout' not in st.session_state:
+            st.session_state['confirm_logout'] = False
+
+        # 2. เช็คเงื่อนไข: ถ้ายังไม่ได้กดปุ่ม Logout ให้แสดงปุ่มปกติ
+        if not st.session_state['confirm_logout']:
+            if st.button("🚪 Log out", type="secondary", use_container_width=True):
+                st.session_state['confirm_logout'] = True # เปลี่ยนสถานะเป็นรอการยืนยัน
+                st.rerun() # รีเฟรชหน้าเพื่อแสดงปุ่มยืนยัน
+        
+        # 3. ถ้ากดปุ่ม Logout แล้ว -> แสดงข้อความถามและปุ่ม ใช่/ไม่
+        else:
+            st.warning("⚠️ ยืนยันออกจากระบบ?")
+            col_yes, col_no = st.columns(2)
+            
+            with col_yes:
+                if st.button("✅ ใช่", type="primary", use_container_width=True):
+                    # ถ้าตอบใช่: เคลียร์สถานะล็อกอิน และ สถานะปุ่มยืนยัน
+                    st.session_state['logged_in'] = False
+                    st.session_state['confirm_logout'] = False 
+                    st.rerun()
+            
+            with col_no:
+                if st.button("❌ ไม่", type="secondary", use_container_width=True):
+                    # ถ้าตอบไม่: แค่ยกเลิกสถานะปุ่มยืนยัน กลับไปหน้าปกติ
+                    st.session_state['confirm_logout'] = False
+                    st.rerun()
 
     page = st.session_state['current_page']
 
@@ -1166,6 +1192,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
