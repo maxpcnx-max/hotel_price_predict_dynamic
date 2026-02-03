@@ -1110,10 +1110,7 @@ else:
             st.session_state['logged_in'] = False
             st.rerun()
 
-    if "แดชบอร์ด" in page: show_dashboard_page()
-    elif "จัดการข้อมูล" in page: show_manage_data_page()
-    elif "พยากรณ์ราคา" in page: show_pricing_page()
-    elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
