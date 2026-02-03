@@ -722,13 +722,7 @@ else:
                 m4.metric("Error (MAE)", f"{metrics['lr']['mae']:.2f} ฿")
             
             st.divider()
-
-            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
-                success, count = retrain_system()
-                if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูล {count:,} รายการ"); time.sleep(2); st.rerun()
-
-            st.divider()
- 
+            
             # --- ย้ายการวิเคราะห์ปัจจัยมาไว้ที่นี่ ---
             st.subheader("💡 วิเคราะห์ปัจจัยที่มีผลต่อราคา (Feature Importance)")
             
@@ -1146,10 +1140,10 @@ else:
             set_page("🔮 พยากรณ์ราคา")
             st.rerun()
 
-        if st.button("🧠 วิเคราะห์โมเดล", use_container_width=True,
-                     type="primary" if st.session_state['current_page'] == "🧠 วิเคราะห์โมเดล" else "secondary"):
-            set_page("🧠 วิเคราะห์โมเดล")
-            st.rerun()
+#        if st.button("🧠 วิเคราะห์โมเดล", use_container_width=True,
+#                     type="primary" if st.session_state['current_page'] == "🧠 วิเคราะห์โมเดล" else "secondary"):
+#            set_page("🧠 วิเคราะห์โมเดล")
+#            st.rerun()
 
         st.divider() # เส้นคั่น
 
@@ -1172,5 +1166,6 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
