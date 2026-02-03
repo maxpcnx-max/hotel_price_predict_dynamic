@@ -571,7 +571,7 @@ else:
                         up_file.seek(0)
                         new_data = pd.read_csv(up_file)
                         if save_data_robust(new_data, mode='append'):
-                            st.success(f"✅ บันทึกเรียบร้อย! ({len(new_data)} รายการ)"); time.sleep(1); st.rerun()
+                            st.success(f"✅ บันทึกเรียบร้อย! ({len(new_data)} รายการ หากมีการแก้ไขข้อมูลโปรดอย่าลืมกด Retrain Model) หากมีการแก้ไขข้อมูลโปรดอย่าลืมกด Retrain Model"); time.sleep(1); st.rerun()
                     except Exception as e: st.error(f"Error: {e}")
 
             st.divider()
@@ -606,7 +606,7 @@ else:
 
                 if st.button("💾 บันทึกการเปลี่ยนแปลง (Save All)"):
                     if save_data_robust(edited_df, mode='overwrite'):
-                        st.success("✅ บันทึกข้อมูลทั้งหมดเรียบร้อย!"); time.sleep(1); st.rerun()
+                        st.success("✅ บันทึกข้อมูลทั้งหมดเรียบร้อย! หากมีการแก้ไขข้อมูลโปรดอย่าลืมกด Retrain Model"); time.sleep(1); st.rerun()
 
             st.divider()
             with st.expander("🧨 พื้นที่อันตราย (Danger Zone)"):
@@ -670,7 +670,7 @@ else:
                 save_base_prices(new_prices_dict)
                 st.cache_data.clear()
                 st.cache_resource.clear()
-                st.success("✅ บันทึกสำเร็จ!")
+                st.success("✅ บันทึกสำเร็จ! หากมีการแก้ไขข้อมูลโปรดอย่าลืมกด Retrain Model")
                 time.sleep(1); st.rerun()
 
             st.divider()
@@ -1128,3 +1128,4 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
