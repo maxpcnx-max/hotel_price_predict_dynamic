@@ -417,28 +417,24 @@ else:
     def show_dashboard_page():
         # --- 1. CSS Tweak: ลด Padding ของหน้าจอ และปรับแต่งระยะห่าง ---
         st.markdown("""
-        <style>
-            /* 1. ลบขอบและพื้นหลังปุ่มเดิมออก ให้ดูโปร่งใส */
-            section[data-testid="stSidebar"] div.stButton > button {
-                width: 100%;
-                text-align: left;
-                border: none;
-                background-color: transparent;
-                box-shadow: none;
-                padding: 12px 15px;
-                font-size: 16px;
-                display: flex;
-                align-items: center;
-                justify-content: flex-start;
-                transition: background-color 0.2s, color 0.2s;
-                border-radius: 10px;
-                margin-bottom: 5px;
-            }
-            
-            /* ... (โค้ด CSS ส่วนที่เหลือที่ยาวๆ) ... */
-
-        </style>
-    """, unsafe_allow_html=True)
+            <style>
+                div.block-container {
+                    padding-top: 3rem !important;
+                    padding-bottom: 2rem !important;
+                }
+                h1 {
+                    margin-bottom: 0.1rem !important;
+                    font-size: 2rem !important;
+                }
+                div[data-testid="stSelectbox"] label {
+                    font-size: 0.8rem;
+                    margin-bottom: 0rem;
+                }
+                div[data-testid="stSelectbox"] div[data-baseweb="select"] {
+                    min-height: 38px;
+                }
+            </style>
+        """, unsafe_allow_html=True)
 
         st.title("📊 Financial Executive Dashboard")
 
@@ -727,6 +723,12 @@ else:
             
             st.divider()
 
+            if st.button("🚀 เริ่มกระบวนการเรียนรู้ใหม่ (Start Retraining)", type="primary"):
+                success, count = retrain_system()
+                if success: st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูล {count:,} รายการ"); time.sleep(2); st.rerun()
+
+            st.divider()
+ 
             # --- ย้ายการวิเคราะห์ปัจจัยมาไว้ที่นี่ ---
             st.subheader("💡 วิเคราะห์ปัจจัยที่มีผลต่อราคา (Feature Importance)")
             
@@ -767,7 +769,8 @@ else:
                 if success: 
                     st.success(f"🎉 เรียนรู้สำเร็จ! ใช้ข้อมูล {count:,} รายการ")
                     time.sleep(2)
-                    st.rerun()
+                    st.rerun()           
+
     def show_pricing_page():
         st.title("🔮 ระบบพยากรณ์ราคา (Price Forecasting)")
         
@@ -1040,6 +1043,60 @@ else:
                     else:
                         st.warning(f"🚫 ไม่สามารถเพิ่มผู้เข้าพักเป็น {extra_guests} ท่านได้ (Max {max_g})")
 
+    def show_model_insight_page():
+        st.title("🧠 วิเคราะห์ปัจจัยโมเดล (Model Factor Analysis)")
+        st.markdown("แสดงค่าความสำคัญของตัวแปร (Feature Importance Scores) จากการเรียนรู้ของ AI")
+
+        imp_data = metrics.get('importance', {})
+        if not imp_data: imp_data = DEFAULT_METRICS['importance']
+
+        name_mapping = {
+            'Night': 'Night (จำนวนคืน)',
+            'Reservation': 'Reservation (ช่องทางการจอง)',
+            'Month': 'Month (เดือนที่เข้าพัก)',
+            'Is Weekend': 'Is Weekend (วันหยุดสุดสัปดาห์)',
+            'Room Type': 'Room Type (ประเภทห้องพัก)',
+            'Weekday': 'Weekday (วันในสัปดาห์)',
+            'Guests': 'Total Guests (ผู้เข้าพักรวม)',
+            'Is Holiday': 'Is Holiday (วันหยุดนักขัตฤกษ์)'
+        }
+
+        data_list = []
+        for key, value in imp_data.items():
+            th_name = name_mapping.get(key, key) 
+            data_list.append({'Feature': th_name, 'Importance': value})
+
+        fi_df = pd.DataFrame(data_list)
+        if fi_df.empty or 'Importance' not in fi_df.columns:
+            st.warning("⚠️ ยังไม่มีข้อมูลโมเดล (กรุณากด Retrain Model ที่เมนู 'จัดการข้อมูล' เพื่อเริ่มเรียนรู้)")
+            return
+
+        fi_df = fi_df.sort_values('Importance', ascending=True) 
+
+        st.divider()
+        st.subheader("กราฟแสดงน้ำหนักความสำคัญของตัวแปร (Dynamic)")
+
+        fig = px.bar(fi_df, x='Importance', y='Feature', orientation='h', 
+                     title='Feature Importance Score (อัปเดตล่าสุด)',
+                     text_auto='.4f', 
+                     color='Importance', 
+                     color_continuous_scale='Blues')
+        st.plotly_chart(fig, use_container_width=True)
+
+        with st.expander("ดูข้อมูลแบบตาราง (Table View)", expanded=True):
+            display_df = fi_df.sort_values('Importance', ascending=False)
+            display_df['Percentage'] = (display_df['Importance'] * 100).map('{:.2f}%'.format)
+            st.dataframe(display_df, use_container_width=True)
+
+        if not display_df.empty:
+            top_1 = display_df.iloc[0]
+            top_2 = display_df.iloc[1] if len(display_df) > 1 else display_df.iloc[0]
+            st.info(f"""
+            **💡 ข้อสังเกตจาก AI:**
+            * **{top_1['Feature']}:** มีผลต่อราคามากที่สุด ({top_1['Percentage']})
+            * **{top_2['Feature']}:** มีผลรองลงมา ({top_2['Percentage']})
+            """)
+
     def show_about_page():
         st.title("ℹ️ เกี่ยวกับระบบ / ผู้จัดทำ")
         st.divider()
@@ -1070,7 +1127,7 @@ else:
 
         # --- หมวด 1: หน้าแรก ---
         st.caption("หน้าแรก") 
-        if st.button("📊 แดชบอร์ด", use_container_width=True, 
+        if st.button("📊 หน้าแดชบอร์ด", use_container_width=True, 
                      type="primary" if st.session_state['current_page'] == "📊 แดชบอร์ด" else "secondary"):
             set_page("📊 แดชบอร์ด")
             st.rerun()
@@ -1089,12 +1146,10 @@ else:
             set_page("🔮 พยากรณ์ราคา")
             st.rerun()
 
-        # ปุ่มนี้ผมคอมเมนต์ออกไว้ เพราะเราย้ายเนื้อหาไปรวมในหน้า "จัดการข้อมูล" แล้ว
-        # ถ้าคุณยังอยากมีปุ่มนี้อยู่ ให้ลบเครื่องหมาย # ด้านหน้าออกครับ
-        # if st.button("🧠 วิเคราะห์โมเดล", use_container_width=True,
-        #              type="primary" if st.session_state['current_page'] == "🧠 วิเคราะห์โมเดล" else "secondary"):
-        #     set_page("🧠 วิเคราะห์โมเดล")
-        #     st.rerun()
+        if st.button("🧠 วิเคราะห์โมเดล", use_container_width=True,
+                     type="primary" if st.session_state['current_page'] == "🧠 วิเคราะห์โมเดล" else "secondary"):
+            set_page("🧠 วิเคราะห์โมเดล")
+            st.rerun()
 
         st.divider() # เส้นคั่น
 
@@ -1106,14 +1161,16 @@ else:
             st.rerun()
             
         st.divider()
-        if st.button("Log out", type="secondary", use_container_width=True): 
+        if st.button("Log out", type="secondary"): 
             st.session_state['logged_in'] = False
             st.rerun()
 
+    page = st.session_state['current_page']
 
-
-
-
-
+    if "แดชบอร์ด" in page: show_dashboard_page()
+    elif "จัดการข้อมูล" in page: show_manage_data_page()
+    elif "พยากรณ์ราคา" in page: show_pricing_page()
+    elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
+    elif "เกี่ยวกับระบบ" in page: show_about_page()
 
 
