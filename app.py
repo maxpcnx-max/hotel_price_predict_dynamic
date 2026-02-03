@@ -558,7 +558,7 @@ else:
     def show_manage_data_page():
         st.title("📥 ระบบจัดการฐานข้อมูล (Master Data Management)")
         
-        tab_trans, tab_master, tab_train = st.tabs(["📝 แก้ไขข้อมูลการจอง (Transactions)", "⚙️ แก้ไขข้อมูลหลัก (Master Data)", "🚀 อัปเดตแบบจำลอง (Retrain)"])
+        tab_trans, tab_master, tab_train = st.tabs(["📝 แก้ไขข้อมูลการจอง (Master Data)", "⚙️ แก้ไขข้อมูลห้องพัก (Room Data)", "🚀 อัปเดตแบบจำลอง (Retrain)"])
 
         with tab_trans:
             # PART A: Import
@@ -571,7 +571,7 @@ else:
                         up_file.seek(0)
                         new_data = pd.read_csv(up_file)
                         if save_data_robust(new_data, mode='append'):
-                            st.success(f"✅ บันทึกเรียบร้อย! ({len(new_data)} รายการ หากมีการแก้ไขข้อมูลโปรดอย่าลืมกด Retrain Model) หากมีการแก้ไขข้อมูลโปรดอย่าลืมกด Retrain Model"); time.sleep(1); st.rerun()
+                            st.success(f"✅ บันทึกเรียบร้อย! ({len(new_data)} รายการ หากมีการแก้ไขข้อมูลโปรดอย่าลืมกด Retrain Model"); time.sleep(1); st.rerun()
                     except Exception as e: st.error(f"Error: {e}")
 
             st.divider()
@@ -1128,4 +1128,5 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
