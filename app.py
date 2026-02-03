@@ -417,24 +417,28 @@ else:
     def show_dashboard_page():
         # --- 1. CSS Tweak: ลด Padding ของหน้าจอ และปรับแต่งระยะห่าง ---
         st.markdown("""
-            <style>
-                div.block-container {
-                    padding-top: 3rem !important;
-                    padding-bottom: 2rem !important;
-                }
-                h1 {
-                    margin-bottom: 0.1rem !important;
-                    font-size: 2rem !important;
-                }
-                div[data-testid="stSelectbox"] label {
-                    font-size: 0.8rem;
-                    margin-bottom: 0rem;
-                }
-                div[data-testid="stSelectbox"] div[data-baseweb="select"] {
-                    min-height: 38px;
-                }
-            </style>
-        """, unsafe_allow_html=True)
+        <style>
+            /* 1. ลบขอบและพื้นหลังปุ่มเดิมออก ให้ดูโปร่งใส */
+            section[data-testid="stSidebar"] div.stButton > button {
+                width: 100%;
+                text-align: left;
+                border: none;
+                background-color: transparent;
+                box-shadow: none;
+                padding: 12px 15px;
+                font-size: 16px;
+                display: flex;
+                align-items: center;
+                justify-content: flex-start;
+                transition: background-color 0.2s, color 0.2s;
+                border-radius: 10px;
+                margin-bottom: 5px;
+            }
+            
+            /* ... (โค้ด CSS ส่วนที่เหลือที่ยาวๆ) ... */
+
+        </style>
+    """, unsafe_allow_html=True)
 
         st.title("📊 Financial Executive Dashboard")
 
@@ -1052,50 +1056,65 @@ else:
             st.info("วิทยานิพนธ์: การพัฒนาระบบสนับสนุนการตัดสินใจเพื่อการพยากรณ์ราคาแบบพลวัต")
 
     with st.sidebar:
-        st.image("https://cdn-icons-png.flaticon.com/512/2933/2933116.png", width=80)
-        st.markdown(f"### User: {st.session_state['username']}")
-        
-        # กำหนดค่าเริ่มต้นของหน้า (State) ถ้ายังไม่มี
+        # ส่วนโปรไฟล์ (จัดให้รูปอยู่ซ้าย ชื่ออยู่ขวา เหมือน FB)
+        st.write("") # เว้นระยะบนนิดหน่อย
+        prof_c1, prof_c2 = st.columns([1, 2.5])
+        with prof_c1:
+            # ใส่รูปโปรไฟล์ (ถ้าไม่มีไฟล์จะใช้ icon แทน)
+            if os.path.exists("my_profile.jpg"):
+                st.image("my_profile.jpg", use_container_width=True)
+            else:
+                st.image("https://cdn-icons-png.flaticon.com/512/3135/3135715.png", use_container_width=True)
+        with prof_c2:
+            st.markdown(f"**{st.session_state['username']}**")
+            st.caption("Admin Status: Online")
+
+        st.divider() # เส้นคั่นบางๆ
+
+        # กำหนดหน้าปัจจุบัน (State)
         if 'current_page' not in st.session_state:
             st.session_state['current_page'] = "📊 แดชบอร์ด"
         
         def set_page(page_name):
             st.session_state['current_page'] = page_name
 
-        st.divider() # เส้นคั่นแรก
-
-        # --- หมวด 1: หน้าแรก ---
-        st.caption("หน้าแรก") 
-        if st.button("📊 หน้าแดชบอร์ด", use_container_width=True, 
+        # --- เมนูหลัก (Main Menu) ---
+        # ใช้ type="primary" เพื่อบอก CSS ว่าปุ่มนี้ถูกเลือกอยู่ (จะกลายเป็นสีฟ้า)
+        # ใช้ type="secondary" สำหรับปุ่มปกติ (จะโปร่งใส)
+        
+        # 1. แดชบอร์ด
+        if st.button("📊  Financial Dashboard", use_container_width=True, 
                      type="primary" if st.session_state['current_page'] == "📊 แดชบอร์ด" else "secondary"):
             set_page("📊 แดชบอร์ด")
             st.rerun()
 
-        st.divider() # เส้นคั่น
-
-        # --- หมวด 2: จัดการข้อมูล ---
-        st.caption("ฐานข้อมูล") 
-        if st.button("📥 จัดการข้อมูล", use_container_width=True,
+        # 2. จัดการข้อมูล
+        if st.button("📥  Manage Database", use_container_width=True,
                      type="primary" if st.session_state['current_page'] == "📥 จัดการข้อมูล" else "secondary"):
             set_page("📥 จัดการข้อมูล")
             st.rerun()
             
-        if st.button("🔮 พยากรณ์ราคา", use_container_width=True,
+        # 3. พยากรณ์ราคา
+        if st.button("🔮  Price Forecasting", use_container_width=True,
                      type="primary" if st.session_state['current_page'] == "🔮 พยากรณ์ราคา" else "secondary"):
             set_page("🔮 พยากรณ์ราคา")
             st.rerun()
 
-        st.divider() # เส้นคั่น
+        # (ตัดปุ่ม "วิเคราะห์โมเดล" ออก เพราะเราย้ายเนื้อหาไปรวมในหน้าจัดการข้อมูลแล้วตามที่คุยกัน)
 
-        # --- หมวด 3: อื่นๆ ---
-        st.caption("อื่น ๆ") 
-        if st.button("ℹ️ เกี่ยวกับระบบ", use_container_width=True,
+        st.write("") # เว้นวรรค
+        st.caption("Application Info") # หัวข้อเล็กๆ
+
+        # 4. เกี่ยวกับระบบ
+        if st.button("ℹ️  About System", use_container_width=True,
                      type="primary" if st.session_state['current_page'] == "ℹ️ เกี่ยวกับระบบ" else "secondary"):
             set_page("ℹ️ เกี่ยวกับระบบ")
             st.rerun()
             
-        st.divider()
-        if st.button("Log out", type="secondary"): 
+        st.write("") # เว้นวรรค
+        
+        # 5. ปุ่ม Logout (แยกสีออกมาให้ชัดเจน หรือจะใช้ CSS เดิมก็ได้)
+        if st.button("🚪  Log out", type="secondary", use_container_width=True): 
             st.session_state['logged_in'] = False
             st.rerun()
 
@@ -1104,8 +1123,8 @@ else:
     if "แดชบอร์ด" in page: show_dashboard_page()
     elif "จัดการข้อมูล" in page: show_manage_data_page()
     elif "พยากรณ์ราคา" in page: show_pricing_page()
-    elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
