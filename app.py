@@ -591,10 +591,6 @@ else:
 
             st.divider()
 
-            # PART B: Edit (ส่วนด้านล่างนี้เหมือนเดิม...)
-            st.subheader("2. แก้ไขข้อมูล (View All Raw Data)")
-            # ... (โค้ดส่วนล่างคงเดิม) ...
-
             # PART B: Edit
             st.subheader("2. แก้ไขข้อมูล (View All Raw Data)")
             st.caption("แสดงข้อมูลทั้งหมด")
@@ -1211,6 +1207,7 @@ else:
     elif "พยากรณ์ราคา" in page: show_pricing_page()
     elif "วิเคราะห์โมเดล" in page: show_model_insight_page()
     elif "เกี่ยวกับระบบ" in page: show_about_page()
+
 
 
 
